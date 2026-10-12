@@ -423,3 +423,4 @@ details.fold > :last-child { margin-bottom: 10px; }
 .guard .gd-note { margin: -2px 0 4px 24px; }
 .guard .hint { font-size: 12px; }
 b.warn { color: #ffcf6b; }
+.lang-btn { font-size: 11px; font-weight: 700; padding: 2px 6px; min-width: 0; letter-spacing: 0.04em; }

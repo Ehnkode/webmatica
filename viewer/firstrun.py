@@ -67,11 +67,11 @@ def assets_ready() -> bool:
 
 
 def build_assets(jar: str) -> None:
-    print(f"Einmalig: Blocktexturen und Item-Bilder aus {jar} bauen (dauert etwa eine Minute) …", flush=True)
+    print(f"First start: building block textures and item images from {jar} (takes about a minute) …", flush=True)
     for tool in ("build_assets", "build_items"):
         subprocess.run([sys.executable, "-m", f"viewer.tools.{tool}", "--jar", jar], check=True,
                        cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    print("Fertig.", flush=True)
+    print("Done.", flush=True)
 
 
 def prepare(argv: list[str]) -> list[str]:
@@ -85,9 +85,9 @@ def prepare(argv: list[str]) -> list[str]:
     if not assets_ready():
         jar = jar or find_jar()
         if not jar:
-            sys.exit("Blocktexturen fehlen und die Minecraft-Jar wurde nicht gefunden.\n"
-                     "Einmal Minecraft mit der Mod starten (dann findet der Viewer alles selbst)\n"
-                     f"oder angeben: python -m viewer --jar \"<.minecraft>/versions/{MC_VERSION}/{MC_VERSION}.jar\"")
+            sys.exit("Block textures are missing and the Minecraft jar was not found.\n"
+                     "Start Minecraft with the mod once (then the viewer finds everything by itself)\n"
+                     f"or pass it: python -m viewer --jar \"<.minecraft>/versions/{MC_VERSION}/{MC_VERSION}.jar\"")
         build_assets(jar)
     if "--recording" not in args and "-r" not in args and not os.environ.get("MAPPER_RECORDING"):
         rec = find_recording()

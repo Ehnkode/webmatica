@@ -53,7 +53,7 @@ function toast(text) {
 }
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmt = (n) => Math.round(n).toLocaleString('de-DE');
+const fmt = (n) => Math.round(n).toLocaleString(I18N.locale);
 const dimOf = () => (state.worlds.find((w) => w.id === state.server) || { dims: [] }).dims.find((d) => d.key === state.dim);
 
 // ------------------------------------------------------------------ Karte
@@ -2153,7 +2153,7 @@ function renderAuto() {
   $('#ab-info').innerHTML = `<b class="${a.phase === 'error' ? 'bad' : a.phase === 'done' ? 'ok' : a.paused ? 'warn' : ''}">${running && a.paused ? 'pausiert' : AB_PHASE[a.phase] || a.phase}</b>` +
     (running && !mine ? ' (andere Schematic)' : '') + (a.info ? ' · ' + esc(a.info) : '') + (a.fetched ? ` · ${a.fetched}× geholt` : '');
   $('#ab-log').innerHTML = (a.log || []).slice(-8).reverse().map(([t, m]) =>
-    `<li><span class="mono muted">${new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span> ${esc(m)}</li>`).join('');
+    `<li><span class="mono muted">${new Date(t).toLocaleTimeString(I18N.locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span> ${esc(m)}</li>`).join('');
 }
 /* Schutz-Schalter fuer den Autobau (Spieler-Pause, Essen, Werkzeug, Reste) */
 const guard = { cfg: null };

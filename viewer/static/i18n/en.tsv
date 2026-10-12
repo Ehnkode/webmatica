@@ -1,0 +1,712 @@
+# German UI text -> English. {} matches any value (numbers, names, nested text).
+# Leading/trailing spaces and , . : ; · – are ignored when matching and kept as is.
+Webmatica Viewer	Webmatica Viewer
+Schematic-Editor · Webmatica	Schematic Editor · Webmatica
+# --- 3D bar / map header
+Klick auf Spieler oder Schematic wählt aus · sonst Maus fangen ·	Click a player or schematic to select it · otherwise capture the mouse ·
+fliegen ·	fly ·
+hoch/runter ·	up/down ·
+schneller ·	faster ·
+Maus frei	free mouse
+Sichtweite in Chunks mit vollen Blockmodellen	View distance in chunks with full block models
+Dahinter vereinfachtes Gelände aus der Karte, in Blöcken (0 = aus). Füllt auch Chunks, die noch laden.	Simplified terrain from the map beyond that, in blocks (0 = off). Also fills chunks that are still loading.
+Fernsicht	Far view
+Nebel	Fog
+Höhlen und Inneres mitladen (langsamer)	Also load caves and interiors (slower)
+Höhlen	Caves
+Sonne, Schatten, Himmel und Lichtstimmung	Sun, shadows, sky and lighting
+Tageszeit für den Shader	Time of day for the shader
+Uhrzeit	Time
+Bildschirmfoto speichern	Save screenshot
+Foto	Photo
+Klick: dorthin fliegen · Rad: Zoom	Click: fly there · Wheel: zoom
+Näher	Closer
+Weiter weg	Further away
+Minimap ausblenden	Hide minimap
+Minimap zeigen	Show minimap
+Karte	Map
+Frei fliegen (WASD)	Fly freely (WASD)
+Frei	Free
+Kamera folgt dem Spieler, Mausrad = Abstand	Camera follows the player, wheel = distance
+Verfolgen	Follow
+Aus den Augen des Spielers	Through the player's eyes
+Von oben, Mausrad = Höhe	From above, wheel = height
+Von oben	Top
+Auswahl aufheben	Clear selection
+Schicht	Layer
+Schichten: Welt bei einer Höhe aufschneiden (Tasten , und .)	Layers: cut the world at a height (keys , and .)
+Schnitt	Cut
+Schichten aus	Layers off
+Alles bis Y	Everything up to Y
+Nur Ebene Y	Only level Y
+Schnitthöhe	Cut height
+Schnitthöhe runter/rauf	Cut height down/up
+Oberfläche	Surface
+Unter der Decke	Below the roof
+Auf der Decke	On the roof
+Öffnen	Open
+Seitenleiste auf/zu	Toggle sidebar
+Bereiche öffnen (Wegpunkte … Radar)	Open panels (Waypoints … Radar)
+Wegpunkte (1)	Waypoints (1)
+Wegpunkte	Waypoints
+Schilder (2)	Signs (2)
+Schilder	Signs
+Stashes (3)	Stashes (3)
+Schematics (4)	Schematics (4)
+Kisten (5)	Chests (5)
+Kisten	Chests
+Zeitleiste (6)	Timeline (6)
+Zeitleiste	Timeline
+Radar (7)	Radar (7)
+Karte folgt dir (F)	Map follows you (F)
+Karte folgt	Map follows
+dir folgen	follow you
+Spur des Spielers zeigen (T)	Show player trail (T)
+Spur zeigen	Show trail
+Spur	Trail
+3D-Ansicht (Tab)	3D view (Tab)
+3D an/aus	3D on/off
+Bereich wählen und als Schematic speichern (E)	Select an area and save it as a schematic (E)
+Bereich auswählen	Select area
+Zu Koordinaten springen	Jump to coordinates
+zu Koordinaten springen	jump to coordinates
+Koordinaten, z. B. 1200 -340	Coordinates, e.g. 1200 -340
+Bitte X und Z eingeben, z. B. „1200 -340“	Please enter X and Z, e.g. "1200 -340"
+Tastenkürzel (?)	Keyboard shortcuts (?)
+Tastenkürzel	Keyboard shortcuts
+Hilfe	Help
+Schließen	Close
+schließen	close
+Schließen (Esc)	Close (Esc)
+Schließen (S)	Close (S)
+Spieler	Player
+Spieler offline	Player offline
+Spiel nicht verbunden	Game not connected
+Spiel nicht verbunden (Minecraft mit Mod 0.3.2 starten)	Game not connected (start Minecraft with the mod)
+Kein Spieler online – startet Minecraft mit der Mod?	No player online. Is Minecraft running with the mod?
+Server nicht erreichbar	Server not reachable
+Noch keine Aufnahmen gefunden. Mit der Mod spielen, dann neu laden.	No recordings found yet. Play with the mod, then reload.
+Alte Aufnahme (gemischt)	Old recording (mixed)
+Dimension	Dimension
+Dimension unbekannt	Unknown dimension
+andere Dimension	other dimension
+Du bist gerade in einer anderen Dimension	You are in a different dimension right now
+erscheint in ihrer Dimension	appears in its dimension
+gerade eben	just now
+vor {} min	{} min ago
+vor {} h	{} h ago
+vor {} Tagen	{} days ago
+seit {}	since {}
+zuletzt {}	last {}
+Chunk {} {} · Block {} {}	Chunk {} {} · Block {} {}
+Zoom ausserhalb	Zoom out of range
+# --- context menu / waypoints
+Wegpunkt	Waypoint
+Wegpunkt setzen	Set waypoint
+Wegpunkt gespeichert	Waypoint saved
+Wegpunkt bei {} {} {}	Waypoint at {} {} {}
+Wegpunkt „{}“ löschen?	Delete waypoint "{}"?
+Wegpunkt, Hinlaufen, Kiste …	Waypoint, walk there, chest …
+Rechtsklick auf die Karte setzt einen Wegpunkt.	Right-click the map to set a waypoint.
+Noch keine Wegpunkte in dieser Dimension.	No waypoints in this dimension yet.
+Hinlaufen	Walk there
+Hierhin laufen (Baritone)	Walk here (Baritone)
+Hinfliegen	Fly there
+Hierher	Here
+Auf der Karte zeigen	Show on map
+Auf Karte und in 3D zeigen	Show on map and in 3D
+in 3D markieren	highlight in 3D
+3D verfolgen	Follow in 3D
+3D Ego	3D first person
+Ego	First person
+{} löschen	Delete {}
+Text suchen …	Search text …
+Keine Schilder gefunden.	No signs found.
+Ab	At least
+Behältern pro Chunk	containers per chunk
+Nichts über der Schwelle.	Nothing above the threshold.
+{} Behälter	{} containers
+# --- schematics
+Schematic	Schematic
+Schematics	Schematics
+Schematic suchen …	Search schematics …
+.schem, .litematic oder .nbt hochladen	Upload .schem, .litematic or .nbt
+nur .schem, .litematic oder .nbt	only .schem, .litematic or .nbt
+Hochladen	Upload
+{} hochgeladen	{} uploaded
+Neu	New
+Leere Schematic im Editor selbst bauen	Build an empty schematic yourself in the editor
+Bibliothek	Library
+Platzieren	Place
+Platziert	Placed
+{} platziert ({})	{} placed ({})
+Platzieren fehlgeschlagen	Placing failed
+Platzieren setzt die Schematic an die Kartenmitte bzw. in 3D vor die Kamera.	Place puts the schematic at the map centre, or in front of the camera in 3D.
+Platzierung unbekannt	Unknown placement
+Keine Schematic in dieser Dimension geladen.	No schematic loaded in this dimension.
+Doppelklick öffnet	Double-click opens
+Im Editor öffnen	Open in editor
+Im Editor öffnen: Blöcke setzen, abbauen, Bereiche füllen	Open in editor: place and break blocks, fill areas
+Bearbeiten	Edit
+Entladen	Unload
+„{}“ entladen? Die Datei bleibt erhalten.	Unload "{}"? The file is kept.
+Entladen fehlgeschlagen	Unloading failed
+Schematic exportieren	Export schematic
+.schem herunterladen	Download .schem
+Export fehlgeschlagen	Export failed
+Sichtbar	Visible
+Ausgeblendet	Hidden
+Ausblenden	Hide
+Deckkraft	Opacity
+Ins Spiel	In game
+im Spiel	in game
+in Litematica ✓	in Litematica ✓
+nur im Viewer	viewer only
+Als Litematica-Platzierung ins Spiel schicken (Geisterblöcke, Printer, Baritone #litematica)	Send to the game as a Litematica placement (ghost blocks, Printer, Baritone #litematica)
+Tipp: „Ins Spiel“ einschalten, sonst sieht Litematica die Schematic nicht	Tip: turn on "In game", otherwise Litematica can't see the schematic
+Erst „Ins Spiel“ einschalten	Turn on "In game" first
+Erst „Ins Spiel“ einschalten, damit Baritone die Schematic aus Litematica bauen kann	Turn on "In game" first so Baritone can build the schematic from Litematica
+wartet aufs Spiel (Mod 0.3 + Litematica)	waiting for the game (mod + Litematica)
+kein Litematica	no Litematica
+Litematica nicht gefunden	Litematica not found
+Litematica: alle Schichten	Litematica: all layers
+Litematica: Schicht Y {}	Litematica: layer Y {}
+Litematica: Y {} bis {}	Litematica: Y {} to {}
+Litematica: {}	Litematica: {}
+Spieler nicht online: die Schematic landet bei 0 0 0, verschieben kannst du sie auf der Karte	Player not online: the schematic lands at 0 0 0, you can move it on the map
+An deine Position bzw. vor die Kamera	To your position or in front of the camera
+Auf der Karte ziehen oder mit	Drag on the map or use
+verschieben, 	move,
+verschieben	move
+Höhe, mit	height, with
+10 Blöcke	10 blocks
+dreht, 	rotates,
+dreht	rotates
+spiegelt	mirrors
+90° im Uhrzeigersinn (R)	90° clockwise (R)
+Drehen ⟳	Rotate ⟳
+Drehen	Rotate
+Spiegeln (M)	Mirror (M)
+Spiegeln	Mirror
+Richtung	Direction
+Norden	North
+Süden	South
+Osten	East
+Westen	West
+{} m von dir	{} m from you
+{} m von „{}“	{} m from "{}"
+Schematic gibt es nicht mehr	Schematic no longer exists
+Schematic nicht lesbar: {}	Schematic not readable: {}
+Schematic-Datei nicht gefunden	Schematic file not found
+Schematic-Ordner unbekannt	Unknown schematic folder
+Schematic zu gross fuer die 3D-Ansicht (max. 2047 Bloecke Kantenlaenge)	Schematic too big for the 3D view (max. 2047 blocks per side)
+nur eigene Schematics lassen sich umbenennen	only your own schematics can be renamed
+fremde Herkunft	foreign origin
+Name	Name
+Name fehlt	Name missing
+Name der neuen Schematic	Name of the new schematic
+{} · {} KB	{} · {} KB
+# --- schematic tabs: build / check / material
+Bauen	Build
+Abgleich	Check
+Material	Material
+Vergleicht die Schematic mit dem, was die Mod an dieser Stelle aufgezeichnet hat. Farben in 3D	Compares the schematic with what the mod recorded at this spot. Colours in 3D
+Jetzt abgleichen	Check now
+Gleiche ab …	Checking …
+Alle 3 Sekunden neu abgleichen, während du baust	Re-check every 3 seconds while you build
+Live	Live
+fertig	done
+{} % fertig	{} % done
+{} % fertig · {}	{} % done · {}
+fehlt	missing
+falscher Block	wrong block
+falsch gedreht	wrong rotation
+muss weg	must go
+nicht aufgezeichnet	not recorded
+nicht aufgenommen	not recorded
+, {} % nicht aufgezeichnet (Luft)	, {} % not recorded (air)
+Teile sind nicht aufgezeichnet: einmal mit der Mod hinfliegen, dann neu abgleichen.	Parts are not recorded: fly there once with the mod, then check again.
+({} Blöcke sind falsch oder verdreht, bitte selbst prüfen)	({} blocks are wrong or rotated, please check yourself)
+Als Nächstes bauen	Build next
+({} offen, unten zuerst{})	({} open, bottom first{})
+dann nächste zu dir	then nearest to you
+Y {}: noch {}{} Bloecke	Y {}: {}{} blocks left
+nur noch falsche Bloecke	only wrong blocks left
+Fehlende Items	Missing items
+Alle Items	All items
+Alle Items als Tabelle	All items as a table
+Als CSV speichern	Save as CSV
+Filtern …	Filter …
+Item suchen, z. B. obsidian …	Search item, e.g. obsidian …
+Wird gezählt …	Counting …
+{} Sorten · {} Items · etwa {} Shulker	{} types · {} items · about {} shulkers
+{} Items, {} Sorten, etwa {} Shulker voll	{} items, {} types, about {} shulkers full
+(abzüglich deinem Inventar)	(minus your inventory)
+(Inventar unbekannt: Mod 0.3.2)	(inventory unknown)
+{} in Kisten	{} in chests
+in Kisten	in chests
+noch nicht gebaut	not built yet
+ganze Schematic (Abgleich läuft …)	whole schematic (check running …)
+Gezählt: {}, abgezogen: {}	Counted: {}, subtracted: {}
+Gezählt: {}, abgezogen: {}. Diese Items hast du nirgends, sie müssen gefarmt oder gekauft werden.	Counted: {}, subtracted: {}. You don't have these items anywhere, they need to be farmed or bought.
+Gezählt: {}, abgezogen: {}. Diese Items hast du nirgends, sie müssen gefarmt oder gekauft werden. {} weitere Sorten liegen komplett in Kisten.	Counted: {}, subtracted: {}. You don't have these items anywhere, they need to be farmed or bought. {} more types are fully in chests.
+Nichts fehlt: alles ist im Inventar oder in deinen Kisten	Nothing missing: everything is in your inventory or your chests
+Nichts fehlt: alles ist im Inventar oder in deinen Kisten, {} Sorte muss noch aus Kisten geholt werden (Tab „Bauen“ → Autobau)	Nothing missing: everything is in your inventory or your chests, {} type still has to be fetched from chests ("Build" tab → Auto build)
+Nichts fehlt: alles ist im Inventar oder in deinen Kisten, {} Sorten müssen noch aus Kisten geholt werden (Tab „Bauen“ → Autobau)	Nothing missing: everything is in your inventory or your chests, {} types still have to be fetched from chests ("Build" tab → Auto build)
+nichts (Inventar und Kisten unbekannt)	nothing (inventory and chests unknown)
+Kopieren	Copy
+Liste kopiert	List copied
+Kopieren nicht möglich	Copying not possible
+Packliste	Packing list
+Holtour	Fetch tour
+({} Kisten, nächste zuerst)	({} chests, nearest first)
+In keiner gemerkten Kiste: {}	In no known chest: {}
+Du hast alles dabei. Los geht's!	You have everything with you. Let's go!
+Holen	Fetch
+Holen ({} Stack)	Fetch ({} stack)
+Holen ({} Stacks)	Fetch ({} stacks)
+Holen: nichts	Fetch: nothing
+· {}× geholt	· fetched {}×
+# --- build tab
+Bauebene	Build plane
+Schichten in Litematica	Layers in Litematica
+Alle	All
+Nur diese	Only this
+Eine Schicht höher	One layer up
+Eine Schicht tiefer	One layer down
+Y-Höhe der Schicht	Y level of the layer
+Schicht für Schicht automatisch	Layer by layer automatically
+Stellt Litematica immer auf die unterste Schicht, in der noch Blöcke fehlen, und schaltet weiter, sobald sie steht	Always sets Litematica to the lowest layer that still has missing blocks and moves on once it is done
+rechnet …	calculating …
+Automatik läuft für eine andere Schematic	Automatic mode is running for another schematic
+Printer	Printer
+Printer AN, klicken zum Ausschalten	Printer ON, click to turn off
+Printer aus, klicken zum Einschalten	Printer off, click to turn on
+Printer: nicht verbunden	Printer: not connected
+Printer: ?	Printer: ?
+Printer {}	Printer {}
+kein Printer gefunden	no Printer found
+Printer nicht gefunden	Printer not found
+AN	ON
+aus	off
+aus: {}	off: {}
+Pause zwischen Blöcken	Pause between blocks
+Ticks zwischen zwei Blöcken: kleiner = schneller, größer = sicherer gegen Kicks	Ticks between two blocks: lower = faster, higher = safer against kicks
+Ticks	Ticks
+Reichweite	Reach
+Baritone	Baritone
+Baritone von Hand	Baritone by hand
+▶ Bauen	▶ Build
+Baritone baut die Schematic aus Litematica (#litematica)	Baritone builds the schematic from Litematica (#litematica)
+❚❚ Pause	❚❚ Pause
+Baritone anhalten (#pause)	Pause Baritone (#pause)
+▶ Weiter	▶ Resume
+Weitermachen (#resume)	Continue (#resume)
+■ Stopp	■ Stop
+Stopp	Stop
+Alles abbrechen (#stop)	Cancel everything (#stop)
+Freiräumen	Clear
+Alles im Schematic-Rahmen abbauen	Break everything inside the schematic frame
+Baritone baut ALLES im Rahmen {} {} {} bis {} {} {} ab ({} Blöcke).	Baritone will break EVERYTHING in the frame {} {} {} to {} {} {} ({} blocks).
+Achtung: {} Blöcke der Schematic stehen schon und würden mit abgebaut.	Warning: {} blocks of the schematic are already built and would be broken too.
+Wirklich starten?	Really start?
+Autobau	Auto build
+▶ Automatisch holen und bauen	▶ Fetch and build automatically
+Holt fehlendes Material aus deinen Kisten (auch aus Shulkern), baut, holt Nachschub, bis alles steht.	Fetches missing material from your chests (including shulkers), builds, fetches more until everything is done.
+■ Autobau stoppen	■ Stop auto build
+Autobau gestartet	Auto build started
+Autobau starten?	Start auto build?
+Baritone läuft zu deinen Kisten, nimmt das fehlende Material und baut die Schematic. Unterwegs baut es nichts ab, beim Bauen selbst schon (falsche Blöcke im Rahmen).	Baritone walks to your chests, takes the missing material and builds the schematic. It breaks nothing on the way, but it does while building (wrong blocks inside the frame).
+Shulker im Inventar packt er neben sich aus und baut sie wieder ab.	Shulkers in your inventory are placed next to it, emptied and picked up again.
+Abbrechen jederzeit mit „■ Stopp“.	Cancel any time with "■ Stop".
+Schutz und Reste	Safety and leftovers
+Pause, wenn ein Spieler näher als	Pause when a player comes closer than
+m kommt	m
+Baritone hält an (#pause), solange ein anderer Spieler in der Nähe ist, und macht 15 s nachdem er weg ist weiter	Baritone pauses (#pause) while another player is nearby and continues 15 s after they leave
+Freunde, die nicht zählen	Friends who don't count
+Namen, mit Komma getrennt	Names, separated by commas
+Automatisch essen	Eat automatically
+Bei Hunger kurz anhalten und das beste Essen aus dem Inventar essen (keine Goldäpfel, nichts Giftiges)	When hungry, stop briefly and eat the best food in the inventory (no golden apples, nothing harmful)
+Aus lassen, wenn schon ein anderer Mod automatisch isst.	Leave off if another mod already eats automatically.
+Werkzeug nicht kaputtmachen	Don't break tools
+Baritones Werkzeugschutz (itemSaver): ein Werkzeug mit weniger als 10 Haltbarkeit wird nicht mehr benutzt	Baritone's tool saver (itemSaver): a tool with less than 10 durability is no longer used
+Reste nach dem Bauen zurück in die Kisten	Return leftovers to the chests after building
+Wenn alles steht: übrig gebliebene Baumaterialien in Kisten bringen, in denen dieses Item schon liegt	When everything is built: bring leftover building materials to chests that already hold that item
+Gilt nur, solange der Autobau läuft. Wird gespeichert.	Only applies while auto build is running. Saved.
+· alles aus	· everything off
+Spieler-Pause	Player pause
+Essen	Eating
+Werkzeug	Tools
+Reste	Leftovers
+# autobuild phases and messages
+packt Shulker aus	unpacking shulkers
+packt Shulker aus ({})	unpacking shulkers ({})
+plant	planning
+holt Material	fetching material
+läuft zur Baustelle	walking to the build site
+läuft zur Baustelle ({} m)	walking to the build site ({} m)
+baut	building
+bringt Reste zurück	returning leftovers
+angehalten	stopped
+startet …	starting …
+fertig!	done!
+pausiert	paused
+baut ({} Blöcke fehlen noch)	building ({} blocks still missing)
+baut … noch {} Blöcke, {} passende Items dabei	building … {} blocks left, {} matching items carried
+Material alle, holt Nachschub	Out of material, fetching more
+Material fehlt (in keiner gemerkten Kiste): {}	Material missing (in no known chest): {}
+geht nicht voran, plant neu (fehlt evtl. ein anderes Material)	no progress, replanning (maybe another material is missing)
+Baritone kommt nicht weiter (3× ohne Fortschritt)	Baritone is stuck (3× without progress)
+kommt ohne Abbauen nicht zur Baustelle (Weg freimachen oder näher hinstellen)	can't reach the build site without breaking blocks (clear the way or stand closer)
+Holen dauert zu lange, nächste Kiste	Fetching takes too long, next chest
+Holen hat nichts gebracht, nimmt eine andere Kiste	Fetching got nothing, trying another chest
+Holen bringt nichts (Kisten anders als gemerkt? einmal öffnen)	Fetching gets nothing (chests different than remembered? open them once)
+Holen klappt nicht: {}	Fetching fails: {}
+{}, versucht eine andere Kiste	{}, trying another chest
+Auspacken hängt, holt stattdessen aus Kisten	Unpacking is stuck, fetching from chests instead
+Inventar voll mit anderen Sachen: bitte Platz machen und neu starten	Inventory full of other things: please make room and restart
+du bist in einer anderen Dimension als die Schematic	you are in a different dimension than the schematic
+Spieler ist nicht online, Baritone kann nicht starten	Player is not online, Baritone can't start
+Spieler ist in dieser Dimension nicht online	Player is not online in this dimension
+Bauen ging nicht: {}	Building failed: {}
+Reste in {} Kisten zurückgebracht	Leftovers returned to {} chests
+Reste ohne passende Kiste: {}	Leftovers without a matching chest: {}
+{} Bringt {} Reste-Stacks in {} Kisten zurück	{} Bringing {} leftover stacks back to {} chests
+Spieler {} in {} m: pausiert	Player {} at {} m: paused
+pausiert: {} {} m entfernt	paused: {} {} m away
+pausiert: niemand mehr da, weiter in {} s	paused: nobody around, continuing in {} s
+weiter nach {} s Pause	continuing after {} s pause
+wartet auf das Spiel …	waiting for the game …
+wartet auf dein Inventar …	waiting for your inventory …
+gestoppt (Stopp-Knopf)	stopped (Stop button)
+Alles gestoppt	Everything stopped
+# --- chests
+Einlagern	Store
+Inventar einlagern	Store inventory
+Baritone bringt jeden Stack aus deinem Inventar in eine Kiste, in der dieses Item schon liegt	Baritone brings every stack from your inventory to a chest that already holds that item
+Auch die Hotbar (Plätze 1–9) einlagern	Also store the hotbar (slots 1–9)
+mit Hotbar	with hotbar
+■ Einlagern stoppen	■ Stop storing
+Inventar einlagern?	Store inventory?
+Baritone läuft zu deinen Kisten und legt jeden Stack dorthin, wo dieses Item schon liegt. Was in keine Kiste passt, bleibt bei dir.	Baritone walks to your chests and puts every stack where that item already is. Whatever fits in no chest stays with you.
+Die Hotbar bleibt, wie sie ist.	The hotbar stays as it is.
+lagert ein	storing
+Einlagern: {} Stacks in {} Kisten	Storing: {} stacks in {} chests
+eingelagert in {} Kisten	stored in {} chests
+nichts einzulagern	nothing to store
+Einlagern dauert zu lange	Storing takes too long
+bringt {} Stacks zu {}	bringing {} stacks to {}
+, ohne passende Kiste: {}	, without a matching chest: {}
+(ohne passende Kiste: {})	(without a matching chest: {})
+Inhalt kennt der Viewer, sobald du eine Kiste einmal öffnest. Grau = noch nie geöffnet, lila Ring = jemand anderes war dran.	The viewer knows a chest's contents once you open it. Grey = never opened, purple ring = someone else used it.
+Noch keine Kiste gemerkt. Öffne im Spiel eine Kiste (Mod 0.3.2).	No chest remembered yet. Open a chest in the game.
+{} gemerkte Kisten	{} known chests
+{} Items, {} Sorten in {} Kisten	{} items, {} types in {} chests
+Kisten mit Inhalt gemerkt	chests remembered with contents
+{} von {} Kisten	{} of {} chests
+· alle Kisten in der Nähe sind bekannt	· all chests nearby are known
+in der Nähe noch nie geöffnet	never opened nearby
+noch nie geöffnet	never opened
+von anderen benutzt	used by others
+von jemand anderem geöffnet: {}× · {}	opened by someone else: {}× · {}
+gerade offen	open right now
+Im Spiel zeigen	Show in game
+Kisten werden im Spiel markiert …	Highlighting chests in the game …
+Enderkiste	Ender chest
+Enderkiste · {}	Ender chest · {}
+Klick wählt Stacks zum Holen aus · Doppelklick öffnet Shulker	Click selects stacks to fetch · double-click opens shulkers
+Alle Stacks auswählen	Select all stacks
+Baritone läuft hin, öffnet die Kiste und nimmt die ausgewählten Stacks	Baritone walks there, opens the chest and takes the selected stacks
+Baritone läuft hin und nimmt genau diese Items	Baritone walks there and takes exactly these items
+· in Shulker „{}“	· in shulker "{}"
+· {} Shulker	· {} shulkers
+({} Shulker)	({} shulkers)
+und {} weitere … (Doppelklick öffnet)	and {} more … (double-click opens)
+{} Items · {}	{} items · {}
+Zurück	Back
+Inventar	Inventory
+Items genommen	Items taken
+Die Kiste ist in einer anderen Dimension	The chest is in another dimension
+Keine dieser Kisten ist in deiner Dimension	None of these chests is in your dimension
+Kiste unvollstaendig: {}	Chest incomplete: {}
+holt Items aus einer Kiste	fetching items from a chest
+holt {} aus {} {} {}	fetching {} from {} {} {}
+läuft nach {} {}	walking to {} {}
+baut mit Baritone	building with Baritone
+räumt den Bauplatz frei	clearing the build site
+Baritone läuft nach {} {} …	Baritone walking to {} {} …
+Baritone wird gestoppt …	Stopping Baritone …
+Baritone fängt an zu bauen …	Baritone starts building …
+Baritone holt die Items …	Baritone fetching the items …
+Baritone räumt den Bauplatz frei …	Baritone clearing the build site …
+Baritone pausiert …	Baritone paused …
+Baritone macht weiter …	Baritone continuing …
+Baritone …	Baritone …
+Baritone: {}	Baritone: {}
+wird übertragen …	sending …
+Keine Antwort aus dem Spiel (ist die Mod aktiv?)	No answer from the game (is the mod active?)
+unbekannter Befehl	unknown command
+# --- history
+Stand an Tag X	State on day X
+Vergleicht die Welt mit einem früheren Tag. Die Mod sichert ab Version 0.3.1 jeden Tag den alten Stand geänderter Chunks.	Compares the world with an earlier day. Every day the mod keeps the old state of changed chunks.
+Vergleichen	Compare
+Vergleiche …	Comparing …
+noch kein früherer Stand	no earlier state yet
+Seit diesem Tag hat sich in den gesicherten Chunks nichts verändert.	Nothing changed in the saved chunks since that day.
+Am meisten verändert	Changed the most
++{} gebaut · −{} abgebaut · ~{} ersetzt	+{} built · −{} broken · ~{} replaced
+neu gebaut	newly built
+{} {} geändert	{} {} changed
+# --- radar
+Radar	Radar
+Webmatica Radar	Webmatica Radar
+Spieler, die dein Client gerade sieht (Mod 0.3.2). Rot auf Karte und in 3D.	Players your client can see right now. Red on the map and in 3D.
+Jetzt in Sichtweite	In sight now
+noch niemand gesehen	nobody seen yet
+Logbuch	Log
+Alarm, wenn jemand näher als	Alarm when someone is closer than
+an dir oder einer Baustelle ist	to you or a build site
+mit Ton	with sound
+{} · {} min · am nächsten {} m bei {} {}{}	{} · {} min · closest {} m at {} {}{}
+{} ist {}	{} is {}
+⚠ {} ist {}	⚠ {} is {}
+# --- selection panel
+Auf der Karte ein Rechteck aufziehen.	Drag a rectangle on the map.
+Y von	Y from
+bis	to
+Bereich als Schematic speichern und im Editor öffnen	Save the area as a schematic and open it in the editor
+{} × {} × {} = {} Blöcke{}	{} × {} × {} = {} blocks{}
+Ausschnitt zu groß für den Editor ({}×{}×{}),	Area too big for the editor ({}×{}×{}),
+höchstens {} pro Kante: Y-Bereich kleiner wählen	at most {} per side: choose a smaller Y range
+Wird erstellt …	Creating …
+Abbrechen	Cancel
+# --- shortcuts help
+fliegen, 	fly,
+fliegen	fly
+hoch/runter, 	up/down,
+hoch/runter	up/down
+schneller	faster
+verschieben (	move (
+Leer	Space
+Strg	Ctrl
+Bild↑	PgUp
+Bild↓	PgDn
+# --- editor
+Zurück zur Karte	Back to the map
+← Karte	← Map
+Name ändern: anklicken, tippen, Enter	Rename: click, type, Enter
+● ungespeichert	● unsaved
+💾 Speichern	💾 Save
+Speichern	Save
+Änderungen in die Datei schreiben (Strg+S)	Write changes to the file (Ctrl+S)
+Verwerfen	Discard
+Alle Änderungen seit dem letzten Speichern verwerfen	Discard all changes since the last save
+↶ Rückgängig	↶ Undo
+Letzte Aktion rückgängig machen (Strg+Z)	Undo the last action (Ctrl+Z)
+Wiederholen (Strg+Y)	Redo (Ctrl+Y)
+Neue leere Schematic	New empty schematic
+Datei herunterladen	Download file
+In die Welt setzen	Place in the world
+In die Welt gesetzt bei {}. Auf der Karte unter „Schematics“.	Placed in the world at {}. On the map under "Schematics".
+Block setzen (B)	Place block (B)
+Setzen	Place
+Block entfernen (E), auch Rechtsklick	Remove block (E), also right-click
+Abbauen	Break
+Block übernehmen (I), auch Mittelklick oder Alt+Klick	Pick block (I), also middle-click or Alt+click
+Pipette	Pick
+Pipette: {}	Picked: {}
+Bereich wählen (R): zwei Ecken anklicken	Select area (R): click two corners
+Bereich	Area
+Erste Ecke anklicken …	Click the first corner …
+Erste Ecke anklicken … (Shift: in die Luft daneben)	Click the first corner … (Shift: into the air next to it)
+zweite Ecke anklicken	click the second corner
+Ganzen Bereich mit dem gewählten Block füllen	Fill the whole area with the selected block
+Füllen	Fill
+Hohl	Hollow
+Hülle, innen leer	Shell, empty inside
+Wände	Walls
+Nur die vier Wände	Only the four walls
+Leeren	Clear
+Alles im Bereich entfernen	Remove everything in the area
+Bereich kopieren und woanders einfügen (Strg+C)	Copy the area and paste it elsewhere (Ctrl+C)
+Bereich verschieben (Strg+X)	Move the area (Ctrl+X)
+Verschieben	Move
+Einfügen	Paste
+gespiegelt	mirrored
+Klick setzt ab	Click places it
+beliebig oft	as often as you like
+Fertig (Esc)	Done (Esc)
+Luft mitkopieren (überschreibt, was am Ziel steht)	Copy air too (overwrites what is at the target)
+mit Luft	with air
+Drehen (Q)	Rotate (Q)
+Erst einen Bereich mit zwei Ecken wählen	First select an area with two corners
+Ersetzen	Replace
+Ersetzen:	Replace:
+→ gewählter Block	→ selected block
+alles außer Luft	everything except air
+Luft	Air
+Ziel ist der gewählte Block (Palette rechts oder Schnellleiste). Tipp: ⇄ in der Liste unten wählt „Alle …“, ✕ löscht die Sorte sofort.	Target is the selected block (palette on the right or hotbar). Tip: ⇄ in the list below picks "All …", ✕ deletes that type at once.
+Alle ersetzen / löschen	Replace / delete all
+Alle löschen	Delete all
+Alle Blöcke dieser Sorte entfernen (Strg+Z macht es rückgängig)	Remove all blocks of this type (Ctrl+Z undoes it)
+{} {} ersetzen	Replace {} {}
+{} × {} gelöscht (Strg+Z = rückgängig)	{} × {} deleted (Ctrl+Z = undo)
+Wasser/Lava ersetzen	Replace water/lava
+Stämme entrinden	Strip logs
+erst einen Block wählen	select a block first
+In der Schematic	In the schematic
+Blockliste	Block list
+Blöcke einstellen (Repeater, Türen …)	Block settings (repeaters, doors …)
+Block suchen, z. B. stairs …	Search block, e.g. stairs …
+Richtung behalten	Keep direction
+Treppen, Stämme, Türen usw. behalten ihre Richtung	Stairs, logs, doors etc. keep their direction
+Hälfte	Half
+Bauebene auf dieser Höhe	Build plane at this height
+Klicks ins Leere setzen Blöcke auf diese Ebene (zum Bauen Schicht für Schicht)	Clicks into empty space place blocks on this plane (for building layer by layer)
+in der Luft setzen	place in the air
+nur bis Höhe	only up to height
+Linksklick: Werkzeug · Rechtsklick: abbauen · Mittelklick: Pipette	Left-click: tool · Right-click: break · Middle-click: pick block
+Ziehen mit rechter Maustaste: drehen · Shift+Ziehen: verschieben · Rad: Zoom	Drag with right mouse button: rotate · Shift+drag: pan · Wheel: zoom
+WASD: fliegen · Leertaste/C: hoch/runter · F: alles zeigen	WASD: fly · Space/C: up/down · F: show everything
+1–9: Schnellleiste · Strg+Z / Strg+Y	1–9: hotbar · Ctrl+Z / Ctrl+Y
+Bereich: Strg+C kopieren, Strg+X verschieben, Q drehen, M spiegeln	Area: Ctrl+C copy, Ctrl+X move, Q rotate, M mirror
+Ungespeicherte Änderungen	Unsaved changes
+Möchtest du die Änderungen an dieser Schematic speichern, bevor du den Editor schließt?	Do you want to save the changes to this schematic before closing the editor?
+Es gibt Änderungen, die noch nicht gespeichert sind	There are changes that are not saved yet
+Alle ungespeicherten Änderungen verwerfen?	Discard all unsaved changes?
+Es gibt ungespeicherte Änderungen. Trotzdem neue Schematic anlegen? (Vorher 💾 Speichern, sonst gehen sie verloren)	There are unsaved changes. Create a new schematic anyway? (💾 Save first, otherwise they are lost)
+Name der neuen Schematic:	Name of the new schematic:
+Größe Breite × Höhe × Länge (wächst beim Bauen von selbst):	Size width × height × length (grows by itself while building):
+Änderungen verworfen	Changes discarded
+Ändert …	Changing …
+gespeichert um {}	saved at {}
+Speichern fehlgeschlagen	Saving failed
+{} Block geändert	{} block changed
+{} Blöcke geändert	{} blocks changed
+{} Block	{} block
+{} Blöcke	{} blocks
+({} Blöcke)	({} blocks)
+Umbenannt in „{}“	Renamed to "{}"
+Umbenennen	Rename
+{}.schem: {} Blöcke	{}.schem: {} blocks
+Keine Datei gewählt.	No file selected.
+Zur Karte	To the map
+Fluggeschwindigkeit {} Blöcke/s	Flight speed {} blocks/s
+Schematic würde zu groß ({}×{}×{}), höchstens {} pro Kante	Schematic would get too big ({}×{}×{}), at most {} per side
+3D braucht die Blockmodelle (build_assets)	3D needs the block models (build_assets)
+3D braucht die Blockmodelle: python -m viewer.tools.build_assets --jar	3D needs the block models: python -m viewer.tools.build_assets --jar
+3D konnte nicht starten	3D could not start
+Laden fehlgeschlagen	Loading failed
+# --- errors from the server
+Fehler	Error
+Fehler: {}	Error: {}
+interner Fehler: {}	internal error: {}
+nicht gefunden	not found
+zu gross	too big
+x/y/z fehlen	x/y/z missing
+Liste erwartet	list expected
+kein gueltiges JSON: {}	invalid JSON: {}
+Parameter fehlen oder sind ungueltig: {}	Parameters missing or invalid: {}
+Datei fehlt oder ist groesser als 64 MB	File missing or larger than 64 MB
+fuer diese Dimension gibt es keine Aufnahme	there is no recording for this dimension
+keine Aufnahme fuer diese Dimension	no recording for this dimension
+unbekannt: {}	unknown: {}
+unbekannte Bearbeitung {}	unknown edit {}
+falsches Mesh-Format	wrong mesh format
+Blockmodelle fehlen: python -m viewer.tools.build_assets --jar	Block models missing: python -m viewer.tools.build_assets --jar
+Item-Bilder fehlen: python -m viewer.tools.build_items --jar	Item images missing: python -m viewer.tools.build_items --jar
+blocks.png fehlt: python -m viewer.tools.build_assets --jar	blocks.png missing: python -m viewer.tools.build_assets --jar
+kein Skin	no skin
+Kein Skin von der Mod: einmalig per Spielername holen (mc-heads.net).	No skin from the mod: fetch it once by player name (mc-heads.net).
+# --- messages from the mod (shown in the viewer)
+Baritone nicht gefunden	Baritone not found
+Baritone findet keinen Weg zur Kiste, ohne etwas abzubauen	Baritone finds no path to the chest without breaking blocks
+Baritone hat „{}“ abgelehnt	Baritone rejected "{}"
+Baritone hat "{}" abgelehnt	Baritone rejected "{}"
+Schematic ist nicht in Litematica (erst "Ins Spiel")	Schematic is not in Litematica (turn on "In game" first)
+Inventar voll	Inventory full
+Kiste geht nicht auf	Chest doesn't open
+Kiste nicht erreicht (3 min)	Chest not reached (3 min)
+Kiste voll	Chest full
+Kiste wurde geschlossen	Chest was closed
+Kiste wurde geschlossen, nichts genommen	Chest was closed, nothing taken
+abgebrochen, neuer Auftrag	cancelled, new job
+nicht mehr im Spiel	no longer in the game
+Zeit abgelaufen	Time is up
+läuft zur Kiste bei {} {} {}	walking to the chest at {} {} {}
+{} Items genommen	{} items taken
+{} Items eingelagert	{} items stored
+nichts genommen	nothing taken
+nichts eingelagert	nothing stored
+{}, {} fehlen noch	{}, {} still missing
+Datei fehlt: {}	File missing: {}
+Litematica kann die Datei nicht lesen	Litematica can't read the file
+Litematica-Version passt nicht (createFor fehlt)	Litematica version doesn't match (createFor missing)
+Shulker liegt noch am Boden bei {}	Shulker is still on the ground at {}
+Shulker lässt sich nicht abbauen, steht noch bei {}	Shulker can't be broken, still standing at {}
+Shulker lässt sich nicht abstellen	Shulker can't be placed
+kein Platz zum Abstellen (frei, mit Platz darüber)	no room to place it (free, with space above)
+kein passender Shulker im Inventar	no matching shulker in the inventory
+Hunger, aber kein Essen im Inventar	Hungry, but no food in the inventory
+gegessen ({}/20)	ate ({}/20)
+# --- found by the coverage check
+Kiste	Chest
+{} bei {} {} {}	{} at {} {} {}
+{} bei {} {} {} ({})	{} at {} {} {} ({})
+{} dabei	{} carried
+von {} benötigt	{} needed
+Noch zu besorgen	Still to get
+Alle Kisten der Tour im Spiel mit Lichtsäulen markieren	Mark all chests of the tour in the game with light beams
+Alle diese Kisten im Spiel mit Lichtsäulen markieren	Mark all these chests in the game with light beams
+Die nächsten 64 davon im Spiel mit Lichtsäulen markieren	Mark the nearest 64 of them in the game with light beams
+Baritone läuft hin	Baritone walks there
+Folgen	Follow
+Neu bauen	Build new
+Höhe	Height
+Nichts gefunden.	Nothing found.
+Keine Schematics gefunden. Lade eine hoch oder lege sie in den Litematica-Ordner „schematics“.	No schematics found. Upload one or put it in Litematica's "schematics" folder.
+statt {}	instead of {}
+drehen	rotate
+{} Kisten/Schilder	{} chests/signs
+Aufnahme aus	recording off
+Aufnahme nicht gefunden. Einmal Minecraft mit der Mod starten (dann findet der Viewer sie selbst)	Recording not found. Start Minecraft with the mod once (then the viewer finds it by itself)
+Nur Ebene	Only level
+Schicht fuer Schicht	Layer by layer
+{} {} bis {} {}	{} {} to {} {}
+und	and
+nicht aufgenommen	not recorded
+Auswahl	Selection
+hochgeladen	uploaded
+hochgeladen · {}	uploaded · {}
+automatisch	automatic
+oben	top
+unten	bottom
+durch	with
+Block	Block
+richtig	correct
+wartet	waiting
+Blöcke	blocks
+Baritone stoppen	Stop Baritone
+Ein-/Ausblenden	Show/hide
+Liste als Text kopieren	Copy list as text
+Abhaken	Tick off
+Anhalten	Stop
+niemand	nobody
+Rechtsklick	Right-click
+drehen, spiegeln	rotate, mirror
+Leertaste/Shift	Space/Shift
+Bereiche	Panels
+Einfügen	Paste
+# --- in-game messages of the mod
+Holen: {}	Fetch: {}
+Einlagern: {}	Store: {}
+Auspacken: {}	Unpack: {}
+{} Items	{} items
+{} fehlen noch	{} still missing
+{} Kiste markiert	{} chest highlighted
+{} Kisten markiert	{} chests highlighted
+{} markiert	{} highlighted
+Kiste gespeichert ({} Stacks)	Chest saved ({} stacks)
+Aufnahme AN	Recording ON
+Aufnahme AUS	Recording OFF
+{} ({})	{} ({})

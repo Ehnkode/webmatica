@@ -180,7 +180,7 @@ public final class AutoGuard {
 
     private static void say(MinecraftClient mc, String msg, Formatting f) {
         if (mc.player != null) {
-            mc.player.sendMessage(Text.literal("[Webmatica] " + msg).formatted(f), true);
+            mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(msg)).formatted(f), true);
         }
     }
 }

@@ -23,6 +23,10 @@ dependencies {
 
 processResources {
     inputs.property "version", project.version
+    // Uebersetzungstabelle des Viewers auch fuer die Meldungen im Spiel
+    from("viewer/static/i18n") {
+        into "assets/webmatica/i18n"
+    }
     filesMatching("fabric.mod.json") {
         expand "version": project.version
     }

@@ -15,7 +15,7 @@ THREE.ColorManagement.enabled = false;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmt = (n) => Math.round(n).toLocaleString('de-DE');
+const fmt = (n) => Math.round(n).toLocaleString(I18N.locale);
 const pretty = (id) => id.replace('minecraft:', '').replace(/\[.*$/, '').replace(/_/g, ' ');
 const baseOf = (st) => st.replace(/\[.*$/, '');
 const AIR = new Set(['minecraft:air', 'minecraft:cave_air', 'minecraft:void_air', 'minecraft:structure_void']);
@@ -689,7 +689,7 @@ async function saveFile() {
   if (!ed.file || !ed.dirty) return true;
   try {
     applyResult(await post('/api/editor/save', { file: ed.file }));
-    const t = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    const t = new Date().toLocaleTimeString(I18N.locale, { hour: '2-digit', minute: '2-digit' });
     $('#ed-status').textContent = `gespeichert um ${t}`;
     return true;
   } catch (e) { toast('Speichern fehlgeschlagen: ' + e.message); return false; }

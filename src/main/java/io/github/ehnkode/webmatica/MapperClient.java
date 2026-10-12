@@ -63,7 +63,7 @@ public class MapperClient implements ClientModInitializer {
             boolean on = !store.isEnabled();
             store.setEnabled(on);
             if (mc.player != null) {
-                mc.player.sendMessage(Text.literal("[Webmatica] Aufnahme " + (on ? "AN" : "AUS"))
+                mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr("Aufnahme " + (on ? "AN" : "AUS")))
                         .formatted(on ? Formatting.GREEN : Formatting.RED), true);
             }
         }
