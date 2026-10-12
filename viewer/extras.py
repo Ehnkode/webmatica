@@ -203,7 +203,8 @@ class Commands:
 
     def push(self, req: dict) -> dict:
         kind = str(req.get("kind"))
-        if kind not in ("goto", "stop", "pause", "resume", "clear", "litematica", "highlight", "fetch", "unpack", "store"):
+        if kind not in ("goto", "stop", "pause", "resume", "clear", "litematica", "highlight", "fetch", "unpack", "store",
+                        "breakboxes", "chestdump"):
             raise ValueError("unbekannter Befehl")
         cmd = {"id": str(time.time_ns()), "kind": kind, "ts": time.monotonic()}
         if kind == "goto":
@@ -230,6 +231,16 @@ class Commands:
             cmd["put"] = [{"slot": int(i["slot"]), "id": str(i["id"])} for i in req["put"]][:41]
         elif kind == "highlight":
             cmd["pts"] = [[int(v) for v in p[:3]] for p in req["pts"][:64]]
+        elif kind == "breakboxes":
+            cmd["boxes"] = [[int(v) for v in b[:6]] for b in req["boxes"][:1500]]
+            cmd["label"] = str(req.get("label") or "Abbauen")[:40]
+            cmd["pickup"] = bool(req.get("pickup", True))
+            if req.get("timeout"):
+                cmd["timeout"] = max(30, min(1800, int(req["timeout"])))
+            cmd["ids"] = [str(i) for i in (req.get("ids") or [])][:64]
+        elif kind == "chestdump":
+            cmd["slots"] = [int(v) for v in (req.get("slots") or [])][:36]
+            cmd["ids"] = [str(i) for i in (req.get("ids") or [])][:64]
         with self.lock:
             q = self.queue.setdefault(str(req["srv"]), [])
             if kind == "stop":

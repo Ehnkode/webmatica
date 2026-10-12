@@ -32,6 +32,9 @@ Litematica and Baritone. Works on any server or Singleplayer.
 - **Goto:** right-click the map and pick "Walk here". Baritone walks there.
 - **Auto build:** fetches the missing materials from your chests, builds with Baritone layer by
   layer, refills when it runs out and brings leftovers back. It pauses when a player comes close.
+  At the end it fixes wrong blocks, and a queue builds several schematics in a row.
+- **Farming:** pick an area on the map, choose blocks and amounts, and Baritone mines and picks
+  them up. A full inventory goes into a chest you choose or one it places itself.
 - **More:** waypoints, signs, stash finder, timeline of what changed, radar for nearby players.
 
 ## Requirements

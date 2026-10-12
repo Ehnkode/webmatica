@@ -462,3 +462,24 @@ b.warn { color: #ffcf6b; }
 .ed-card svg { width: 22px; height: 22px; }
 .ed-card b { font-size: 12.5px; }
 .ed-card span { font-size: 10.5px; color: var(--muted); }
+
+/* Warteschlange, Farmen, falsche Bloecke */
+.q-list { list-style: none; margin: 4px 0 8px; padding: 0; counter-reset: q; }
+.q-list li { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 6px; counter-increment: q; }
+.q-list li::before { content: counter(q) "."; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 1.4em; }
+.q-list li span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.q-list li:nth-child(odd) { background: var(--card); }
+.q-list button { padding: 1px 7px; }
+.fm-y { flex-wrap: wrap; }
+.fm-y input[type=number] { width: 72px; }
+#fm-area { font-size: 12px; margin: 4px 0 2px; }
+#fm-filter { width: 100%; margin-bottom: 6px; }
+#fm-chest { width: 100%; }
+.fm-blocks tr.on td:first-child { color: var(--accent); font-weight: 600; }
+.fm-amt { white-space: nowrap; text-align: right; }
+.fm-amt input { width: 78px; }
+.fm-amt .ok { color: var(--accent); }
+.fm-guard { margin-top: 8px; }
+.chk-fix { margin: 8px 0; }
+#chk-fix { border-color: var(--danger); }
+#fm-pick { white-space: nowrap; }
