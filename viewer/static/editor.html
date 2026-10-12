@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schematic-Editor · Webmatica</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/editor.css">
+</head>
+<body class="ed">
+<div id="ed-view"></div>
+
+<header class="panel ed-top">
+  <a href="/" id="ed-back" class="ed-link" title="Zurück zur Karte">← Karte</a>
+  <input id="ed-name" class="ed-name" value="Editor" maxlength="60" spellcheck="false" title="Name ändern: anklicken, tippen, Enter">
+  <span id="ed-size" class="muted mono"></span>
+  <span class="ed-sep"></span>
+  <button id="ed-undo" title="Letzte Aktion rückgängig machen (Strg+Z)">↶ Rückgängig</button>
+  <button id="ed-redo" title="Wiederholen (Strg+Y)">↷</button>
+  <span id="ed-dirty" class="ed-dirty" hidden title="Es gibt Änderungen, die noch nicht gespeichert sind">● ungespeichert</span>
+  <button id="ed-save" title="Änderungen in die Datei schreiben (Strg+S)" disabled>💾 Speichern</button>
+  <button id="ed-discard" title="Alle Änderungen seit dem letzten Speichern verwerfen" disabled>Verwerfen</button>
+  <span class="ed-sep"></span>
+  <button id="ed-place" class="primary" hidden>In die Welt setzen</button>
+  <button id="ed-new" title="Neue leere Schematic">Neu</button>
+  <a id="ed-download" class="ed-link" title="Datei herunterladen">.schem</a>
+  <span id="ed-status" class="muted"></span>
+</header>
+
+<aside class="panel ed-tools">
+  <div class="seg ed-toolseg">
+    <button data-tool="place" class="on" title="Block setzen (B)">Setzen</button>
+    <button data-tool="break" title="Block entfernen (E), auch Rechtsklick">Abbauen</button>
+    <button data-tool="pick" title="Block übernehmen (I), auch Mittelklick oder Alt+Klick">Pipette</button>
+    <button data-tool="box" title="Bereich wählen (R): zwei Ecken anklicken">Bereich</button>
+  </div>
+  <div id="ed-current" class="ed-current"></div>
+  <label class="ed-row">Richtung
+    <select id="ed-dir">
+      <option value="auto">automatisch</option>
+      <option value="north">Norden</option><option value="east">Osten</option>
+      <option value="south">Süden</option><option value="west">Westen</option>
+      <option value="up">oben</option><option value="down">unten</option>
+    </select>
+  </label>
+  <label class="ed-row">Hälfte
+    <select id="ed-half"><option value="auto">automatisch</option><option value="bottom">unten</option><option value="top">oben</option></select>
+  </label>
+  <div id="ed-boxpanel" class="ed-box" hidden>
+    <div id="ed-boxinfo" class="muted">Erste Ecke anklicken …</div>
+    <div class="ed-btns">
+      <button data-boxop="fill" title="Ganzen Bereich mit dem gewählten Block füllen">Füllen</button>
+      <button data-boxop="walls" title="Nur die vier Wände">Wände</button>
+      <button data-boxop="hollow" title="Hülle, innen leer">Hohl</button>
+      <button data-boxop="clear" class="danger" title="Alles im Bereich entfernen">Leeren</button>
+    </div>
+    <div class="ed-row">Ersetzen:
+      <select id="ed-from"></select>
+      <button data-boxop="replace">→ gewählter Block</button>
+    </div>
+    <div class="ed-btns">
+      <button id="ed-copy" title="Bereich kopieren und woanders einfügen (Strg+C)">Kopieren</button>
+      <button id="ed-move" title="Bereich verschieben (Strg+X)">Verschieben</button>
+    </div>
+    <button id="ed-boxreset">Auswahl aufheben</button>
+  </div>
+  <div id="ed-pastepanel" class="ed-box ed-paste" hidden>
+    <div id="ed-pasteinfo"></div>
+    <div class="ed-btns">
+      <button id="ed-prot" title="Drehen (Q)">⟳ 90°</button>
+      <button id="ed-pmir" title="Spiegeln (M)">Spiegeln</button>
+      <label class="check" title="Luft mitkopieren (überschreibt, was am Ziel steht)"><input type="checkbox" id="ed-pair"> mit Luft</label>
+    </div>
+    <button id="ed-pdone">Fertig (Esc)</button>
+  </div>
+  <h4>Alle ersetzen / löschen</h4>
+  <div class="ed-box ed-repl">
+    <label class="ed-row">Alle <select id="ed-rfrom"></select></label>
+    <div class="ed-row">durch <span id="ed-rto" class="ed-rto"></span></div>
+    <label class="ed-row check" title="Treppen, Stämme, Türen usw. behalten ihre Richtung"><input type="checkbox" id="ed-rkeep" checked> Richtung behalten</label>
+    <div class="ed-row ed-rbtns"><button id="ed-rgo" class="primary">Ersetzen</button><button id="ed-rdel" class="danger" title="Alle Blöcke dieser Sorte entfernen (Strg+Z macht es rückgängig)">Alle löschen</button></div>
+    <p class="hint">Ziel ist der gewählte Block (Palette rechts oder Schnellleiste). Tipp: ⇄ in der Liste unten wählt „Alle …“, ✕ löscht die Sorte sofort.</p>
+  </div>
+  <h4>Schnitt</h4>
+  <label class="ed-row"><input type="checkbox" id="ed-cut"> nur bis Höhe <input type="range" id="ed-cuty" min="0" max="16" value="16"><span id="ed-cutv" class="mono"></span></label>
+  <label class="ed-row" title="Klicks ins Leere setzen Blöcke auf diese Ebene (zum Bauen Schicht für Schicht)"><input type="checkbox" id="ed-plane"> Bauebene auf dieser Höhe</label>
+  <h4>In der Schematic <span id="ed-countsum" class="muted"></span></h4>
+  <div id="ed-counts" class="ed-counts"></div>
+  <p class="hint">Linksklick: Werkzeug · Rechtsklick: abbauen · Mittelklick: Pipette<br>Ziehen mit rechter Maustaste: drehen · Shift+Ziehen: verschieben · Rad: Zoom<br>WASD: fliegen · Leertaste/C: hoch/runter · F: alles zeigen<br>1–9: Schnellleiste · Strg+Z / Strg+Y<br>Bereich: Strg+C kopieren, Strg+X verschieben, Q drehen, M spiegeln</p>
+</aside>
+
+<aside class="panel ed-palette">
+  <input id="ed-search" placeholder="Block suchen, z. B. stairs …" autocomplete="off">
+  <div id="ed-blocks" class="ed-blocks"></div>
+</aside>
+
+<div class="panel ed-hotbar" id="ed-hotbar"></div>
+<div id="ed-tip" class="ed-tip panel mono" hidden></div>
+<div id="toast" class="panel" hidden></div>
+
+<script type="module" src="/static/editor.js"></script>
+<div id="ed-close" class="ed-modal" hidden>
+  <div class="panel ed-modal-box" role="dialog" aria-modal="true">
+    <h3>Ungespeicherte Änderungen</h3>
+    <p>Möchtest du die Änderungen an dieser Schematic speichern, bevor du den Editor schließt?</p>
+    <div class="ed-modal-btns">
+      <button data-close="cancel">Abbrechen</button>
+      <button data-close="drop" class="danger">Verwerfen</button>
+      <button data-close="save" class="primary">Speichern</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

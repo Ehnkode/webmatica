@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "webmatica",
+  "version": "${version}",
+  "name": "Webmatica",
+  "description": "Records the chunks your client receives into region files and talks to a local browser viewer (map, 3D, chests, schematics, Baritone helpers).",
+  "authors": ["Ehnkode"],
+  "contact": {
+    "homepage": "https://github.com/Ehnkode/webmatica",
+    "sources": "https://github.com/Ehnkode/webmatica",
+    "issues": "https://github.com/Ehnkode/webmatica/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/webmatica/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["io.github.ehnkode.webmatica.MapperClient"]
+  },
+  "mixins": [
+    "webmatica.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
