@@ -710,3 +710,22 @@ Kiste gespeichert ({} Stacks)	Chest saved ({} stacks)
 Aufnahme AN	Recording ON
 Aufnahme AUS	Recording OFF
 {} ({})	{} ({})
+# --- UI 0.9.1
+3D-Einstellungen	3D settings
+Einstellungen	Settings
+Editor (5)	Editor (5)
+Kisten (6)	Chests (6)
+Zeitleiste (7)	Timeline (7)
+Radar (8)	Radar (8)
+Schematics bauen und ändern: Blöcke setzen, abbauen, füllen, ersetzen, kopieren und drehen.	Build and change schematics: place, break, fill, replace, copy and rotate blocks.
+Leere Schematic	Empty schematic
+Aus der Welt	From the world
+Bereich auswählen	Select area
+.schem, .litematic	.schem, .litematic
+Noch keine Schematics.	No schematics yet.
+Position	Position
+Liste	List
+Fortschritt	Progress
+{} fehlen	{} missing
+alles da	all there
+läuft	running
