@@ -3,8 +3,7 @@ name: Fehler melden
 about: Etwas funktioniert nicht
 ---
 
-> **Bitte keine Koordinaten, Screenshots der Karte, Aufnahmen oder `.viewer`-Dateien anhängen.**
-> Sie verraten, wo deine Base ist. Schneide Koordinaten aus Logs heraus.
+
 
 **Was ist passiert?**
 
