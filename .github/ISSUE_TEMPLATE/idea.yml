@@ -1,0 +1,11 @@
+name: Idea or feature request
+description: Suggest something new or a better way to do something
+labels: [idea]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: What would you like Webmatica to do, and what would you use it for?
+    validations:
+      required: true
