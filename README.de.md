@@ -3,7 +3,7 @@
 [English](README.md) · **Deutsch**
 
 Deine Minecraft-Welt im Browser: Karte, 3D-Ansicht, Kisten und Schematics, dazu Litematica und
-Baritone fernsteuern. Für 2b2t gebaut, läuft auf jedem Server.
+Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
 ![3D-Ansicht einer Demo-Welt](docs/screenshot-3d.jpg)
 
