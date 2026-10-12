@@ -131,7 +131,7 @@ public final class BuildControl {
                 appliedSeq = seq;
                 String msg = apply(w);
                 if (msg != null) {
-                    mc.player.sendMessage(Text.literal("[Webmatica] " + msg).formatted(Formatting.AQUA), true);
+                    mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(msg)).formatted(Formatting.AQUA), true);
                 }
             }
         }

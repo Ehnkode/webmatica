@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="de">
 <head>
+<script src="/static/i18n.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Webmatica</title>
@@ -41,6 +42,7 @@
 
 <header class="bar top-left panel">
   <div class="brand">Webmatica</div>
+  <button class="lang-btn" data-noi18n title="Deutsch / English" onclick="I18N.set(I18N.lang === 'de' ? 'en' : 'de')"><script>document.currentScript.parentNode.append(I18N.lang === 'de' ? 'EN' : 'DE')</script></button>
   <select id="server" title="Server"></select>
   <div id="dims" class="seg" role="tablist" aria-label="Dimension"></div>
   <div id="layers" class="seg small" aria-label="Schicht"></div>

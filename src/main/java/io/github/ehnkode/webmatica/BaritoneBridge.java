@@ -112,7 +112,7 @@ public final class BaritoneBridge {
             // Kisten im Spiel markieren: kein Baritone, nur Partikel
             int n = Highlighter.getInstance().set(cmd.getAsJsonArray("pts"), cmd.has("label") ? cmd.get("label").getAsString() : "");
             if (mc.player != null) {
-                mc.player.sendMessage(Text.literal("[Webmatica] " + n + " Kiste" + (n == 1 ? "" : "n") + " markiert")
+                mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(n + " Kiste" + (n == 1 ? "" : "n") + " markiert"))
                         .formatted(Formatting.GOLD), true);
             }
             report(id, true, n + " markiert");
@@ -165,7 +165,7 @@ public final class BaritoneBridge {
             err = c.getClass().getSimpleName() + ": " + c.getMessage();
         }
         if (mc.player != null) {
-            mc.player.sendMessage(Text.literal("[Webmatica] Baritone #" + line + (err == null ? "" : " – " + err))
+            mc.player.sendMessage(Text.literal("[Webmatica] Baritone #" + line + (err == null ? "" : " – " + Lang.tr(err)))
                     .formatted(err == null ? Formatting.AQUA : Formatting.RED), true);
         }
         report(id, err == null, err == null ? "#" + line : err);

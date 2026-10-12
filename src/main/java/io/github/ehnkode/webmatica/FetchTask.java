@@ -359,7 +359,7 @@ public final class FetchTask {
 
     private static void actionbar(MinecraftClient mc, String s, Formatting f) {
         if (mc.player != null) {
-            mc.player.sendMessage(Text.literal("[Webmatica] " + s).formatted(f), true);
+            mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(s)).formatted(f), true);
         }
     }
 

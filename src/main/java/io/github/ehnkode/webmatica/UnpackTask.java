@@ -374,7 +374,7 @@ public final class UnpackTask {
         MinecraftClient mc = MinecraftClient.getInstance();
         String msg = "Auspacken: " + (taken > 0 ? taken + " Items" : "nichts") + " genommen" + (why != null ? " (" + why + ")" : "");
         if (mc.player != null) {
-            mc.player.sendMessage(Text.literal("[Webmatica] " + msg).formatted(ok ? Formatting.GREEN : Formatting.RED), true);
+            mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(msg)).formatted(ok ? Formatting.GREEN : Formatting.RED), true);
         }
         BaritoneBridge.report(id, ok, msg);
         phase = Phase.IDLE;

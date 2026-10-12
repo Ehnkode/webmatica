@@ -921,16 +921,16 @@ def prerender_loop(app: App, recording: str, workers: int, interval: float = 10.
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m viewer", description="Webmatica Viewer")
     ap.add_argument("--recording", "-r", default=os.environ.get("MAPPER_RECORDING", ""),
-                    help="Pfad zu .minecraft/webmatica_recording (Standard: was die Mod in ~/.webmatica/client.json meldet)")
-    ap.add_argument("--cache", default="", help="Kachel-Cache (Standard: <recording>/.viewer-cache)")
+                    help="path to .minecraft/webmatica_recording (default: what the mod writes to ~/.webmatica/client.json)")
+    ap.add_argument("--cache", default="", help="tile cache (default: <recording>/.viewer-cache)")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8770)
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1),
-                    help="Prozesse zum Vorrendern der Karte (0 = aus)")
+                    help="processes for pre-rendering the map (0 = off)")
     args = ap.parse_args(argv)
     if not args.recording or not os.path.isdir(args.recording):
-        ap.error("Aufnahme nicht gefunden. Einmal Minecraft mit der Mod starten (dann findet der Viewer sie selbst) "
-                 "oder --recording <.minecraft/webmatica_recording> angeben")
+        ap.error("Recording not found. Start Minecraft with the mod once (then the viewer finds it by itself) "
+                 "or pass --recording <.minecraft/webmatica_recording>")
     cache = args.cache or os.path.join(args.recording, ".viewer-cache")
     os.makedirs(cache, exist_ok=True)
 
@@ -945,11 +945,11 @@ def main(argv=None):
     srv.daemon_threads = True
     dims = app.rec.dimensions()
     print(f"Webmatica: http://{args.host}:{args.port}")
-    print(f"Aufnahme: {app.rec.root}  ({len(dims)} Dimension(en))")
+    print(f"Recording: {app.rec.root}  ({len(dims)} dimension(s))")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
-        print("\nbeendet")
+        print("\nstopped")
 
 
 if __name__ == "__main__":

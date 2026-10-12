@@ -266,7 +266,7 @@ public final class ContainerTracker {
                     MinecraftClient mc = MinecraftClient.getInstance();
                     mc.execute(() -> {
                         if (mc.player != null) {
-                            mc.player.sendMessage(Text.literal("[Webmatica] Kiste gespeichert (" + n + " Stacks)")
+                            mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr("Kiste gespeichert (" + n + " Stacks)"))
                                     .formatted(net.minecraft.util.Formatting.GOLD), true);
                         }
                     });
