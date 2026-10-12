@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Webmatica</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2322a06b'/%3E%3Cpath d='M3 11l3-4 2 3 2-2 3 3z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="map"></div>
+<div id="view3d" hidden>
+  <div class="hint3d panel">
+    <span>Klick auf Spieler oder Schematic wählt aus · sonst Maus fangen · <b>WASD</b> fliegen · <b>Leertaste/Shift</b> hoch/runter · <b>Strg</b> schneller · <b>Esc</b> Maus frei</span>
+    <label title="Sichtweite in Chunks mit vollen Blockmodellen">Chunks <input type="range" id="radius3d" min="4" max="48" value="12"> <span id="radius3d-val" class="mono">12</span></label>
+    <label title="Dahinter vereinfachtes Gelände aus der Karte, in Blöcken (0 = aus). Füllt auch Chunks, die noch laden.">Fernsicht <input type="range" id="lod3d" min="0" max="16" value="8"> <span id="lod3d-val" class="mono"></span></label>
+    <label class="check"><input type="checkbox" id="fog3d"> Nebel</label>
+    <label class="check" title="Höhlen und Inneres mitladen (langsamer)"><input type="checkbox" id="full3d"> Höhlen</label>
+    <label class="check" title="Sonne, Schatten, Himmel und Lichtstimmung"><input type="checkbox" id="fancy3d"> Shader</label>
+    <label id="hour3d-wrap" title="Tageszeit für den Shader">Uhrzeit <input type="range" id="hour3d" min="0" max="24" step="0.25" value="10"> <span id="hour3d-val" class="mono">10:00</span></label>
+    <button id="shot3d" title="Bildschirmfoto speichern">Foto</button>
+  </div>
+  <div id="mini" class="mini panel" title="Klick: dorthin fliegen · Rad: Zoom">
+    <div id="mini-map"></div>
+    <div id="mini-arrow" class="mini-arrow"></div>
+    <div class="mini-btns"><button id="mini-in" title="Näher">+</button><button id="mini-out" title="Weiter weg">−</button><button id="mini-hide" title="Minimap ausblenden">✕</button></div>
+  </div>
+  <button id="mini-show" class="mini-show panel" title="Minimap zeigen" hidden>Karte</button>
+  <div id="cam-panel" class="panel" hidden>
+    <span id="cam-name" class="cam-name"></span>
+    <div class="seg" id="cam-modes">
+      <button data-cam="free" title="Frei fliegen (WASD)">Frei</button>
+      <button data-cam="follow" title="Kamera folgt dem Spieler, Mausrad = Abstand">Verfolgen</button>
+      <button data-cam="ego" title="Aus den Augen des Spielers">Ego</button>
+      <button data-cam="top" title="Von oben, Mausrad = Höhe">Von oben</button>
+    </div>
+    <button id="cam-close" title="Auswahl aufheben">✕</button>
+  </div>
+</div>
+
+<header class="bar top-left panel">
+  <div class="brand">Webmatica</div>
+  <select id="server" title="Server"></select>
+  <div id="dims" class="seg" role="tablist" aria-label="Dimension"></div>
+  <div id="layers" class="seg small" aria-label="Schicht"></div>
+  <div class="cut" title="Schichten: Welt bei einer Höhe aufschneiden (Tasten , und .)">
+    <select id="cut-mode" aria-label="Schnitt">
+      <option value="off">Schichten aus</option>
+      <option value="below">Alles bis Y</option>
+      <option value="layer">Nur Ebene Y</option>
+    </select>
+    <input type="range" id="cut-y" min="-64" max="319" value="64" aria-label="Schnitthöhe">
+    <input type="number" id="cut-yn" min="-64" max="319" value="64" aria-label="Schnitthöhe">
+  </div>
+</header>
+
+<div id="activity" class="panel activity" hidden>
+  <span id="act-dot" class="act-dot"></span>
+  <button id="act-text" class="act-text" title="Öffnen"></button>
+  <button id="act-stop" class="act-stop" title="Anhalten">■ Stopp</button>
+  <button id="act-x" class="act-x" title="Ausblenden">✕</button>
+</div>
+
+<div class="bar top-right panel">
+  <form id="goto" autocomplete="off">
+    <input id="goto-input" placeholder="Koordinaten, z. B. 1200 -340" aria-label="Zu Koordinaten springen">
+  </form>
+  <button id="btn-select" class="toggle" title="Bereich wählen und als Schematic speichern (E)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/></svg>Auswahl</button>
+  <button id="btn-trail" class="toggle" title="Spur des Spielers zeigen (T)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-9 4-11"/></svg>Spur</button>
+  <button id="btn-3d" class="toggle" title="3D-Ansicht (Tab)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>3D</button>
+  <button id="btn-follow" class="toggle" title="Karte folgt dir (F)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>Folgen</button>
+</div>
+
+<nav id="rail" class="panel rail" aria-label="Bereiche">
+  <button data-tab="waypoints" title="Wegpunkte (1)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 1 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg><span>Wegpunkte</span></button>
+  <button data-tab="signs" title="Schilder (2)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="10" rx="1.5"/><path d="M12 15v5M8 9h8M8 12h5"/></svg><span>Schilder</span></button>
+  <button data-tab="stashes" title="Stashes (3)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9l8-5 8 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 9h16M10 13h4"/></svg><span>Stashes</span></button>
+  <button data-tab="schematics" title="Schematics (4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><span>Schematics</span></button>
+  <button data-tab="chests" title="Kisten (5)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="M3 11h18M11 11v3h2v-3"/></svg><span>Kisten</span></button>
+  <button data-tab="history" title="Zeitleiste (6)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>Zeitleiste</span></button>
+  <button data-tab="radar" title="Radar (7)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/></svg><span>Radar</span><i id="radar-badge" class="badge" hidden></i></button>
+  <span class="rail-sep"></span>
+  <button id="btn-help" title="Tastenkürzel (?)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.4M12 16.6v.2"/></svg><span>Hilfe</span></button>
+</nav>
+
+<aside id="side" class="panel" hidden>
+  <div class="side-head"><b id="side-title">Wegpunkte</b><button id="side-close" class="icon" title="Schließen (S)">✕</button></div>
+  <section data-pane="waypoints" class="pane active">
+    <p class="hint">Rechtsklick auf die Karte setzt einen Wegpunkt.</p>
+    <ul id="wp-list" class="list"></ul>
+  </section>
+  <section data-pane="signs" class="pane">
+    <label class="check"><input type="checkbox" id="show-signs" checked> Auf der Karte zeigen</label>
+    <input id="sign-filter" placeholder="Text suchen …">
+    <ul id="sign-list" class="list"></ul>
+  </section>
+  <section data-pane="stashes" class="pane">
+    <label class="check"><input type="checkbox" id="show-stashes" checked> Auf der Karte zeigen</label>
+    <label class="range">Ab <input type="number" id="stash-min" value="6" min="1" max="500"> Behältern pro Chunk</label>
+    <ul id="stash-list" class="list"></ul>
+  </section>
+  <section data-pane="schematics" class="pane">
+    <h4>Platziert</h4>
+    <ul id="placed-list" class="list"></ul>
+    <h4>Bibliothek <span id="lib-count" class="muted"></span></h4>
+    <div class="lib-tools">
+      <input id="lib-filter" placeholder="Schematic suchen …">
+      <label class="upload" title=".schem, .litematic oder .nbt hochladen">Hochladen<input type="file" id="lib-upload" accept=".schem,.litematic,.nbt,.schematic" multiple hidden></label>
+      <button id="lib-new" title="Leere Schematic im Editor selbst bauen">Neu bauen</button>
+    </div>
+    <p class="hint" id="lib-hint">Platzieren setzt die Schematic an die Kartenmitte bzw. in 3D vor die Kamera.</p>
+    <ul id="lib-list" class="list"></ul>
+  </section>
+  <section data-pane="chests" class="pane">
+    <div id="ct-known" class="ct-known"></div>
+    <div class="card">
+      <div class="card-title">Einlagern</div>
+      <div class="sp-row st-row">
+        <button id="st-go" title="Baritone bringt jeden Stack aus deinem Inventar in eine Kiste, in der dieses Item schon liegt">Inventar einlagern</button>
+        <label class="check" title="Auch die Hotbar (Plätze 1–9) einlagern"><input type="checkbox" id="st-hotbar"> mit Hotbar</label>
+      </div>
+      <div id="st-info" class="ab-info muted"></div>
+    </div>
+    <label class="check"><input type="checkbox" id="show-chests" checked> Auf der Karte zeigen</label>
+    <p class="hint">Inhalt kennt der Viewer, sobald du eine Kiste einmal öffnest. Grau = noch nie geöffnet, lila Ring = jemand anderes war dran.</p>
+    <div class="seg ct-mode"><button data-ctmode="items" class="on">Alle Items</button><button data-ctmode="chests">Kisten</button></div>
+    <div class="sp-row"><input id="ct-filter" placeholder="Item suchen, z. B. obsidian …"><button id="ct-csv" title="Alle Items als Tabelle">CSV</button></div>
+    <p id="ct-sum" class="muted"></p>
+    <div id="ct-grid" class="item-grid"></div>
+    <div id="ct-where"></div>
+    <ul id="ct-list" class="list"></ul>
+  </section>
+  <section data-pane="history" class="pane">
+    <p class="hint">Vergleicht die Welt mit einem früheren Tag. Die Mod sichert ab Version 0.3.1 jeden Tag den alten Stand geänderter Chunks.</p>
+    <div class="sp-row"><select id="hist-date"></select><button id="hist-run" class="primary">Vergleichen</button></div>
+    <label class="check"><input type="checkbox" id="hist-show" checked> Auf Karte und in 3D zeigen</label>
+    <div id="hist-out"></div>
+    <ul id="hist-list" class="list"></ul>
+  </section>
+  <section data-pane="radar" class="pane">
+    <p class="hint">Spieler, die dein Client gerade sieht (Mod 0.3.2). Rot auf Karte und in 3D.</p>
+    <label class="slider">Alarm, wenn jemand näher als <input type="range" id="rd-radius" min="16" max="256" step="16"><span id="rd-radius-v" class="mono"></span> an dir oder einer Baustelle ist</label>
+    <label class="check"><input type="checkbox" id="rd-sound"> mit Ton</label>
+    <h4>Jetzt in Sichtweite</h4>
+    <ul id="rd-now" class="list"></ul>
+    <h4>Logbuch</h4>
+    <ul id="rd-log" class="list"></ul>
+  </section>
+</aside>
+
+<div id="sel-panel" class="panel" hidden>
+  <div class="sel-head"><b>Schematic exportieren</b> <span id="sel-size" class="muted mono"></span></div>
+  <p class="hint" id="sel-hint">Auf der Karte ein Rechteck aufziehen.</p>
+  <div class="sel-row">
+    <label>Y von <input type="number" id="sel-y0"></label>
+    <label>bis <input type="number" id="sel-y1"></label>
+  </div>
+  <label class="sel-name">Name <input id="sel-name" value="auswahl" maxlength="60"></label>
+  <div class="sel-row">
+    <button id="sel-cancel">Abbrechen</button>
+    <button id="sel-edit" disabled title="Bereich als Schematic speichern und im Editor öffnen">Im Editor öffnen</button>
+    <button id="sel-go" class="primary" disabled>.schem herunterladen</button>
+  </div>
+</div>
+
+<div id="schem-panel" class="panel" hidden>
+  <div class="sp-head">
+    <input id="sp-name" maxlength="80" aria-label="Name">
+    <button id="sp-close" title="Schließen (Esc)">✕</button>
+  </div>
+  <div class="muted mono sp-sub" id="sp-sub"></div>
+  <div class="sp-error" id="sp-error" hidden></div>
+  <nav class="tabs sp-tabs">
+    <button data-sptab="place" class="active">Platzieren</button>
+    <button data-sptab="mats">Material</button>
+    <button data-sptab="check">Abgleich</button>
+    <button data-sptab="build">Bauen</button>
+  </nav>
+  <div class="sp-body">
+  <section data-sppane="place" class="sp-pane active">
+  <div class="sp-pos">
+    <label>X <input type="number" id="sp-x"></label><button data-nudge="x,-1">−</button><button data-nudge="x,1">+</button>
+    <label>Y <input type="number" id="sp-y"></label><button data-nudge="y,-1">−</button><button data-nudge="y,1">+</button>
+    <label>Z <input type="number" id="sp-z"></label><button data-nudge="z,-1">−</button><button data-nudge="z,1">+</button>
+  </div>
+  <div class="sp-row">
+    <button id="sp-rot" title="90° im Uhrzeigersinn (R)">Drehen ⟳</button>
+    <button id="sp-mirror" class="toggle" title="Spiegeln (M)">Spiegeln</button>
+    <button id="sp-here" title="An deine Position bzw. vor die Kamera">Hierher</button>
+  </div>
+  <div class="sp-row">
+    <button id="sp-vis" class="toggle on">Sichtbar</button>
+    <label class="sp-op">Deckkraft <input type="range" id="sp-op" min="10" max="100" value="100"></label>
+  </div>
+  <div class="sp-row">
+    <button id="sp-ingame" class="toggle" title="Als Litematica-Platzierung ins Spiel schicken (Geisterblöcke, Printer, Baritone #litematica)">Ins Spiel</button>
+    <span id="sp-ingame-st" class="ingame-st"></span>
+  </div>
+  <div class="sp-row">
+    <button id="sp-goto">Hinfliegen</button>
+    <button id="sp-edit" title="Im Editor öffnen: Blöcke setzen, abbauen, Bereiche füllen">Bearbeiten</button>
+    <button id="sp-del" class="danger">Entladen</button>
+  </div>
+    <p class="hint">Auf der Karte ziehen oder mit <kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> verschieben, <kbd>Bild↑</kbd><kbd>Bild↓</kbd> Höhe, mit <kbd>Shift</kbd> 10 Blöcke. <kbd>R</kbd> dreht, <kbd>M</kbd> spiegelt.</p>
+  </section>
+  <section data-sppane="mats" class="sp-pane">
+    <div id="mat-miss" class="card miss-card"></div>
+    <div class="sp-row"><input id="mat-filter" placeholder="Filtern …"><button id="mat-csv" title="Als CSV speichern">CSV</button></div>
+    <div id="mat-sum" class="muted"></div>
+    <table class="mats"><tbody id="mat-list"></tbody></table>
+  </section>
+  <section data-sppane="check" class="sp-pane">
+    <p class="hint">Vergleicht die Schematic mit dem, was die Mod an dieser Stelle aufgezeichnet hat. Farben in 3D: <span class="k-missing">fehlt</span>, <span class="k-wrong">falscher Block</span>, <span class="k-rotated">falsch gedreht</span>, <span class="k-extra">muss weg</span>.</p>
+    <div class="sp-row"><button id="chk-run" class="primary">Jetzt abgleichen</button><label class="check" title="Alle 3 Sekunden neu abgleichen, während du baust"><input type="checkbox" id="chk-live"> live</label><label class="check"><input type="checkbox" id="chk-show" checked> in 3D markieren</label></div>
+    <div id="chk-out"></div>
+  </section>
+  <section data-sppane="build" class="sp-pane">
+    <div id="bd-game" class="bd-game muted">Spiel nicht verbunden</div>
+    <div class="card hero">
+      <div class="card-title">Autobau</div>
+      <p class="hint">Holt fehlendes Material aus deinen Kisten (auch aus Shulkern), baut, holt Nachschub, bis alles steht.</p>
+      <button id="ab-toggle" class="primary big">▶ Automatisch holen und bauen</button>
+      <div id="ab-info" class="ab-info muted"></div>
+      <ol id="ab-log" class="ab-log"></ol>
+    </div>
+    <details class="fold" data-fold="guard">
+    <summary>Schutz und Reste <span id="gd-sum" class="muted"></span></summary>
+    <div class="guard">
+      <label class="check" title="Baritone hält an (#pause), solange ein anderer Spieler in der Nähe ist, und macht 15 s nachdem er weg ist weiter"><input type="checkbox" data-guard="radar"> Pause, wenn ein Spieler näher als <input type="number" id="gd-dist" class="gd-dist" min="8" max="256" step="8"> m kommt</label>
+      <label class="gd-row">Freunde, die nicht zählen <input id="gd-friends" placeholder="Namen, mit Komma getrennt" spellcheck="false"></label>
+      <label class="check" title="Bei Hunger kurz anhalten und das beste Essen aus dem Inventar essen (keine Goldäpfel, nichts Giftiges)"><input type="checkbox" data-guard="eat"> Automatisch essen</label>
+      <p class="hint gd-note">Aus lassen, wenn schon ein anderer Mod automatisch isst.</p>
+      <label class="check" title="Baritones Werkzeugschutz (itemSaver): ein Werkzeug mit weniger als 10 Haltbarkeit wird nicht mehr benutzt"><input type="checkbox" data-guard="tools"> Werkzeug nicht kaputtmachen</label>
+      <label class="check" title="Wenn alles steht: übrig gebliebene Baumaterialien in Kisten bringen, in denen dieses Item schon liegt"><input type="checkbox" data-guard="leftovers"> Reste nach dem Bauen zurück in die Kisten</label>
+      <p class="hint">Gilt nur, solange der Autobau läuft. Wird gespeichert.</p>
+    </div>
+    </details>
+    <details class="fold" data-fold="baritone">
+    <summary>Baritone von Hand</summary>
+    <div class="sp-row bd-btns">
+      <button id="bd-build" class="primary" title="Baritone baut die Schematic aus Litematica (#litematica)">▶ Bauen</button>
+      <button id="bd-pause" title="Baritone anhalten (#pause)">❚❚ Pause</button>
+      <button id="bd-resume" title="Weitermachen (#resume)">▶ Weiter</button>
+      <button id="bd-stop" title="Alles abbrechen (#stop)">■ Stopp</button>
+      <button id="bd-clear" class="danger" title="Alles im Schematic-Rahmen abbauen">Freiräumen</button>
+    </div>
+    </details>
+    <details class="fold" data-fold="printer">
+    <summary>Printer</summary>
+    <div class="sp-row"><button id="pr-toggle" class="pr-toggle">Printer: ?</button></div>
+    <label class="slider">Reichweite <input type="range" id="pr-range" min="1" max="6" step="0.5"><span id="pr-range-v" class="mono"></span></label>
+    <label class="slider" title="Ticks zwischen zwei Blöcken: kleiner = schneller, größer = sicherer gegen Kicks">Pause zwischen Blöcken <input type="range" id="pr-interval" min="0" max="20" step="1"><span id="pr-interval-v" class="mono"></span></label>
+    <div class="pr-flags">
+      <label class="check"><input type="checkbox" data-pr="air"> in der Luft setzen</label>
+      <label class="check"><input type="checkbox" data-pr="interact"> Blöcke einstellen (Repeater, Türen …)</label>
+      <label class="check"><input type="checkbox" data-pr="strip"> Stämme entrinden</label>
+      <label class="check"><input type="checkbox" data-pr="fluids"> Wasser/Lava ersetzen</label>
+    </div>
+    </details>
+    <details class="fold" data-fold="layers">
+    <summary>Schichten in Litematica</summary>
+    <div class="sp-row">
+      <button id="ly-all">Alle</button>
+      <button id="ly-down" title="Eine Schicht tiefer">▼</button>
+      <input id="ly-y" type="number" class="ly-y" title="Y-Höhe der Schicht">
+      <button id="ly-up" title="Eine Schicht höher">▲</button>
+      <button id="ly-set">Nur diese</button>
+    </div>
+    <label class="check" title="Stellt Litematica immer auf die unterste Schicht, in der noch Blöcke fehlen, und schaltet weiter, sobald sie steht"><input type="checkbox" id="ly-auto"> Schicht für Schicht automatisch</label>
+    <div id="ly-info" class="muted"></div>
+    </details>
+  </section>
+  </div>
+</div>
+
+<footer class="bar bottom-left panel mono">
+  <span id="cursor">–</span>
+  <span id="info" class="muted"></span>
+</footer>
+
+<div class="bar bottom-right panel mono" id="status">
+  <span id="player-status" class="dot off">Spieler offline</span>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<div id="help" class="modal" hidden>
+  <div class="modal-box panel">
+    <div class="side-head"><b>Tastenkürzel</b><button id="help-close" class="icon" title="Schließen (Esc)">✕</button></div>
+    <div class="keys">
+      <h4>Karte</h4>
+      <div><kbd>1</kbd>–<kbd>7</kbd><span>Bereiche öffnen (Wegpunkte … Radar)</span></div>
+      <div><kbd>S</kbd><span>Seitenleiste auf/zu</span></div>
+      <div><kbd>/</kbd><span>zu Koordinaten springen</span></div>
+      <div><kbd>F</kbd><span>dir folgen</span></div>
+      <div><kbd>T</kbd><span>Spur zeigen</span></div>
+      <div><kbd>E</kbd><span>Bereich auswählen</span></div>
+      <div><kbd>,</kbd> <kbd>.</kbd><span>Schnitthöhe runter/rauf</span></div>
+      <div><kbd>Tab</kbd><span>3D an/aus</span></div>
+      <div><span class="k">Rechtsklick</span><span>Wegpunkt, Hinlaufen, Kiste …</span></div>
+      <h4>Schematic</h4>
+      <div><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd><span>verschieben (<kbd>Shift</kbd> = 10)</span></div>
+      <div><kbd>Bild↑</kbd> <kbd>Bild↓</kbd><span>Höhe</span></div>
+      <div><kbd>R</kbd> <kbd>M</kbd><span>drehen, spiegeln</span></div>
+      <div><kbd>Esc</kbd><span>schließen</span></div>
+      <h4>3D</h4>
+      <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>fliegen, <kbd>Leer</kbd>/<kbd>Shift</kbd> hoch/runter, <kbd>Strg</kbd> schneller</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="inv-win" hidden>
+  <div class="inv-box">
+    <div class="inv-head"><button id="inv-back" title="Zurück" hidden>‹</button><b id="inv-title"></b><button id="inv-close" title="Schließen">✕</button></div>
+    <div id="inv-grid" class="inv-grid"></div>
+    <div class="inv-foot"><span id="inv-info" class="mono"></span><span><button id="inv-all" title="Alle Stacks auswählen">Alle</button> <button id="inv-fetch" class="primary" hidden title="Baritone läuft hin, öffnet die Kiste und nimmt die ausgewählten Stacks">Holen</button> <button id="inv-goto">Hinfliegen</button></span></div>
+    <div class="inv-hint muted">Klick wählt Stacks zum Holen aus · Doppelklick öffnet Shulker</div>
+  </div>
+</div>
+<div id="inv-tip" hidden></div>
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/interp.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
