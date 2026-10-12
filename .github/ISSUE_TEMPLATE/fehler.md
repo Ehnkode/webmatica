@@ -13,4 +13,4 @@ about: Etwas funktioniert nicht
 
 **Versionen:** Minecraft, Fabric Loader, Fabric API, Webmatica-Mod, Viewer (Python-Version), Baritone/Litematica falls benutzt
 
-**Fehlermeldung** (aus dem schwarzen Viewer-Fenster oder `logs/latest.log`, ohne Koordinaten):
+**Fehlermeldung** (aus dem schwarzen Viewer-Fenster oder `logs/latest.log`):
