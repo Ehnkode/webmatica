@@ -49,7 +49,7 @@ Zwei Teile, die zusammenarbeiten:
 | Minecraft **1.21.11** mit **Fabric Loader** 0.19+ und **Fabric API** | Pflicht |
 | **Python 3.10+** (Windows: beim Installieren „Add python.exe to PATH“ anhaken) | Viewer |
 | [Baritone](https://github.com/cabaletta/baritone) (Fabric-Version für 1.21.11) | Hinlaufen, Holen, Einlagern, Autobau |
-| [Litematica](https://modrinth.com/mod/litematica) und optional Litematica Printer | „Ins Spiel“, Schichten, Printer |
+| [Litematica](https://modrinth.com/mod/litematica) mit [MaLiLib](https://modrinth.com/mod/malilib), optional Litematica Printer | „Ins Spiel“, Schichten, Printer |
 
 Ohne Baritone und Litematica laufen Aufnahme, Karte, 3D, Kisten und Editor trotzdem.
 
