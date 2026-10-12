@@ -3,7 +3,7 @@
 **English** · [Deutsch](README.de.md)
 
 Your Minecraft world in the browser: map, 3D view, chests and schematics, plus remote control for
-Litematica and Baritone. Made for 2b2t, works on any server.
+Litematica and Baritone. Works on any server or Singleplayer.
 
 ![3D view of a demo world](docs/screenshot-3d.jpg)
 
