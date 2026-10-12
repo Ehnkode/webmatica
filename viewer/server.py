@@ -32,7 +32,11 @@ Endpunkte (alle JSON, ausser Bildern):
     GET  /api/auto?srv=                      Autobau-Stand       POST /api/auto {srv, pid} starten / {srv} stoppen
     GET  /api/control?srv=                   Printer/Schicht-Sollzustand fuer die Mod   POST /api/control (Browser)
     POST /api/control/status                 Mod meldet Printer/Schicht im Spiel   GET /api/control/state?srv=
-    GET/POST /api/auto/settings              Autobau-Schutz: radar, radarDist, friends, eat, tools, leftovers
+    GET/POST /api/auto/settings              Autobau-Schutz: radar, radarDist, friends, eat, tools, leftovers, fix
+    POST /api/auto {srv, queue: [pid]}       Warteschlange setzen
+    POST /api/auto {srv, farm: {area, dim, targets, chest, placeChest}}   Farmen starten
+    GET  /api/farm/scan?srv=&dim=&x0=..      welche Bloecke im Bereich stehen
+    POST /api/fix {srv, pid, extra}          falsche/verdrehte (und ueberfluessige) Bloecke abbauen lassen
     GET  /api/radar?srv=                     Logbuch: wer war wann in Sichtweite
     GET  /editor?file=                       Schematic-Editor (eigene Seite)
     GET  /api/editor/blocks|voxels|mesh|info Editor-Daten   POST /api/editor/open|new|cut|edit|undo|redo|save|discard
@@ -65,6 +69,7 @@ from .core.tiles import Layer, TileStore, render_chunk
 from .core.world import ChunkCache
 from .placements import Placements
 from .editor import Editor
+from . import farm
 from .autobuild import AutoBuild
 from .extras import Commands, Containers, Control, History, LidLog, Radar, world_chests
 from .core.world import DIM_LABELS, LEGACY_SERVER, Recording
@@ -533,6 +538,14 @@ def make_handler(app: App):
                     return self.json(app.auto.get_settings())
                 if p == "/api/auto":
                     return self.json(app.auto.view(q["srv"][0]))
+                if p == "/api/farm/scan":
+                    dim = app.rec.dimension(q["srv"][0], q["dim"][0])
+                    if dim is None:
+                        return self.fail(404, "keine Aufnahme")
+                    try:
+                        return self.json(farm.scan(app.rec, dim, {k: q[k][0] for k in ("x0", "z0", "x1", "z1", "y0", "y1")}))
+                    except (KeyError, ValueError) as e:
+                        return self.fail(400, str(e))
                 if p == "/api/control/state":
                     return self.json(app.control.view(q["srv"][0]))
                 if p == "/api/radar":
@@ -774,12 +787,32 @@ def make_handler(app: App):
                 try:
                     if req.get("store"):
                         return self.json(app.auto.start_store(str(req["srv"]), bool(req.get("hotbar"))))
+                    if req.get("startQueue"):
+                        app.auto._next_in_queue(str(req["srv"]))
+                        return self.json(app.auto.view(str(req["srv"])))
+                    if "queue" in req:
+                        return self.json(app.auto.set_queue(str(req["srv"]), list(req["queue"] or [])))
+                    if req.get("farm"):
+                        return self.json(app.auto.start_farm(str(req["srv"]), dict(req["farm"])))
                     if req.get("pid"):
                         return self.json(app.auto.start(str(req["srv"]), str(req["pid"])))
                     return self.json(app.auto.stop(str(req["srv"])))
                 except (LookupError, KeyError) as e:
                     return self.fail(404, f"unbekannt: {e}")
                 except ValueError as e:
+                    return self.fail(400, str(e))
+            if u.path == "/api/fix":
+                try:
+                    res = app.placements.verify(str(req["pid"]), app.rec)
+                    pts = AutoBuild.fix_points(res, bool(req.get("extra")))
+                    if not pts:
+                        return self.json({"n": 0})
+                    cmd = app.commands.push({"srv": str(req["srv"]), "kind": "breakboxes", "boxes": farm.boxes(pts),
+                                             "label": "Falsche Blöcke", "pickup": True})
+                    return self.json({"n": len(pts), "id": cmd["id"]})
+                except LookupError as e:
+                    return self.fail(404, str(e))
+                except (KeyError, ValueError) as e:
                     return self.fail(400, str(e))
             if u.path == "/api/commands":
                 try:

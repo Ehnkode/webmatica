@@ -86,8 +86,9 @@
   <button data-tab="schematics" title="Schematics (4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><span>Schematics</span></button>
   <button data-tab="editor" title="Editor (5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>Editor</span></button>
   <button data-tab="chests" title="Kisten (6)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="M3 11h18M11 11v3h2v-3"/></svg><span>Kisten</span></button>
-  <button data-tab="history" title="Zeitleiste (7)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>Zeitleiste</span></button>
-  <button data-tab="radar" title="Radar (8)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/></svg><span>Radar</span><i id="radar-badge" class="badge" hidden></i></button>
+  <button data-tab="farm" title="Farmen (7)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4c3 0 6 1.5 6 3-2.5-.8-5-.8-7.5 0z"/><path d="M13 5.5L4 19.5l1.5 1L14.5 7"/></svg><span>Farmen</span></button>
+  <button data-tab="history" title="Zeitleiste (8)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>Zeitleiste</span></button>
+  <button data-tab="radar" title="Radar (9)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/></svg><span>Radar</span><i id="radar-badge" class="badge" hidden></i></button>
   <span class="rail-sep"></span>
   <button id="btn-help" title="Tastenkürzel (?)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.4M12 16.6v.2"/></svg><span>Hilfe</span></button>
 </nav>
@@ -150,6 +151,37 @@
     <div id="ct-where"></div>
     <ul id="ct-list" class="list"></ul>
   </section>
+  <section data-pane="farm" class="pane">
+    <p class="hint">Baritone baut in einem Bereich bestimmte Blöcke ab, bis die Menge erreicht ist, und sammelt alles ein.</p>
+    <div class="card">
+      <div class="card-title">1 · Bereich</div>
+      <div class="sp-row"><button id="fm-pick" class="primary">Auf der Karte wählen</button></div>
+      <div id="fm-area" class="muted mono"></div>
+      <div class="sp-row fm-y"><label>Y von <input type="number" id="fm-y0"></label><label>bis <input type="number" id="fm-y1"></label>
+        <label class="check" title="Bereich auf ganze Chunks (16 × 16) erweitern"><input type="checkbox" id="fm-snap" checked> ganze Chunks</label></div>
+    </div>
+    <div class="card">
+      <div class="card-title">2 · Blöcke und Menge <span id="fm-sum" class="muted"></span></div>
+      <p id="fm-blocks-hint" class="hint">Erst einen Bereich wählen.</p>
+      <input id="fm-filter" placeholder="Block suchen …" hidden>
+      <table class="mats fm-blocks"><tbody id="fm-blocks"></tbody></table>
+    </div>
+    <div class="card">
+      <div class="card-title">3 · Wenn das Inventar voll ist</div>
+      <select id="fm-chest"></select>
+      <p class="hint">Werkzeug, Essen, Kisten und die Hotbar bleiben bei dir.</p>
+    </div>
+    <div class="card hero">
+      <button id="fm-go" class="primary big" disabled>▶ Farmen starten</button>
+      <div id="fm-info" class="ab-info muted"></div>
+      <ol id="fm-log" class="ab-log"></ol>
+      <div class="guard fm-guard">
+        <label class="check"><input type="checkbox" data-guard="radar"> Pause bei Spielern in der Nähe</label>
+        <label class="check"><input type="checkbox" data-guard="eat"> Automatisch essen</label>
+        <label class="check"><input type="checkbox" data-guard="tools"> Werkzeug nicht kaputtmachen</label>
+      </div>
+    </div>
+  </section>
   <section data-pane="history" class="pane">
     <p class="hint">Vergleicht die Welt mit einem früheren Tag. Die Mod sichert ab Version 0.3.1 jeden Tag den alten Stand geänderter Chunks.</p>
     <div class="sp-row"><select id="hist-date"></select><button id="hist-run" class="primary">Vergleichen</button></div>
@@ -169,7 +201,7 @@
 </aside>
 
 <div id="sel-panel" class="panel" hidden>
-  <div class="sel-head"><b>Schematic exportieren</b> <span id="sel-size" class="muted mono"></span></div>
+  <div class="sel-head"><b>Bereich</b> <span id="sel-size" class="muted mono"></span></div>
   <p class="hint" id="sel-hint">Auf der Karte ein Rechteck aufziehen.</p>
   <div class="sel-row">
     <label>Y von <input type="number" id="sel-y0"></label>
@@ -178,6 +210,7 @@
   <label class="sel-name">Name <input id="sel-name" value="auswahl" maxlength="60"></label>
   <div class="sel-row">
     <button id="sel-cancel">Abbrechen</button>
+    <button id="sel-farm" disabled title="In diesem Bereich Blöcke abbauen lassen">Hier farmen</button>
     <button id="sel-edit" disabled title="Bereich als Schematic speichern und im Editor öffnen">Im Editor öffnen</button>
     <button id="sel-go" class="primary" disabled>.schem herunterladen</button>
   </div>
@@ -243,6 +276,12 @@
       <div id="ab-info" class="ab-info muted"></div>
       <ol id="ab-log" class="ab-log"></ol>
     </div>
+    <div class="card">
+      <div class="card-title">Warteschlange <span id="q-sum" class="muted"></span></div>
+      <p id="q-hint" class="hint">Danach automatisch weiterbauen: Schematics hier einreihen.</p>
+      <ol id="q-list" class="q-list"></ol>
+      <div class="sp-row"><button id="q-add">+ Diese einreihen</button><button id="q-start" hidden>▶ Warteschlange starten</button></div>
+    </div>
     <details class="fold" data-fold="guard">
     <summary>Schutz und Reste <span id="gd-sum" class="muted"></span></summary>
     <div class="guard">
@@ -251,6 +290,7 @@
       <label class="check" title="Bei Hunger kurz anhalten und das beste Essen aus dem Inventar essen (keine Goldäpfel, nichts Giftiges)"><input type="checkbox" data-guard="eat"> Automatisch essen</label>
       <p class="hint gd-note">Aus lassen, wenn schon ein anderer Mod automatisch isst.</p>
       <label class="check" title="Baritones Werkzeugschutz (itemSaver): ein Werkzeug mit weniger als 10 Haltbarkeit wird nicht mehr benutzt"><input type="checkbox" data-guard="tools"> Werkzeug nicht kaputtmachen</label>
+      <label class="check" title="Wenn alles steht: falsch gedrehte und überflüssige Blöcke im Rahmen abbauen und richtig neu setzen"><input type="checkbox" data-guard="fix"> Am Ende falsche Blöcke korrigieren</label>
       <label class="check" title="Wenn alles steht: übrig gebliebene Baumaterialien in Kisten bringen, in denen dieses Item schon liegt"><input type="checkbox" data-guard="leftovers"> Reste nach dem Bauen zurück in die Kisten</label>
       <p class="hint">Gilt nur, solange der Autobau läuft. Wird gespeichert.</p>
     </div>
@@ -309,7 +349,7 @@
     <div class="side-head"><b>Tastenkürzel</b><button id="help-close" class="icon" title="Schließen (Esc)">✕</button></div>
     <div class="keys">
       <h4>Karte</h4>
-      <div><kbd>1</kbd>–<kbd>8</kbd><span>Bereiche öffnen (Wegpunkte … Radar)</span></div>
+      <div><kbd>1</kbd>–<kbd>9</kbd><span>Bereiche öffnen (Wegpunkte … Radar)</span></div>
       <div><kbd>S</kbd><span>Seitenleiste auf/zu</span></div>
       <div><kbd>/</kbd><span>zu Koordinaten springen</span></div>
       <div><kbd>F</kbd><span>dir folgen</span></div>

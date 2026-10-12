@@ -97,6 +97,10 @@ public final class BaritoneBridge {
             UnpackTask.getInstance().start(id, cmd);
             return;
         }
+        if ("breakboxes".equals(kind) || "chestdump".equals(kind)) {
+            FarmTask.getInstance().start(id, cmd);
+            return;
+        }
         if ("pause".equals(kind)) {
             AutoGuard.setPaused(true);
         } else if ("resume".equals(kind)) {
@@ -106,6 +110,7 @@ public final class BaritoneBridge {
             AutoGuard.setPaused(false);
             FetchTask.getInstance().cancel();
             UnpackTask.getInstance().cancel();
+            FarmTask.getInstance().cancel();
             BaritoneSafety.restore();
         }
         if ("highlight".equals(kind)) {
