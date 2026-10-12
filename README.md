@@ -17,16 +17,18 @@ Litematica and Baritone. Works on any server or Singleplayer.
 | | |
 |---|---|
 | ![Map](docs/map.jpg) | ![Schematic editor](docs/editor.jpg) |
+| ![Follow camera](docs/follow.jpg) | |
 
-- **Map and 3D** of everything you have seen, with real block models, live position, trail and
-  a follow camera.
+- **Map and 3D** of everything you have seen, with real block models, live position and trail.
+- **Follow camera:** click yourself or another player in 3D and lock the camera on them, from
+  behind, first person or from above.
 - **Schematics:** load `.litematic`, `.schem` or `.nbt`, place them on the map, send them to
   Litematica with one click, and see which items are still missing. Your inventory and chests are
   already subtracted.
 - **Schematic editor:** place, break and fill blocks, replace or delete every block of a type, copy,
   move and rotate, with undo. Any area of your world can become a schematic.
-- **Chests:** every chest you open is remembered, shulker contents included, and you can search
-  across all of them.
+- **Chests:** every chest you open is remembered, shulker contents included. Search for an item
+  across all chests, then let Baritone walk to the chest or fetch exactly the stacks you picked.
 - **Goto:** right-click the map and pick "Walk here". Baritone walks there.
 - **Auto build:** fetches the missing materials from your chests, builds with Baritone layer by
   layer, refills when it runs out and brings leftovers back. It pauses when a player comes close.
