@@ -5,12 +5,32 @@
 Your Minecraft world in the browser: map, 3D view, chests and schematics, plus remote control for
 Litematica and Baritone. Works on any server or Singleplayer.
 
-![3D view of a demo world](docs/screenshot-3d.jpg)
+![Schematic in 3D with the list of missing items](docs/3d.jpg)
 
 - **Mod** (Fabric 1.21.11, client only): saves every chunk you see as normal region files and
   remembers chest contents. Sends nothing to the server or the chat.
-- **Viewer** (Python, runs locally at <http://127.0.0.1:8770>): map, 3D, chests, schematic editor,
-  auto build with Baritone. Interface in English and German (switch at the top left).
+- **Viewer** (Python, runs locally at <http://127.0.0.1:8770>): everything below, in your browser.
+  English and German (switch at the top left).
+
+## Features
+
+| | |
+|---|---|
+| ![Map](docs/map.jpg) | ![Schematic editor](docs/editor.jpg) |
+
+- **Map and 3D** of everything you have seen, with real block models, live position, trail and
+  a follow camera.
+- **Schematics:** load `.litematic`, `.schem` or `.nbt`, place them on the map, send them to
+  Litematica with one click, and see which items are still missing. Your inventory and chests are
+  already subtracted.
+- **Schematic editor:** place, break and fill blocks, replace or delete every block of a type, copy,
+  move and rotate, with undo. Any area of your world can become a schematic.
+- **Chests:** every chest you open is remembered, shulker contents included, and you can search
+  across all of them.
+- **Goto:** right-click the map and pick "Walk here". Baritone walks there.
+- **Auto build:** fetches the missing materials from your chests, builds with Baritone layer by
+  layer, refills when it runs out and brings leftovers back. It pauses when a player comes close.
+- **More:** waypoints, signs, stash finder, timeline of what changed, radar for nearby players.
 
 ## Requirements
 
