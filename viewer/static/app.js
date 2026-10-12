@@ -906,6 +906,7 @@ function updateSel() {
   const b = sel.box;
   $('#sel-go').disabled = !b;
   $('#sel-edit').disabled = !b;
+  $('#sel-farm').disabled = !b;
   if (!b) { $('#sel-size').textContent = ''; $('#sel-hint').hidden = false; return; }
   $('#sel-hint').hidden = true;
   const y0 = Number($('#sel-y0').value), y1 = Number($('#sel-y1').value);
@@ -1592,6 +1593,8 @@ function renderCheck() {
       ${keys.slice(1).map(([k, l]) => `<span class="k-${k}">${l}</span><span class="mono">${fmt(s[k])}</span>`).join('')}
       <span class="k-extra">muss weg</span><span class="mono">${fmt(s.extra)}</span>
     </div>
+    ${s.wrong + s.rotated + s.extra ? `<div class="sp-row chk-fix"><button id="chk-fix" title="Baritone baut diese Blöcke ab und sammelt sie ein. Danach setzt der Autobau oder der Printer die richtigen.">Falsche Blöcke abbauen (${fmt(s.wrong + s.rotated)})</button>
+      ${s.extra ? `<label class="check" title="Blöcke, wo die Schematic Luft hat"><input type="checkbox" id="chk-fix-extra"${schem.fixExtra ? ' checked' : ''}> auch „muss weg“ (${fmt(s.extra)})</label>` : ''}</div>` : ''}
     ${c.todo && c.todo.length ? `<h4>Als Nächstes bauen <span class="muted">(${fmt(c.todoTotal)} offen, unten zuerst${state.player && state.player.active ? ', dann nächste zu dir' : ''})</span></h4>
       <table class="mats todo"><tbody>${c.todo.slice(0, 80).map((t) => `<tr data-goto="${t[0]},${t[1]},${t[2]}" title="Hinfliegen"><td class="mono">${t[0]} ${t[1]} ${t[2]}</td>
       <td>${esc(itemName(t[3]))}</td><td class="k-${t[4]}">${t[4] === 'missing' ? 'fehlt' : t[4] === 'wrong' ? 'statt ' + esc(itemName(t[5] || '')) : 'drehen'}</td></tr>`).join('')}</tbody></table>` : ''}
@@ -2152,8 +2155,8 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === '?') { toggleHelp(); return; }
   if (e.key === 'Escape' && !$('#help').hidden) { toggleHelp(false); return; }
-  const tabs = ['waypoints', 'signs', 'stashes', 'schematics', 'editor', 'chests', 'history', 'radar'];
-  if (/^[1-8]$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
+  const tabs = ['waypoints', 'signs', 'stashes', 'schematics', 'editor', 'chests', 'farm', 'history', 'radar'];
+  if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
     const t = tabs[Number(e.key) - 1];
     if (!$('#side').hidden && sideTab === t) toggleSide(false); else toggleSide(true, t);
     return;
@@ -2186,18 +2189,19 @@ async function pollControl() {
 }
 
 /* Autobau: holen und bauen im Wechsel (rechnet der Viewer, siehe autobuild.py) */
-const AB_PHASE = { unpack: 'packt Shulker aus', plan: 'plant', fetch: 'holt Material', approach: 'läuft zur Baustelle', build: 'baut', return: 'bringt Reste zurück', done: 'fertig', error: 'angehalten', off: 'aus' };
+const AB_PHASE = { fix: 'korrigiert falsche Blöcke', fplan: 'plant', mine: 'baut ab', deposit: 'lagert ein', unpack: 'packt Shulker aus', plan: 'plant', fetch: 'holt Material', approach: 'läuft zur Baustelle', build: 'baut', return: 'bringt Reste zurück', done: 'fertig', error: 'angehalten', off: 'aus' };
 function renderAuto() {
   const a = ctl.auto, pl = selPl();
-  const running = a && a.mode !== 'store' && ['plan', 'fetch', 'approach', 'build', 'unpack', 'return'].includes(a.phase);
+  const running = a && (a.mode || 'build') === 'build' && ['plan', 'fetch', 'approach', 'build', 'unpack', 'return', 'fix'].includes(a.phase);
   const mine = running && pl && a.pid === pl.id;
+  renderQueue(a, running);
   $('#ab-toggle').textContent = running ? '■ Autobau stoppen' : '▶ Automatisch holen und bauen';
   spBadge('build', mine ? (AB_PHASE[a.phase] || 'läuft') : 'Autobau', mine ? 'good' : '');
   $('#ab-toggle').classList.toggle('danger', !!running);
   $('#ab-toggle').classList.add('primary');
   $('#ab-toggle').disabled = !running && !(pl && pl.ingame);
   $('#ab-toggle').title = running || (pl && pl.ingame) ? '' : 'Erst „Ins Spiel“ einschalten, damit Baritone die Schematic aus Litematica bauen kann';
-  if (!a || a.mode === 'store' || a.phase === 'off' && !a.log) { $('#ab-info').textContent = ''; $('#ab-log').innerHTML = ''; return; }
+  if (!a || a.mode === 'store' || a.mode === 'farm' || a.phase === 'off' && !a.log) { $('#ab-info').textContent = ''; $('#ab-log').innerHTML = ''; return; }
   $('#ab-info').innerHTML = `<b class="${a.phase === 'error' ? 'bad' : a.phase === 'done' ? 'ok' : a.paused ? 'warn' : ''}">${running && a.paused ? 'pausiert' : AB_PHASE[a.phase] || a.phase}</b>` +
     (running && !mine ? ' (andere Schematic)' : '') + (a.info ? ' · ' + esc(a.info) : '') + (a.fetched ? ` · ${a.fetched}× geholt` : '');
   $('#ab-log').innerHTML = (a.log || []).slice(-8).reverse().map(([t, m]) =>
@@ -2211,7 +2215,7 @@ function renderGuard() {
   $$('[data-guard]').forEach((c) => { c.checked = !!g[c.dataset.guard]; });
   if (document.activeElement !== $('#gd-dist')) $('#gd-dist').value = g.radarDist;
   if (document.activeElement !== $('#gd-friends')) $('#gd-friends').value = (g.friends || []).join(', ');
-  const on = [g.radar && 'Spieler-Pause', g.eat && 'Essen', g.tools && 'Werkzeug', g.leftovers && 'Reste'].filter(Boolean);
+  const on = [g.radar && 'Spieler-Pause', g.eat && 'Essen', g.tools && 'Werkzeug', g.fix && 'Korrektur', g.leftovers && 'Reste'].filter(Boolean);
   $('#gd-sum').textContent = on.length ? '· ' + on.join(', ') : '· alles aus';
 }
 async function saveGuard(patch) {
@@ -2252,8 +2256,9 @@ $('#st-go').addEventListener('click', async () => {
 $('#ab-toggle').addEventListener('click', async () => {
   const a = ctl.auto, pl = selPl();
   const srv = (state.player && state.player.server) || state.server;
-  const running = a && a.mode !== 'store' && ['plan', 'fetch', 'approach', 'build', 'unpack', 'return'].includes(a.phase);
+  const running = a && (a.mode || 'build') === 'build' && ['plan', 'fetch', 'approach', 'build', 'unpack', 'return', 'fix'].includes(a.phase);
   if (!running && !pl) return;
+  if (!running && a && a.mode === 'farm' && ['fplan', 'mine', 'deposit'].includes(a.phase) && !confirm('Gerade wird gefarmt. Farmen beenden und stattdessen bauen?')) return;
   if (!running && !confirm('Autobau starten?\n\nBaritone läuft zu deinen Kisten, nimmt das fehlende Material und baut die Schematic. Unterwegs baut es nichts ab, beim Bauen selbst schon (falsche Blöcke im Rahmen).\n\nShulker im Inventar packt er neben sich aus und baut sie wieder ab.\\n\\nAbbrechen jederzeit mit „■ Stopp“.')) return;
   try {
     ctl.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify(running ? { srv } : { srv, pid: pl.id }) });
@@ -2417,6 +2422,207 @@ for (const id of ['#rd-now', '#rd-log']) {
   });
 }
 $('#rd-sound').addEventListener('click', () => { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); });
+
+// ------------------------------------------------------------------ Falsche Bloecke, Warteschlange, Farmen
+
+const gameSrv = () => (state.player && state.player.server) || state.server;
+
+$('#chk-out').addEventListener('change', (e) => { if (e.target.id === 'chk-fix-extra') schem.fixExtra = e.target.checked; });
+$('#chk-out').addEventListener('click', async (e) => {
+  if (e.target.id !== 'chk-fix') return;
+  const pl = selPl(), c = schem.check;
+  if (!pl || !c) return;
+  const n = c.stats.wrong + c.stats.rotated + (schem.fixExtra ? c.stats.extra : 0);
+  if (!confirm(`${fmt(n)} Blöcke abbauen?\n\nBaritone baut genau diese Blöcke im Rahmen der Schematic ab und sammelt sie ein. Danach setzt der Autobau (oder der Printer) die richtigen.`)) return;
+  try {
+    const r = await api('/api/fix', { method: 'POST', body: JSON.stringify({ srv: gameSrv(), pid: pl.id, extra: !!schem.fixExtra }) });
+    toast(r.n ? `Baritone baut ${fmt(r.n)} Blöcke ab` : 'Nichts abzubauen');
+  } catch (err) { toast('Abbauen: ' + err.message); }
+});
+
+/* Warteschlange: nach "fertig" baut der Autobau die naechste Schematic */
+function renderQueue(a, running) {
+  const q = (a && a.queue) || [];
+  const pl = selPl();
+  $('#q-sum').textContent = q.length ? `· ${q.length}` : '';
+  $('#q-hint').hidden = q.length > 0;
+  $('#q-list').innerHTML = q.map((id, i) => {
+    const p = schem.list.find((x) => x.id === id);
+    return `<li data-q="${i}"><span>${esc(p ? p.name : 'gelöscht')}</span>${i ? '<button data-qup title="Nach oben">↑</button>' : ''}<button data-qdel title="Entfernen">✕</button></li>`;
+  }).join('');
+  $('#q-add').disabled = !pl || q.includes(pl.id) || (running && a.pid === pl.id);
+  $('#q-start').hidden = running || !q.length;
+}
+async function saveQueue(q) {
+  try { ctl.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv: gameSrv(), queue: q }) }); } catch (e) { toast('Warteschlange: ' + e.message); }
+  renderAuto();
+}
+$('#q-add').addEventListener('click', () => {
+  const pl = selPl();
+  const q = ((ctl.auto && ctl.auto.queue) || []).slice();
+  if (pl && !q.includes(pl.id)) { q.push(pl.id); saveQueue(q); toast(`${pl.name} eingereiht`); }
+});
+$('#q-list').addEventListener('click', (e) => {
+  const li = e.target.closest('[data-q]');
+  if (!li) return;
+  const i = Number(li.dataset.q), q = ((ctl.auto && ctl.auto.queue) || []).slice();
+  if (e.target.closest('[data-qdel]')) q.splice(i, 1);
+  else if (e.target.closest('[data-qup]')) [q[i - 1], q[i]] = [q[i], q[i - 1]];
+  else return;
+  saveQueue(q);
+});
+$('#q-start').addEventListener('click', async () => {
+  if (!confirm('Warteschlange starten?\n\nDer Autobau baut eine Schematic nach der anderen, jeweils mit Material aus deinen Kisten.')) return;
+  try { ctl.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv: gameSrv(), startQueue: true }) }); } catch (e) { toast('Warteschlange: ' + e.message); }
+  renderAuto();
+});
+
+/* Farmen: Bereich auf der Karte, Bloecke mit Menge, wohin mit vollem Inventar */
+const farmUi = { box: null, dim: null, blocks: [], amounts: {}, rect: null, timer: null, auto: null };
+const FARM_RUN = ['fplan', 'mine', 'deposit'];
+
+function farmArea() {
+  const b = farmUi.box;
+  if (!b) return null;
+  const snap = $('#fm-snap').checked;
+  const a = snap ? { x0: Math.floor(b.x0 / 16) * 16, z0: Math.floor(b.z0 / 16) * 16, x1: Math.floor(b.x1 / 16) * 16 + 15, z1: Math.floor(b.z1 / 16) * 16 + 15 } : { ...b };
+  a.y0 = Number($('#fm-y0').value); a.y1 = Number($('#fm-y1').value);
+  return a;
+}
+function drawFarmArea() {
+  const a = (farmUi.auto && farmUi.auto.farm && FARM_RUN.includes(farmUi.auto.phase)) ? farmUi.auto.farm.area : farmArea();
+  const visible = farmRunning() || (!$('#side').hidden && sideTab === 'farm') || sel.on;
+  const show = a && visible && (farmUi.dim || state.dim) === state.dim;
+  if (!show) { if (farmUi.rect) { farmUi.rect.remove(); farmUi.rect = null; } return; }
+  const bounds = L.latLngBounds(toLatLng(a.x0, a.z0), toLatLng(a.x1 + 1, a.z1 + 1));
+  if (farmUi.rect) farmUi.rect.setBounds(bounds);
+  else farmUi.rect = L.rectangle(bounds, { color: '#f5a524', weight: 2, dashArray: '6 4', fillOpacity: 0.08, interactive: false }).addTo(map);
+}
+function setFarmBox(box, y0, y1) {
+  farmUi.box = box;
+  farmUi.dim = state.dim;
+  $('#fm-y0').value = y0;
+  $('#fm-y1').value = y1;
+  farmAreaChanged();
+}
+let farmScanT = null;
+function farmAreaChanged() {
+  const a = farmArea();
+  if (!a) { $('#fm-area').textContent = 'noch keiner'; return; }
+  const cw = (a.x1 - a.x0 + 1) / 16, cl = (a.z1 - a.z0 + 1) / 16;
+  $('#fm-area').textContent = `${a.x0} ${a.z0} bis ${a.x1} ${a.z1}` + ($('#fm-snap').checked ? ` · ${cw * cl} Chunks` : '');
+  drawFarmArea();
+  fillFarmChests();
+  clearTimeout(farmScanT);
+  farmScanT = setTimeout(scanFarm, 300);
+}
+async function scanFarm() {
+  const a = farmArea();
+  if (!a) return;
+  $('#fm-blocks-hint').hidden = false;
+  $('#fm-blocks-hint').textContent = 'Zählt Blöcke …';
+  try {
+    const r = await api('/api/farm/scan?' + new URLSearchParams({ srv: state.server, dim: farmUi.dim || state.dim, ...a }));
+    farmUi.blocks = r.blocks;
+    $('#fm-blocks-hint').textContent = r.chunks ? '' : 'In diesem Bereich ist nichts aufgezeichnet. Einmal mit der Mod hinfliegen.';
+    $('#fm-blocks-hint').hidden = !!r.chunks;
+  } catch (e) { farmUi.blocks = []; $('#fm-blocks-hint').textContent = e.message; }
+  $('#fm-filter').hidden = !farmUi.blocks.length;
+  renderFarmBlocks();
+}
+function renderFarmBlocks() {
+  const f = $('#fm-filter').value.trim().toLowerCase().replace(/ /g, '_');
+  const mined = (farmUi.auto && farmUi.auto.mode === 'farm' && farmUi.auto.farm && farmUi.auto.farm.mined) || {};
+  const rows = farmUi.blocks.filter(([id]) => !f || id.includes(f) || farmUi.amounts[id]);
+  $('#fm-blocks').innerHTML = rows.map(([id, n]) => {
+    const want = farmUi.amounts[id] || '';
+    const got = mined[id];
+    return `<tr class="${want ? 'on' : ''}"><td>${itemIcon(id, 20)} ${esc(itemName(id))}</td><td class="n muted" title="im Bereich">${fmt(n)}</td>
+      <td class="fm-amt">${got != null && want ? `<span class="mono ${got >= want ? 'ok' : ''}">${fmt(got)} /</span>` : ''}<input type="number" min="0" step="64" placeholder="Menge" data-fm="${esc(id)}" value="${want}"></td></tr>`;
+  }).join('');
+  const sel = Object.entries(farmUi.amounts).filter(([, n]) => n > 0);
+  $('#fm-sum').textContent = sel.length ? `· ${sel.length} gewählt` : '';
+  renderFarmGo();
+}
+function fillFarmChests() {
+  const a = farmArea(), cur = $('#fm-chest').value;
+  const cx = a ? (a.x0 + a.x1) / 2 : 0, cz = a ? (a.z0 + a.z1) / 2 : 0;
+  const list = (chests.list || []).filter((c) => c.dim === (farmUi.dim || state.dim) && !String(c.block || '').endsWith('shulker_box'))
+    .map((c) => ({ c, d: Math.hypot(c.x - cx, c.z - cz) })).sort((p, q) => p.d - q.d).slice(0, 20);
+  $('#fm-chest').innerHTML = '<option value="">Kiste aus dem Inventar aufstellen</option>' +
+    list.map(({ c, d }) => `<option value="${esc(c.key)}">${esc(c.title || chestWhere(c))} · ${fmt(d)} m</option>`).join('');
+  $('#fm-chest').value = list.some(({ c }) => c.key === cur) ? cur : '';
+}
+function farmRunning() { const a = farmUi.auto; return !!(a && a.mode === 'farm' && FARM_RUN.includes(a.phase)); }
+function renderFarmGo() {
+  const run = farmRunning();
+  const any = Object.values(farmUi.amounts).some((n) => n > 0);
+  $('#fm-go').textContent = run ? '■ Farmen stoppen' : '▶ Farmen starten';
+  $('#fm-go').classList.toggle('danger', run);
+  $('#fm-go').disabled = !run && !(farmUi.box && any);
+  $('#fm-go').title = run || (farmUi.box && any) ? '' : 'Erst Bereich wählen und bei mindestens einem Block eine Menge eintragen';
+}
+function renderFarm() {
+  const a = farmUi.auto;
+  renderFarmGo();
+  drawFarmArea();
+  if (!a || a.mode !== 'farm') { $('#fm-info').textContent = ''; $('#fm-log').innerHTML = ''; return; }
+  const run = farmRunning();
+  $('#fm-info').innerHTML = `<b class="${a.phase === 'error' ? 'bad' : a.phase === 'done' ? 'ok' : a.paused ? 'warn' : ''}">${run && a.paused ? 'pausiert' : AB_PHASE[a.phase] || a.phase}</b>` +
+    (a.info ? ' · ' + esc(a.info) : '') + (a.farm && a.farm.deposits ? ` · ${a.farm.deposits}× eingelagert` : '');
+  $('#fm-log').innerHTML = (a.log || []).slice(-8).reverse().map(([t, m]) =>
+    `<li><span class="mono muted">${new Date(t).toLocaleTimeString(I18N.locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span> ${esc(m)}</li>`).join('');
+  if (run && a.farm) renderFarmBlocks();
+}
+async function pollFarm() {
+  if (document.hidden || !state.server) return;
+  const open = !$('#side').hidden && sideTab === 'farm';
+  if (!open && !farmRunning()) { drawFarmArea(); return; }
+  if (open && (chests.list || []).length !== farmUi.nChests) { farmUi.nChests = (chests.list || []).length; fillFarmChests(); }
+  try { farmUi.auto = await api('/api/auto?' + new URLSearchParams({ srv: gameSrv() })); } catch (_) { return; }
+  renderFarm();
+}
+setInterval(pollFarm, 2000);
+
+$('#fm-pick').addEventListener('click', () => {
+  if (mode3d) { toast('Bereich wählen geht auf der 2D-Karte'); return; }
+  setSelect(true);
+});
+$('#sel-farm').addEventListener('click', () => {
+  const b = sel.box;
+  if (!b) return;
+  setFarmBox({ ...b }, Number($('#sel-y0').value), Number($('#sel-y1').value));
+  setSelect(false);
+  toggleSide(true, 'farm');
+});
+$('#fm-snap').addEventListener('change', farmAreaChanged);
+$('#fm-y0').addEventListener('change', farmAreaChanged);
+$('#fm-y1').addEventListener('change', farmAreaChanged);
+$('#fm-filter').addEventListener('input', renderFarmBlocks);
+$('#fm-blocks').addEventListener('change', (e) => {
+  const id = e.target.dataset && e.target.dataset.fm;
+  if (!id) return;
+  const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
+  if (n) farmUi.amounts[id] = n; else delete farmUi.amounts[id];
+  renderFarmBlocks();
+});
+$('#fm-go').addEventListener('click', async () => {
+  const srv = gameSrv();
+  try {
+    if (farmRunning()) {
+      farmUi.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv }) });
+    } else {
+      const a = farmArea();
+      const targets = Object.fromEntries(Object.entries(farmUi.amounts).filter(([, n]) => n > 0));
+      const what = Object.entries(targets).map(([id, n]) => `${fmt(n)}× ${itemName(id)}`).join(', ');
+      const chest = $('#fm-chest').value;
+      if (!confirm(`Farmen starten?\n\n${what}\n\nBaritone baut im markierten Bereich ab und sammelt alles ein. Volles Inventar: ${chest ? 'zur gewählten Kiste bringen' : 'Kiste aus dem Inventar aufstellen und einpacken'}.\n\nAbbrechen jederzeit mit „■ Farmen stoppen“.`)) return;
+      farmUi.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv, farm: { area: a, dim: farmUi.dim || state.dim, targets, chest: chest || null, placeChest: true } }) });
+    }
+  } catch (e) { toast('Farmen: ' + e.message); }
+  renderFarm();
+});
+farmAreaChanged();
 
 // ------------------------------------------------------------------ Start
 

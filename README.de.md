@@ -34,6 +34,9 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 - **Goto:** Rechtsklick auf die Karte, „Hierhin laufen“, und Baritone läuft hin.
 - **Autobau:** holt fehlendes Material aus deinen Kisten, baut mit Baritone Schicht für Schicht,
   holt Nachschub und bringt Reste zurück. Hält an, wenn ein Spieler in die Nähe kommt.
+  Am Ende korrigiert er falsche Blöcke, eine Warteschlange baut mehrere Schematics nacheinander.
+- **Farmen:** Bereich auf der Karte wählen, Blöcke und Menge angeben, Baritone baut ab und sammelt
+  ein. Volles Inventar kommt in eine gewählte Kiste oder eine, die er selbst aufstellt.
 - **Außerdem:** Wegpunkte, Schilder, Stash-Finder, Zeitleiste der Änderungen, Radar für Spieler
   in der Nähe.
 

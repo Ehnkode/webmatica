@@ -102,7 +102,7 @@ public final class AutoGuard {
         long now = System.currentTimeMillis();
         if (now < nextTry || p.getHungerManager().getFoodLevel() > HUNGRY || mc.currentScreen != null
                 || p.isUsingItem() || FetchTask.getInstance().busy() && !FetchTask.getInstance().walking()
-                || UnpackTask.getInstance().busy()) {
+                || UnpackTask.getInstance().busy() || FarmTask.getInstance().handlingChest()) {
             return;
         }
         nextTry = now + 10_000L;

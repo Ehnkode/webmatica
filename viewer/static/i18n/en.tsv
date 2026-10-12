@@ -717,6 +717,9 @@ Editor (5)	Editor (5)
 Kisten (6)	Chests (6)
 Zeitleiste (7)	Timeline (7)
 Radar (8)	Radar (8)
+Zeitleiste (8)	Timeline (8)
+Radar (9)	Radar (9)
+Farmen (7)	Farming (7)
 Schematics bauen und ändern: Blöcke setzen, abbauen, füllen, ersetzen, kopieren und drehen.	Build and change schematics: place, break, fill, replace, copy and rotate blocks.
 Leere Schematic	Empty schematic
 Aus der Welt	From the world
@@ -729,3 +732,111 @@ Fortschritt	Progress
 {} fehlen	{} missing
 alles da	all there
 läuft	running
+# --- Farmen, Warteschlange, falsche Bloecke
+Farmen	Farming
+Baritone baut in einem Bereich bestimmte Blöcke ab, bis die Menge erreicht ist, und sammelt alles ein.	Baritone mines chosen blocks in an area until the amount is reached, and picks everything up.
+1 · Bereich	1 · Area
+Auf der Karte wählen	Pick on the map
+Y von	Y from
+bis	to
+ganze Chunks	whole chunks
+Bereich auf ganze Chunks (16 × 16) erweitern	Expand the area to whole chunks (16 × 16)
+2 · Blöcke und Menge	2 · Blocks and amount
+Erst einen Bereich wählen.	Pick an area first.
+Block suchen …	Search block …
+3 · Wenn das Inventar voll ist	3 · When the inventory is full
+Werkzeug, Essen, Kisten und die Hotbar bleiben bei dir.	Tools, food, chests and the hotbar stay with you.
+▶ Farmen starten	▶ Start farming
+■ Farmen stoppen	■ Stop farming
+Pause bei Spielern in der Nähe	Pause when players are near
+Automatisch essen	Eat automatically
+Werkzeug nicht kaputtmachen	Don't break tools
+Kiste aus dem Inventar aufstellen	Place a chest from the inventory
+noch keiner	none yet
+{} {} bis {} {}	{} {} to {} {}
+{} Chunks	{} chunks
+Zählt Blöcke …	Counting blocks …
+In diesem Bereich ist nichts aufgezeichnet. Einmal mit der Mod hinfliegen.	Nothing recorded in this area. Fly there once with the mod.
+Menge	Amount
+im Bereich	in the area
+{} gewählt	{} selected
+Erst Bereich wählen und bei mindestens einem Block eine Menge eintragen	Pick an area first and enter an amount for at least one block
+{}× eingelagert	{}× stored
+Bereich wählen geht auf der 2D-Karte	Picking an area works on the 2D map
+Farmen: {}	Farming: {}
+Bereich	Area
+Hier farmen	Farm here
+In diesem Bereich Blöcke abbauen lassen	Let Baritone mine blocks in this area
+baut ab	mining
+lagert ein	storing
+korrigiert falsche Blöcke	fixing wrong blocks
+Farmen gestartet: {}	Farming started: {}
+Im Bereich nicht aufgezeichnet: {}	Not recorded in the area: {}
+du bist in einer anderen Dimension als der Farm-Bereich	you are in a different dimension than the farm area
+Abbauen hängt, nimmt die nächste Stelle	Mining is stuck, taking the next spot
+Einlagern hängt	Storing is stuck
+Einlagern ging nicht: {}	Storing failed: {}
+Einlagern klappt nicht: {}	Storing doesn't work: {}
+kommt nicht weiter (4× nichts abgebaut)	stuck (4× nothing mined)
+an dieser Stelle ging nichts, nimmt eine andere	nothing happened here, trying another spot
+fertig: {}	done: {}
+im Bereich gibt es nicht mehr: {}	no more in the area: {}
+keine erreichbaren Blöcke mehr im Bereich	no reachable blocks left in the area
+baut {} Blöcke ab bei {} {} {}	mining {} blocks at {} {} {}
+noch {}	{} to go
+Inventar voll, aber nichts zum Einlagern (nur Werkzeug/Essen)	Inventory full, but nothing to store (only tools/food)
+Inventar voll: bringt {} Stacks zu {}	Inventory full: taking {} stacks to {}
+Inventar voll und keine Kiste gewählt	Inventory full and no chest chosen
+Inventar voll und keine Kiste dabei (Kiste mitnehmen oder eine wählen)	Inventory full and no chest with you (bring one or pick one)
+Inventar voll: stellt eine Kiste auf und packt {} Stacks hinein	Inventory full: placing a chest and putting {} stacks in
+neue Kiste {} {} {}	new chest {} {} {}
+Kiste: {} Items eingelagert bei {} {} {}	Chest: {} items stored at {} {} {}
+Kiste: {} Items eingelagert	Chest: {} items stored
+Farmen: fertig, {} Items eingesammelt	Farming: done, {} items picked up
+Falsche Blöcke: fertig, {} Items eingesammelt	Wrong blocks: done, {} items picked up
+Farmen: baut {} Bereiche ab	Farming: mining {} areas
+Falsche Blöcke: baut {} Bereiche ab	Wrong blocks: mining {} areas
+Kiste lässt sich nicht abstellen	Can't place the chest
+keine Kiste im Inventar	no chest in the inventory
+kein Platz für eine Kiste	no room for a chest
+Kiste geht nicht auf	Chest won't open
+Kiste wurde geschlossen	Chest was closed
+nichts abzubauen	nothing to mine
+Zeit abgelaufen	time is up
+Inventar voll	Inventory full
+abgebrochen, neuer Auftrag	cancelled, new task
+gestoppt	stopped
+nicht mehr im Spiel	no longer in game
+nicht im Spiel	not in game
+Gerade wird gefarmt. Farmen beenden und stattdessen bauen?	Farming is running. Stop farming and build instead?
+Falsche Blöcke abbauen ({})	Break wrong blocks ({})
+Baritone baut diese Blöcke ab und sammelt sie ein. Danach setzt der Autobau oder der Printer die richtigen.	Baritone breaks these blocks and picks them up. Then the auto build or the Printer places the right ones.
+auch „muss weg“ ({})	also "must go" ({})
+Blöcke, wo die Schematic Luft hat	Blocks where the schematic has air
+Baritone baut {} Blöcke ab	Baritone is breaking {} blocks
+Nichts abzubauen	Nothing to break
+Abbauen: {}	Breaking: {}
+baut {} falsche oder überflüssige Blöcke ab	breaking {} wrong or extra blocks
+Abbauen dauert zu lange, plant neu	Breaking takes too long, planning again
+fertig! ({} Blöcke sind verdreht oder zu viel, bitte selbst prüfen)	done! ({} blocks are rotated or extra, please check yourself)
+Am Ende falsche Blöcke korrigieren	Fix wrong blocks at the end
+Wenn alles steht: falsch gedrehte und überflüssige Blöcke im Rahmen abbauen und richtig neu setzen	When everything is built: break rotated and extra blocks in the frame and place them correctly
+Korrektur	Fixing
+Warteschlange	Queue
+Danach automatisch weiterbauen: Schematics hier einreihen.	Keep building afterwards: queue schematics here.
++ Diese einreihen	+ Queue this one
+▶ Warteschlange starten	▶ Start queue
+Nach oben	Move up
+Entfernen	Remove
+gelöscht	deleted
+{} eingereiht	{} queued
+Warteschlange: {}	Queue: {}
+Warteschlange: als Nächstes {}	Queue: next up {}
+{} Blöcke abbauen?	Break {} blocks?
+Baritone baut genau diese Blöcke im Rahmen der Schematic ab und sammelt sie ein. Danach setzt der Autobau (oder der Printer) die richtigen.	Baritone breaks exactly these blocks in the schematic frame and picks them up. Then the auto build (or the Printer) places the right ones.
+Warteschlange starten?	Start the queue?
+Der Autobau baut eine Schematic nach der anderen, jeweils mit Material aus deinen Kisten.	The auto build builds one schematic after another, each with material from your chests.
+Farmen starten?	Start farming?
+Baritone baut im markierten Bereich ab und sammelt alles ein. Volles Inventar: zur gewählten Kiste bringen.	Baritone mines in the marked area and picks everything up. Full inventory: take it to the chosen chest.
+Baritone baut im markierten Bereich ab und sammelt alles ein. Volles Inventar: Kiste aus dem Inventar aufstellen und einpacken.	Baritone mines in the marked area and picks everything up. Full inventory: place a chest from the inventory and fill it.
+Abbrechen jederzeit mit „■ Farmen stoppen“.	Cancel any time with "■ Stop farming".
