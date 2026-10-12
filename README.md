@@ -124,7 +124,8 @@ Java 21 oder neuer, Gradle kommt über den Wrapper mit:
 ```
 
 Die fertige Jar liegt in `build/libs/`. GitHub baut sie bei jedem Push automatisch (Actions,
-Artefakt „webmatica-mod“); ein Tag wie `v0.4.0` legt ein Release mit der Jar an.
+Artefakt „webmatica-mod“). Wird auf GitHub ein Release veröffentlicht, hängt der Build die Jar
+automatisch daran.
 
 ## Ohne Minecraft ausprobieren
 
