@@ -5,12 +5,34 @@
 Deine Minecraft-Welt im Browser: Karte, 3D-Ansicht, Kisten und Schematics, dazu Litematica und
 Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
-![3D-Ansicht einer Demo-Welt](docs/screenshot-3d.jpg)
+![Schematic in 3D mit der Liste der fehlenden Items](docs/3d.jpg)
 
 - **Mod** (Fabric 1.21.11, nur Client): speichert jeden Chunk, den du siehst, als normale
   Regiondateien und merkt sich Kisteninhalte. Schickt nichts an den Server oder in den Chat.
-- **Viewer** (Python, läuft lokal unter <http://127.0.0.1:8770>): Karte, 3D, Kisten,
-  Schematic-Editor, Autobau mit Baritone. Oberfläche auf Deutsch und Englisch (Umschalter oben links).
+- **Viewer** (Python, läuft lokal unter <http://127.0.0.1:8770>): alles Folgende im Browser.
+  Auf Deutsch und Englisch (Umschalter oben links).
+
+## Funktionen
+
+| | |
+|---|---|
+| ![Karte](docs/map.jpg) | ![Schematic-Editor](docs/editor.jpg) |
+
+- **Karte und 3D** von allem, was du gesehen hast, mit echten Blockmodellen, Live-Position, Spur
+  und Verfolger-Kamera.
+- **Schematics:** `.litematic`, `.schem` oder `.nbt` laden, auf der Karte platzieren, mit einem
+  Klick an Litematica schicken und sehen, welche Items noch fehlen. Inventar und Kisten sind schon
+  abgezogen.
+- **Schematic-Editor:** Blöcke setzen, abbauen und füllen, alle Blöcke einer Sorte ersetzen oder
+  löschen, kopieren, verschieben, drehen, mit Rückgängig. Jeder Bereich deiner Welt kann zur
+  Schematic werden.
+- **Kisten:** Jede Kiste, die du öffnest, wird gemerkt, auch der Inhalt von Shulkern. Du kannst
+  über alle Kisten hinweg suchen.
+- **Goto:** Rechtsklick auf die Karte, „Hierhin laufen“, und Baritone läuft hin.
+- **Autobau:** holt fehlendes Material aus deinen Kisten, baut mit Baritone Schicht für Schicht,
+  holt Nachschub und bringt Reste zurück. Hält an, wenn ein Spieler in die Nähe kommt.
+- **Außerdem:** Wegpunkte, Schilder, Stash-Finder, Zeitleiste der Änderungen, Radar für Spieler
+  in der Nähe.
 
 ## Voraussetzungen
 
