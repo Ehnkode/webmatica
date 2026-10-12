@@ -12,14 +12,19 @@
 <body>
 <div id="map"></div>
 <div id="view3d" hidden>
-  <div class="hint3d panel">
-    <span>Klick auf Spieler oder Schematic wählt aus · sonst Maus fangen · <b>WASD</b> fliegen · <b>Leertaste/Shift</b> hoch/runter · <b>Strg</b> schneller · <b>Esc</b> Maus frei</span>
+  <div id="set3d" class="set3d panel" hidden>
     <label title="Sichtweite in Chunks mit vollen Blockmodellen">Chunks <input type="range" id="radius3d" min="4" max="48" value="12"> <span id="radius3d-val" class="mono">12</span></label>
     <label title="Dahinter vereinfachtes Gelände aus der Karte, in Blöcken (0 = aus). Füllt auch Chunks, die noch laden.">Fernsicht <input type="range" id="lod3d" min="0" max="16" value="8"> <span id="lod3d-val" class="mono"></span></label>
-    <label class="check"><input type="checkbox" id="fog3d"> Nebel</label>
-    <label class="check" title="Höhlen und Inneres mitladen (langsamer)"><input type="checkbox" id="full3d"> Höhlen</label>
-    <label class="check" title="Sonne, Schatten, Himmel und Lichtstimmung"><input type="checkbox" id="fancy3d"> Shader</label>
     <label id="hour3d-wrap" title="Tageszeit für den Shader">Uhrzeit <input type="range" id="hour3d" min="0" max="24" step="0.25" value="10"> <span id="hour3d-val" class="mono">10:00</span></label>
+    <div class="set3d-checks">
+      <label class="check"><input type="checkbox" id="fog3d"> Nebel</label>
+      <label class="check" title="Höhlen und Inneres mitladen (langsamer)"><input type="checkbox" id="full3d"> Höhlen</label>
+      <label class="check" title="Sonne, Schatten, Himmel und Lichtstimmung"><input type="checkbox" id="fancy3d"> Shader</label>
+    </div>
+  </div>
+  <div class="hint3d panel">
+    <span id="hint3d-text">Klick auf Spieler oder Schematic wählt aus · sonst Maus fangen · <b>WASD</b> fliegen · <b>Leertaste/Shift</b> hoch/runter · <b>Strg</b> schneller · <b>Esc</b> Maus frei</span>
+    <button id="set3d-btn" class="toggle" title="3D-Einstellungen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Einstellungen</button>
     <button id="shot3d" title="Bildschirmfoto speichern">Foto</button>
   </div>
   <div id="mini" class="mini panel" title="Klick: dorthin fliegen · Rad: Zoom">
@@ -79,9 +84,10 @@
   <button data-tab="signs" title="Schilder (2)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="10" rx="1.5"/><path d="M12 15v5M8 9h8M8 12h5"/></svg><span>Schilder</span></button>
   <button data-tab="stashes" title="Stashes (3)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9l8-5 8 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 9h16M10 13h4"/></svg><span>Stashes</span></button>
   <button data-tab="schematics" title="Schematics (4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><span>Schematics</span></button>
-  <button data-tab="chests" title="Kisten (5)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="M3 11h18M11 11v3h2v-3"/></svg><span>Kisten</span></button>
-  <button data-tab="history" title="Zeitleiste (6)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>Zeitleiste</span></button>
-  <button data-tab="radar" title="Radar (7)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/></svg><span>Radar</span><i id="radar-badge" class="badge" hidden></i></button>
+  <button data-tab="editor" title="Editor (5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>Editor</span></button>
+  <button data-tab="chests" title="Kisten (6)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="M3 11h18M11 11v3h2v-3"/></svg><span>Kisten</span></button>
+  <button data-tab="history" title="Zeitleiste (7)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>Zeitleiste</span></button>
+  <button data-tab="radar" title="Radar (8)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/></svg><span>Radar</span><i id="radar-badge" class="badge" hidden></i></button>
   <span class="rail-sep"></span>
   <button id="btn-help" title="Tastenkürzel (?)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.4M12 16.6v.2"/></svg><span>Hilfe</span></button>
 </nav>
@@ -113,6 +119,17 @@
     </div>
     <p class="hint" id="lib-hint">Platzieren setzt die Schematic an die Kartenmitte bzw. in 3D vor die Kamera.</p>
     <ul id="lib-list" class="list"></ul>
+  </section>
+  <section data-pane="editor" class="pane">
+    <p class="hint">Schematics bauen und ändern: Blöcke setzen, abbauen, füllen, ersetzen, kopieren und drehen.</p>
+    <div class="ed-start">
+      <button id="edp-new" class="ed-card"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><b>Neu</b><span>Leere Schematic</span></button>
+      <button id="edp-cut" class="ed-card"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/></svg><b>Aus der Welt</b><span>Bereich auswählen</span></button>
+      <button id="edp-up" class="ed-card"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg><b>Hochladen</b><span>.schem, .litematic</span></button>
+    </div>
+    <h4>Öffnen</h4>
+    <input id="edp-filter" placeholder="Schematic suchen …">
+    <ul id="edp-list" class="list"></ul>
   </section>
   <section data-pane="chests" class="pane">
     <div id="ct-known" class="ct-known"></div>
@@ -173,11 +190,17 @@
   </div>
   <div class="muted mono sp-sub" id="sp-sub"></div>
   <div class="sp-error" id="sp-error" hidden></div>
-  <nav class="tabs sp-tabs">
-    <button data-sptab="place" class="active">Platzieren</button>
-    <button data-sptab="mats">Material</button>
-    <button data-sptab="check">Abgleich</button>
-    <button data-sptab="build">Bauen</button>
+  <div class="sp-quick">
+    <button id="sp-ingame" class="toggle" title="Als Litematica-Platzierung ins Spiel schicken (Geisterblöcke, Printer, Baritone #litematica)">Ins Spiel</button>
+    <button id="sp-edit" title="Im Editor öffnen: Blöcke setzen, abbauen, Bereiche füllen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Bearbeiten</button>
+    <button id="sp-goto" title="Hinfliegen">Hinfliegen</button>
+  </div>
+  <span id="sp-ingame-st" class="ingame-st"></span>
+  <nav class="sp-tabs">
+    <button data-sptab="place" class="active"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M7 7l-4 5 4 5M17 7l4 5-4 5"/></svg><b>Platzieren</b><small id="spt-place">Position</small></button>
+    <button data-sptab="mats"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/></svg><b>Material</b><small id="spt-mats">Liste</small></button>
+    <button data-sptab="check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg><b>Abgleich</b><small id="spt-check">Fortschritt</small></button>
+    <button data-sptab="build"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg><b>Bauen</b><small id="spt-build">Autobau</small></button>
   </nav>
   <div class="sp-body">
   <section data-sppane="place" class="sp-pane active">
@@ -196,12 +219,6 @@
     <label class="sp-op">Deckkraft <input type="range" id="sp-op" min="10" max="100" value="100"></label>
   </div>
   <div class="sp-row">
-    <button id="sp-ingame" class="toggle" title="Als Litematica-Platzierung ins Spiel schicken (Geisterblöcke, Printer, Baritone #litematica)">Ins Spiel</button>
-    <span id="sp-ingame-st" class="ingame-st"></span>
-  </div>
-  <div class="sp-row">
-    <button id="sp-goto">Hinfliegen</button>
-    <button id="sp-edit" title="Im Editor öffnen: Blöcke setzen, abbauen, Bereiche füllen">Bearbeiten</button>
     <button id="sp-del" class="danger">Entladen</button>
   </div>
     <p class="hint">Auf der Karte ziehen oder mit <kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> verschieben, <kbd>Bild↑</kbd><kbd>Bild↓</kbd> Höhe, mit <kbd>Shift</kbd> 10 Blöcke. <kbd>R</kbd> dreht, <kbd>M</kbd> spiegelt.</p>
@@ -292,7 +309,7 @@
     <div class="side-head"><b>Tastenkürzel</b><button id="help-close" class="icon" title="Schließen (Esc)">✕</button></div>
     <div class="keys">
       <h4>Karte</h4>
-      <div><kbd>1</kbd>–<kbd>7</kbd><span>Bereiche öffnen (Wegpunkte … Radar)</span></div>
+      <div><kbd>1</kbd>–<kbd>8</kbd><span>Bereiche öffnen (Wegpunkte … Radar)</span></div>
       <div><kbd>S</kbd><span>Seitenleiste auf/zu</span></div>
       <div><kbd>/</kbd><span>zu Koordinaten springen</span></div>
       <div><kbd>F</kbd><span>dir folgen</span></div>

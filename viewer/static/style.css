@@ -424,3 +424,41 @@ details.fold > :last-child { margin-bottom: 10px; }
 .guard .hint { font-size: 12px; }
 b.warn { color: #ffcf6b; }
 .lang-btn { font-size: 11px; font-weight: 700; padding: 2px 6px; min-width: 0; letter-spacing: 0.04em; }
+
+/* 3D: Einstellungen hinter dem Zahnrad, Hinweis blendet aus */
+.set3d { position: absolute; bottom: 62px; left: 50%; transform: translateX(-50%); padding: 10px 14px; display: grid; gap: 8px;
+  font-size: 12.5px; min-width: 300px; }
+.set3d[hidden] { display: none; }
+.set3d label { display: flex; gap: 8px; align-items: center; color: var(--fg); }
+.set3d input[type=range] { flex: 1; padding: 0; }
+.set3d .mono { min-width: 70px; text-align: right; color: var(--muted); }
+.set3d-checks { display: flex; gap: 14px; }
+#hint3d-text { transition: opacity .6s, max-width .6s; max-width: 900px; overflow: hidden; white-space: nowrap; }
+#hint3d-text.gone { opacity: 0; max-width: 0; }
+.hint3d { flex-wrap: nowrap; }
+.hint3d button { display: inline-flex; gap: 6px; align-items: center; }
+.hint3d button svg { width: 15px; height: 15px; }
+
+/* Schematic-Fenster: Schnellzeile und grosse Reiter */
+.sp-quick { display: flex; gap: 6px; margin: 0 0 4px; }
+.sp-quick button { flex: 1; display: inline-flex; gap: 6px; align-items: center; justify-content: center; padding: 6px 8px; }
+.sp-quick button svg { width: 15px; height: 15px; }
+#sp-ingame-st:empty { display: none; }
+#sp-ingame-st { display: block; margin: 0 0 4px; }
+.sp-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 6px 0 4px; flex: none; }
+.sp-tabs button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 2px 6px; border-radius: 9px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--line); color: var(--muted); }
+.sp-tabs button svg { width: 18px; height: 18px; }
+.sp-tabs button b { font-size: 12.5px; font-weight: 600; color: var(--fg); }
+.sp-tabs button small { font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.sp-tabs button small.warn { color: var(--danger); }
+.sp-tabs button small.good { color: #22a06b; }
+.sp-tabs button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--fg); }
+.sp-tabs button:hover { color: var(--fg); }
+
+/* Editor-Reiter */
+.ed-start { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 4px; }
+.ed-card { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px; border-radius: 10px; }
+.ed-card svg { width: 22px; height: 22px; }
+.ed-card b { font-size: 12.5px; }
+.ed-card span { font-size: 10.5px; color: var(--muted); }

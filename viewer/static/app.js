@@ -751,8 +751,25 @@ async function set3d(on) {
   }
   mode3d = on;
   $('#btn-3d').classList.toggle('on', on);
+  if (on) showHint3d();
+  else $('#set3d').hidden = true;
   schedulePlayer();
 }
+
+/* 3D: Hinweis nur kurz zeigen, Einstellungen hinter dem Zahnrad */
+let hint3dTimer = null;
+function showHint3d() {
+  const h = $('#hint3d-text');
+  h.classList.remove('gone');
+  clearTimeout(hint3dTimer);
+  hint3dTimer = setTimeout(() => h.classList.add('gone'), 8000);
+}
+$('#set3d-btn').addEventListener('click', () => {
+  const p = $('#set3d');
+  p.hidden = !p.hidden;
+  $('#set3d-btn').classList.toggle('on', !p.hidden);
+});
+$('.hint3d').addEventListener('mouseenter', showHint3d);
 
 /* Minimap in 3D: kleine 2D-Karte um die Kamera, Pfeil zeigt die Blickrichtung */
 const mini = { map: null, layer: null, me: null, zoom: 0, timer: null, hidden: false };
@@ -1042,8 +1059,27 @@ function renderLibrary() {
     <li data-file="${esc(e.file)}"><div class="main"><div class="title">${esc(e.name)}</div>
     <div class="sub">${esc(e.folder)} · ${fmt(e.bytes / 1024)} KB</div></div><button data-edit title="Im Editor öffnen">✎</button><button data-place>Platzieren</button></li>`).join('')
     : `<li class="empty">${schem.lib.length ? 'Nichts gefunden.' : 'Keine Schematics gefunden. Lade eine hoch oder lege sie in den Litematica-Ordner „schematics“.'}</li>`;
+  if ($('#edp-list')) renderEdLib();
 }
 $('#lib-filter').addEventListener('input', renderLibrary);
+
+/* Editor-Reiter: neu, aus der Welt, hochladen, vorhandene oeffnen */
+function renderEdLib() {
+  const f = $('#edp-filter').value.trim().toLowerCase();
+  const files = schem.lib.filter((e) => !f || e.file.toLowerCase().includes(f));
+  $('#edp-list').innerHTML = files.length ? files.slice(0, 300).map((e) => `
+    <li data-file="${esc(e.file)}"><div class="main"><div class="title">${esc(e.name)}</div>
+    <div class="sub">${esc(e.folder)} · ${fmt(e.bytes / 1024)} KB</div></div><button data-edit>Öffnen</button></li>`).join('')
+    : `<li class="empty">${schem.lib.length ? 'Nichts gefunden.' : 'Noch keine Schematics.'}</li>`;
+}
+$('#edp-filter').addEventListener('input', renderEdLib);
+$('#edp-list').addEventListener('click', (e) => {
+  const li = e.target.closest('li[data-file]');
+  if (li) openEditor({ file: li.dataset.file });
+});
+$('#edp-new').addEventListener('click', () => $('#lib-new').click());
+$('#edp-up').addEventListener('click', () => $('#lib-upload').click());
+$('#edp-cut').addEventListener('click', () => { toggleSide(false); setSelect(true); });
 
 function renderPlaced() {
   const here = placedHere();
@@ -1182,8 +1218,16 @@ async function flushSchems() {
   if (schem.sel && !$('#schem-panel').hidden) loadPaneData();
 }
 
+/* Kurzinfo unter den grossen Reitern des Schematic-Fensters */
+function spBadge(tab, text, cls) {
+  const el = $('#spt-' + tab);
+  if (!el) return;
+  el.textContent = text;
+  el.className = cls || '';
+}
+const SPT_DEFAULT = { place: 'Position', mats: 'Liste', check: 'Fortschritt', build: 'Autobau' };
 function selectSchem(id, from3d) {
-  if (schem.sel !== id) { schem.mats = null; schem.check = null; }
+  if (schem.sel !== id) { schem.mats = null; schem.check = null; for (const k in SPT_DEFAULT) spBadge(k, SPT_DEFAULT[k]); }
   if (schem.sel && schem.sel !== id && view3d) view3d.setVerify(schem.sel, null);
   schem.sel = id;
   if (view3d && !from3d) view3d.select(id ? { type: 'schematic', id } : null, true);
@@ -1409,16 +1453,18 @@ function renderMissing() {
   const total = L.missing.reduce((a, r) => a + r.miss, 0);
   const sh = L.missing.reduce((a, r) => a + r.miss / (27 * stackOf(r.it)), 0);
   if (!L.missing.length) {
+    spBadge('mats', 'alles da', 'good');
     el.innerHTML = `<div class="card-title">Fehlende Items</div><p class="ok-hint">Nichts fehlt: alles ist im Inventar oder in deinen Kisten${L.fetch.length ? `, ${L.fetch.length} ${L.fetch.length === 1 ? 'Sorte muss' : 'Sorten müssen'} noch aus Kisten geholt werden (Tab „Bauen“ → Autobau)` : ''}.</p>
       <p class="hint">Gezählt: ${src}, abgezogen: ${minus}.</p>`;
     return;
   }
+  spBadge('mats', `${L.missing.length} fehlen`, 'warn');
   el.innerHTML = `<div class="card-title">Fehlende Items <span class="muted">${L.missing.length} Sorten · ${fmt(total)} Items · etwa ${Math.max(1, Math.ceil(sh))} Shulker</span>
       <button id="miss-copy" title="Liste als Text kopieren">Kopieren</button></div>
+    <p class="hint">Gezählt: ${src}, abgezogen: ${minus}. Diese Items hast du nirgends, sie müssen gefarmt oder gekauft werden.${L.fetch.length ? ` ${L.fetch.length} weitere Sorten liegen komplett in Kisten.` : ''}</p>
     <table class="mats miss"><tbody>${L.missing.map((r) => `<tr><td>${itemIcon(r.it, 20)} ${esc(itemName(r.it))}</td>
       <td class="n miss-n">${fmt(r.miss)}</td><td class="s">${r.miss >= stackOf(r.it) ? stacksText(r.it, r.miss) : ""}</td>
-      <td class="s">${r.have || r.box ? `<span class="muted" title="von ${fmt(r.n)} benötigt">${[r.have ? fmt(r.have) + ' dabei' : '', r.box ? fmt(r.box) + ' in Kisten' : ''].filter(Boolean).join(', ')}</span>` : ''}</td></tr>`).join('')}</tbody></table>
-    <p class="hint">Gezählt: ${src}, abgezogen: ${minus}. Diese Items hast du nirgends, sie müssen gefarmt oder gekauft werden.${L.fetch.length ? ` ${L.fetch.length} weitere Sorten liegen komplett in Kisten.` : ''}</p>`;
+      <td class="s">${r.have || r.box ? `<span class="muted" title="von ${fmt(r.n)} benötigt">${[r.have ? fmt(r.have) + ' dabei' : '', r.box ? fmt(r.box) + ' in Kisten' : ''].filter(Boolean).join(', ')}</span>` : ''}</td></tr>`).join('')}</tbody></table>`;
 }
 $('#mat-miss').addEventListener('click', (e) => {
   if (!e.target.closest('#miss-copy')) return;
@@ -1538,6 +1584,7 @@ function renderCheck() {
   const pct = (n) => (n / tot) * 100;
   const keys = [['ok', 'richtig'], ['rotated', 'falsch gedreht'], ['wrong', 'falscher Block'], ['missing', 'fehlt'], ['unknown', 'nicht aufgezeichnet']];
   const colors = { ok: '#22a06b', rotated: '#ffe066', wrong: '#e5484d', missing: '#3e9bf5', unknown: '#555b66' };
+  spBadge('check', `${Math.floor(pct(s.ok))} % fertig`, s.ok >= s.total ? 'good' : '');
   $('#chk-out').innerHTML = `
     <div class="bar-chk">${keys.map(([k]) => `<span style="width:${pct(s[k])}%;background:${colors[k]}"></span>`).join('')}</div>
     <div class="chk-stats">
@@ -2105,8 +2152,8 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === '?') { toggleHelp(); return; }
   if (e.key === 'Escape' && !$('#help').hidden) { toggleHelp(false); return; }
-  const tabs = ['waypoints', 'signs', 'stashes', 'schematics', 'chests', 'history', 'radar'];
-  if (/^[1-7]$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
+  const tabs = ['waypoints', 'signs', 'stashes', 'schematics', 'editor', 'chests', 'history', 'radar'];
+  if (/^[1-8]$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
     const t = tabs[Number(e.key) - 1];
     if (!$('#side').hidden && sideTab === t) toggleSide(false); else toggleSide(true, t);
     return;
@@ -2145,6 +2192,7 @@ function renderAuto() {
   const running = a && a.mode !== 'store' && ['plan', 'fetch', 'approach', 'build', 'unpack', 'return'].includes(a.phase);
   const mine = running && pl && a.pid === pl.id;
   $('#ab-toggle').textContent = running ? '■ Autobau stoppen' : '▶ Automatisch holen und bauen';
+  spBadge('build', mine ? (AB_PHASE[a.phase] || 'läuft') : 'Autobau', mine ? 'good' : '');
   $('#ab-toggle').classList.toggle('danger', !!running);
   $('#ab-toggle').classList.add('primary');
   $('#ab-toggle').disabled = !running && !(pl && pl.ingame);
