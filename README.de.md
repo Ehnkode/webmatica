@@ -17,17 +17,20 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 | | |
 |---|---|
 | ![Karte](docs/map.jpg) | ![Schematic-Editor](docs/editor.jpg) |
+| ![Verfolger-Kamera](docs/follow.jpg) | |
 
-- **Karte und 3D** von allem, was du gesehen hast, mit echten Blockmodellen, Live-Position, Spur
-  und Verfolger-Kamera.
+- **Karte und 3D** von allem, was du gesehen hast, mit echten Blockmodellen, Live-Position und Spur.
+- **Verfolger-Kamera:** in 3D dich oder einen anderen Spieler anklicken und die Kamera auf ihn
+  festsetzen, von hinten, aus der Ich-Sicht oder von oben.
 - **Schematics:** `.litematic`, `.schem` oder `.nbt` laden, auf der Karte platzieren, mit einem
   Klick an Litematica schicken und sehen, welche Items noch fehlen. Inventar und Kisten sind schon
   abgezogen.
 - **Schematic-Editor:** Blöcke setzen, abbauen und füllen, alle Blöcke einer Sorte ersetzen oder
   löschen, kopieren, verschieben, drehen, mit Rückgängig. Jeder Bereich deiner Welt kann zur
   Schematic werden.
-- **Kisten:** Jede Kiste, die du öffnest, wird gemerkt, auch der Inhalt von Shulkern. Du kannst
-  über alle Kisten hinweg suchen.
+- **Kisten:** Jede Kiste, die du öffnest, wird gemerkt, auch der Inhalt von Shulkern. Such ein
+  Item über alle Kisten hinweg, dann läuft Baritone auf Knopfdruck hin oder holt genau die Stacks,
+  die du ausgewählt hast.
 - **Goto:** Rechtsklick auf die Karte, „Hierhin laufen“, und Baritone läuft hin.
 - **Autobau:** holt fehlendes Material aus deinen Kisten, baut mit Baritone Schicht für Schicht,
   holt Nachschub und bringt Reste zurück. Hält an, wenn ein Spieler in die Nähe kommt.
