@@ -12,8 +12,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Block-Entity-Daten (z. B. Schildtext) kommen oft erst nach dem Chunk.
- * Dann den Chunk noch einmal schreiben.
+ * Block entity data (e.g. sign text) often arrives after the chunk.
+ * Then write the chunk once more.
  */
 @Mixin(ClientPlayNetworkHandler.class)
 public abstract class ClientPlayNetworkHandlerMixin {
@@ -25,8 +25,8 @@ public abstract class ClientPlayNetworkHandlerMixin {
     }
 
     /**
-     * Truhen-Deckel. Am Ende einhaengen: der erste Aufruf kommt vom Netzwerk-Thread
-     * und bricht in forceMainThread ab, erst der zweite (Client-Thread) laeuft durch.
+     * Chest lids. Inject at the end: the first call comes from the network thread
+     * and aborts in forceMainThread, only the second (client thread) runs through.
      */
     @Inject(method = "onBlockEvent", at = @At("TAIL"))
     private void mapper$onBlockEvent(BlockEventS2CPacket packet, CallbackInfo ci) {

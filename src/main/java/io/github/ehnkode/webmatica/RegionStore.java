@@ -31,21 +31,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.CRC32;
 
 /**
- * Nimmt Chunks vom Client entgegen und schreibt sie in .mca-Dateien.
+ * Receives chunks from the client and writes them to .mca files.
  *
- * Ablauf:
+ * Flow:
  * <ul>
- *   <li>Client-Thread: Chunk geladen oder geaendert -> {@link ChunkSnapshot}
- *       erstellen (Kopie) und an den IO-Thread geben.</li>
- *   <li>IO-Thread: NBT bauen, gegen den zuletzt geschriebenen Stand vergleichen
- *       und nur bei Aenderung ueber Vanillas {@link RegionFile} schreiben.
- *       Vanilla verwaltet die Sektoren selbst, die Datei waechst also nicht
- *       bei jedem Neuschreiben.</li>
+ *   <li>Client thread: chunk loaded or changed -> create a {@link ChunkSnapshot}
+ *       (copy) and hand it to the IO thread.</li>
+ *   <li>IO thread: build NBT, compare against the last written state
+ *       and only write via vanilla's {@link RegionFile} if changed.
+ *       Vanilla manages the sectors itself, so the file doesn't grow
+ *       on every rewrite.</li>
  * </ul>
  *
- * Geaenderte Chunks (Bauen, Abbauen, Block-Updates vom Server) werden erst
- * gesammelt und nach {@link #DIRTY_DELAY_MS} Ruhe geschrieben, damit z. B.
- * beim Tunnelgraben nicht jeder einzelne Block einen Schreibvorgang ausloest.
+ * Changed chunks (building, breaking, block updates from the server) are first
+ * collected and written after {@link #DIRTY_DELAY_MS} of quiet, so that e.g.
+ * digging a tunnel doesn't trigger a write for every single block.
  */
 public final class RegionStore {
 
@@ -60,16 +60,16 @@ public final class RegionStore {
         return t;
     });
 
-    // --- nur Client-Thread ---
-    /** Chunk-Key -> Zeitpunkt der letzten Aenderung. */
+    // --- client thread only ---
+    /** Chunk key -> time of last change. */
     private final Map<Long, Long> dirty = new HashMap<>();
     private volatile boolean enabled = true;
 
-    // --- nur IO-Thread ---
+    // --- IO thread only ---
     private final LinkedHashMap<Path, RegionFile> openRegions = new LinkedHashMap<>(16, 0.75f, true);
-    /** "regionDir|chunkKey" -> CRC des zuletzt geschriebenen NBT. */
+    /** "regionDir|chunkKey" -> CRC of the last written NBT. */
     private final Map<String, Long> lastWritten = new HashMap<>();
-    /** Zeitleiste: Chunks, deren alter Stand heute schon gesichert (oder geprueft) ist. */
+    /** Timeline: chunks whose old state has already been backed up (or checked) today. */
     private final Set<String> historyChecked = new HashSet<>();
 
     private final AtomicInteger writtenCount = new AtomicInteger();
@@ -91,16 +91,16 @@ public final class RegionStore {
         }
     }
 
-    /** Anzahl tatsaechlich geschriebener (geaenderter) Chunks seit Spielstart. */
+    /** Number of chunks actually written (changed) since game start. */
     public int getWrittenCount() {
         return writtenCount.get();
     }
 
-    // ---------------------------------------------------------------- Client-Thread
+    // ---------------------------------------------------------------- Client thread
 
     /**
-     * Chunk vom Server empfangen. Geschrieben wird erst nach {@link #DIRTY_DELAY_MS}:
-     * das Licht kommt im selben Paket, wird vom Client aber erst danach eingetragen.
+     * Chunk received from the server. Only written after {@link #DIRTY_DELAY_MS}:
+     * light arrives in the same packet but is only applied by the client afterwards.
      */
     public void onChunkLoad(ClientWorld world, WorldChunk chunk) {
         if (enabled) {
@@ -108,21 +108,21 @@ public final class RegionStore {
         }
     }
 
-    /** Chunk verlaesst die Sichtweite: offene Aenderungen sofort sichern. */
+    /** Chunk leaves view distance: save pending changes immediately. */
     public void onChunkUnload(ClientWorld world, WorldChunk chunk) {
         if (enabled && dirty.remove(chunk.getPos().toLong()) != null) {
             submit(world, chunk);
         }
     }
 
-    /** Ein Block in diesem Chunk hat sich geaendert. */
+    /** A block in this chunk has changed. */
     public void markDirty(int chunkX, int chunkZ) {
         if (enabled) {
             dirty.put(ChunkPos.toLong(chunkX, chunkZ), System.currentTimeMillis());
         }
     }
 
-    /** Jeden Client-Tick: beruhigte Aenderungen schreiben. */
+    /** Every client tick: write settled changes. */
     public void tick(MinecraftClient mc) {
         ClientWorld world = mc.world;
         if (world == null || dirty.isEmpty()) {
@@ -137,9 +137,9 @@ public final class RegionStore {
             }
             it.remove();
             ChunkPos pos = new ChunkPos(e.getKey());
-            // create=false liefert null fuer fehlende Chunks. world.getChunk(x, z)
-            // gaebe stattdessen einen leeren Chunk zurueck, der echte Daten mit
-            // Luft ueberschreiben wuerde.
+            // create=false returns null for missing chunks. world.getChunk(x, z)
+            // would instead return an empty chunk, which would overwrite real data
+            // with air.
             WorldChunk chunk = world.getChunkManager().getChunk(pos.x, pos.z, ChunkStatus.FULL, false);
             if (chunk != null) {
                 submit(world, chunk);
@@ -147,7 +147,7 @@ public final class RegionStore {
         }
     }
 
-    /** Verbindung getrennt oder Dimension gewechselt: Dateien schliessen. */
+    /** Disconnected or dimension changed: close files. */
     public void onDisconnect() {
         dirty.clear();
         io.submit(this::closeAll);
@@ -172,7 +172,7 @@ public final class RegionStore {
         io.submit(() -> write(regionDir, historyDir, dim, snap));
     }
 
-    // ---------------------------------------------------------------- IO-Thread
+    // ---------------------------------------------------------------- IO thread
 
     private void write(Path regionDir, Path historyDir, RegistryKey<World> dim, ChunkSnapshot snap) {
         try {
@@ -186,7 +186,7 @@ public final class RegionStore {
             String key = regionDir + "|" + snap.pos().toLong();
             Long prev = lastWritten.get(key);
             if (prev != null && prev == crc.getValue()) {
-                return; // unveraendert seit dem letzten Schreiben
+                return; // unchanged since the last write
             }
 
             RegionFile region = region(regionDir, dim, snap.pos().getRegionX(), snap.pos().getRegionZ());
@@ -205,9 +205,9 @@ public final class RegionStore {
     }
 
     /**
-     * Zeitleiste: bevor ein Chunk mit anderem Inhalt ueberschrieben wird, den alten
-     * Stand einmal pro Tag nach .history/JJJJ-MM-TT/ sichern. Der Viewer vergleicht
-     * damit "Stand an Tag X" mit heute.
+     * Timeline: before a chunk is overwritten with different content, back up the
+     * old state once per day to .history/YYYY-MM-DD/. The viewer uses this to
+     * compare "state on day X" with today.
      */
     private void backupOld(RegionFile region, Path historyDir, RegistryKey<World> dim, ChunkSnapshot snap, byte[] bytes) {
         String day = LocalDate.now().toString();
@@ -220,12 +220,12 @@ public final class RegionStore {
             try (java.io.DataInputStream in = region.getChunkInputStream(snap.pos())) {
                 if (in == null) {
                     historyChecked.add(key);
-                    return;     // neuer Chunk, nichts zu sichern
+                    return;     // new chunk, nothing to back up
                 }
                 old = in.readAllBytes();
             }
             if (Arrays.equals(old, bytes)) {
-                return;         // gleicher Stand (z. B. neu geladen): bei echter Aenderung erneut pruefen
+                return;         // same state (e.g. reloaded): check again on a real change
             }
             historyChecked.add(key);
             Path dir = Path.of(historyDir.toString().replace("%DAY%", day));
@@ -279,7 +279,7 @@ public final class RegionStore {
         }
     }
 
-    /** Beim Beenden des Spiels: Warteschlange abarbeiten, dann schliessen. */
+    /** On game exit: drain the queue, then close. */
     public void shutdown() {
         io.submit(this::closeAll);
         io.shutdown();

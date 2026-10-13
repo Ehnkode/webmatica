@@ -1,8 +1,8 @@
-"""Bereich der Aufnahme -> Sponge Schematic v3 (.schem).
+"""Recording area -> Sponge Schematic v3 (.schem).
 
-Laesst sich mit WorldEdit, FAWE, Litematica (Import) und Axiom laden. Kisten,
-Schilder usw. werden mit ihrem Inhalt uebernommen, soweit der Client ihn
-gesehen hat (2b2t schickt Kisteninhalte nur nach dem Oeffnen).
+Loads in WorldEdit, FAWE, Litematica (import) and Axiom. Chests,
+signs etc. are included with their contents, as far as the client has
+seen them (2b2t only sends chest contents after opening).
 """
 
 from __future__ import annotations
@@ -16,12 +16,12 @@ from . import nbt
 from .chunk import BLOCKS
 from .world import Dimension, Recording
 
-MAX_VOLUME = 64 * 1024 * 1024        # Bloecke; groesser wird die Datei unhandlich
+MAX_VOLUME = 64 * 1024 * 1024        # blocks; larger makes the file unwieldy
 _BE_SKIP = {"x", "y", "z", "id", "keepPacked"}
 
 
 def _varints(values: np.ndarray) -> bytes:
-    """Palette-Indizes als VarInt-Folge (Sponge-Format), vektorisiert."""
+    """Palette indices as a VarInt sequence (Sponge format), vectorized."""
     v = values.astype(np.uint32)
     if not len(v):
         return b""
@@ -43,7 +43,7 @@ def _varints(values: np.ndarray) -> bytes:
 
 def export(rec: Recording, dim: Dimension, x0: int, y0: int, z0: int, x1: int, y1: int, z1: int,
            name: str = "Auswahl") -> tuple[bytes, dict]:
-    """Ecken inklusive, beliebige Reihenfolge. Liefert (gzip-Bytes, Infos)."""
+    """Corners inclusive, any order. Returns (gzip bytes, info)."""
     x0, x1 = sorted((x0, x1))
     y0, y1 = sorted((y0, y1))
     z0, z1 = sorted((z0, z1))
@@ -53,8 +53,8 @@ def export(rec: Recording, dim: Dimension, x0: int, y0: int, z0: int, x1: int, y
     if max(W, H, Ln) > 32767:
         raise ValueError("eine Kante ist laenger als 32767 Bloecke")
 
-    ids = np.zeros((H, Ln, W), np.int64)            # [y, z, x], globale Block-IDs, 0 = Luft
-    known = np.zeros((Ln, W), bool)                 # Spalten aus aufgezeichneten Chunks
+    ids = np.zeros((H, Ln, W), np.int64)            # [y, z, x], global block IDs, 0 = air
+    known = np.zeros((Ln, W), bool)                 # columns from recorded chunks
     block_entities = []
     data_version = None
 
@@ -63,7 +63,7 @@ def export(rec: Recording, dim: Dimension, x0: int, y0: int, z0: int, x1: int, y
             ch = rec.chunk(dim, cx, cz)
             if ch is None:
                 continue
-            # Ueberlappung Chunk <-> Auswahl in Weltkoordinaten
+            # overlap chunk <-> selection in world coordinates
             ax, bx = max(x0, cx * 16), min(x1, cx * 16 + 15)
             az, bz = max(z0, cz * 16), min(z1, cz * 16 + 15)
             ay, by = max(y0, ch.min_y), min(y1, ch.min_y + ch.height - 1)
@@ -102,13 +102,13 @@ def export(rec: Recording, dim: Dimension, x0: int, y0: int, z0: int, x1: int, y
 
 def write(ids: np.ndarray, name: str, block_entities: list | None = None, data_version: int | None = None,
           origin: tuple | None = None) -> bytes:
-    """Block-IDs (H, L, W) [y, z, x] als Sponge Schematic v3 (gzip-Bytes).
+    """Block IDs (H, L, W) [y, z, x] as Sponge Schematic v3 (gzip bytes).
 
-    ``block_entities`` im Sponge-Format ({"Pos": IntArray, "Id": str, "Data": {...}}).
+    ``block_entities`` in Sponge format ({"Pos": IntArray, "Id": str, "Data": {...}}).
     """
     H, Ln, W = ids.shape
     used, inv = np.unique(ids, return_inverse=True)
-    if used[0] != 0:                      # Luft immer Index 0
+    if used[0] != 0:                      # air is always index 0
         used = np.concatenate([[0], used])
         inv = inv + 1
     palette = {BLOCKS.names[int(sid)]: nbt.Int(i) for i, sid in enumerate(used)}

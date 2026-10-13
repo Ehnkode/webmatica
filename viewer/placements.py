@@ -1,10 +1,10 @@
-"""Schematic-Bibliothek und platzierte Schematics (fuer server.py).
+"""Schematic library and placed schematics (for server.py).
 
-Bibliothek: alle .schem/.litematic/.nbt in den Schematic-Ordnern neben der
-Aufnahme (Litematica: ``schematics/``) plus
-hochgeladene Dateien in ``<aufnahme>/.viewer/schematics/``.
+Library: all .schem/.litematic/.nbt in the schematic folders next to the
+recording (Litematica: ``schematics/``) plus
+uploaded files in ``<recording>/.viewer/schematics/``.
 
-Platzierungen liegen in ``<aufnahme>/.viewer/placements.json``.
+Placements are stored in ``<recording>/.viewer/placements.json``.
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ class Placements:
         self._trans: dict = {}        # (path, mtime, rot, mirror) -> Schem
         self._meshes: dict = {}       # same key -> bytes
 
-    # ---------------------------------------------------------------- Bibliothek
+    # ---------------------------------------------------------------- Library
 
     def library(self) -> list:
         out = []
@@ -79,13 +79,13 @@ class Placements:
         name = re.sub(r"[^A-Za-z0-9_. ()-]", "_", os.path.basename(filename)).strip(" .") or "upload.schem"
         if not name.lower().endswith(EXTS):
             raise ValueError("nur .schem, .litematic oder .nbt")
-        sch.load(data, name)        # vorab pruefen, damit nur lesbare Dateien landen
+        sch.load(data, name)        # check up front so only readable files end up there
         p = os.path.join(self.upload_dir, name)
         with open(p, "wb") as f:
             f.write(data)
         return {"file": f"hochgeladen/{name}", "name": name.rsplit(".", 1)[0]}
 
-    # ---------------------------------------------------------------- Laden mit Cache
+    # ---------------------------------------------------------------- Loading with cache
 
     def schem(self, file_id: str, rot: int = 0, mirror: bool = False) -> sch.Schem:
         p = self.resolve(file_id)
@@ -122,7 +122,7 @@ class Placements:
             self._meshes[key] = data
         return data, etag
 
-    # ---------------------------------------------------------------- Platzierungen
+    # ---------------------------------------------------------------- Placements
 
     def _read(self) -> list:
         try:
@@ -142,7 +142,7 @@ class Placements:
             s = self.schem(pl["file"], pl.get("rot", 0), pl.get("mirror", False))
             return {**pl, "size": list(s.size), "error": None,
                     "mtime": int(os.path.getmtime(self.resolve(pl["file"])) * 1000)}
-        except Exception as e:  # Datei weg/kaputt: trotzdem anzeigen, damit man sie entfernen kann
+        except Exception as e:  # file gone/broken: show it anyway so it can be removed
             return {**pl, "size": [1, 1, 1], "error": str(e)}
 
     def list(self, server: str | None = None, dim: str | None = None) -> list:
@@ -198,17 +198,17 @@ class Placements:
             pls = [pl for pl in self._read() if pl.get("id") != pid]
             self._write(pls)
 
-    # ---------------------------------------------------------------- Litematica-Bruecke
+    # ---------------------------------------------------------------- Litematica bridge
 
     _LM_ROT = {0: "NONE", 90: "CLOCKWISE_90", 180: "CLOCKWISE_180", 270: "COUNTERCLOCKWISE_90"}
 
     def litematica(self, server: str | None) -> list:
-        """Platzierungen mit "Ins Spiel" fuer die Mod, in Litematicas Begriffen.
+        """Placements with "In game" for the mod, in Litematica's terms.
 
-        Der Viewer speichert die kleinste Ecke der gedrehten Schematic (x, y, z).
-        Litematica will den Punkt, auf dem der Datei-Ursprung landet, und dreht/spiegelt
-        um diesen Punkt: erst spiegeln (FRONT_BACK: x -> -x), dann im Uhrzeigersinn
-        drehen (x, z) -> (-z, x). Also: Ursprung = Ecke - min(Transform(Box der Datei)).
+        The viewer stores the minimum corner of the rotated schematic (x, y, z).
+        Litematica wants the point where the file origin lands, and rotates/mirrors
+        around that point: first mirror (FRONT_BACK: x -> -x), then rotate
+        clockwise (x, z) -> (-z, x). So: origin = corner - min(transform(file box)).
         """
         out = []
         for pl in self._read():
@@ -238,7 +238,7 @@ class Placements:
             })
         return out
 
-    # ---------------------------------------------------------------- Auswertung
+    # ---------------------------------------------------------------- Evaluation
 
     def materials(self, pid: str) -> dict:
         pl = self.get(pid)

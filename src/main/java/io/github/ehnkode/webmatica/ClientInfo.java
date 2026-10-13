@@ -9,11 +9,11 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 /**
- * Sagt dem Viewer, wo er suchen muss: schreibt beim Start
- * {@code <Benutzerordner>/.webmatica/client.json} mit dem Aufnahme-Ordner und der
- * Spiel-Jar (aus der der Viewer Blocktexturen und -modelle liest). So braucht der
- * Viewer keine Pfade, egal welcher Launcher oder welches Profil benutzt wird.
- * Die Datei bleibt auf dem eigenen Rechner, nichts davon geht ins Netz.
+ * Tells the viewer where to look: on startup writes
+ * {@code <user folder>/.webmatica/client.json} with the recording folder and the
+ * game jar (from which the viewer reads block textures and models). So the
+ * viewer needs no paths, regardless of launcher or profile.
+ * The file stays on the local machine, nothing goes to the network.
  */
 final class ClientInfo {
 
@@ -22,7 +22,7 @@ final class ClientInfo {
 
     private static boolean done;
 
-    /** Client-Thread, einmal nach dem Start. */
+    /** Client thread, once after startup. */
     static void write(MinecraftClient mc) {
         if (done) {
             return;
@@ -37,7 +37,7 @@ final class ClientInfo {
                 Path jar = Path.of(MinecraftClient.class.getProtectionDomain().getCodeSource().getLocation().toURI());
                 o.addProperty("gameJar", jar.toAbsolutePath().toString());
             } catch (Throwable ignored) {
-                // ohne Jar-Pfad fragt der Viewer beim ersten Start danach
+                // without a jar path the viewer asks for it on first start
             }
             o.addProperty("minecraft", "1.21.11");
             o.addProperty("updated", System.currentTimeMillis());

@@ -10,9 +10,9 @@ import java.nio.file.Path;
 import java.util.Locale;
 
 /**
- * Wohin ein Chunk geschrieben wird: pro Server ein eigener Weltordner, darin
- * die Dimensionen im Vanilla-Layout. Dadurch laesst sich jeder Server-Ordner
- * direkt als Welt in Amulet, MCA Selector oder BlueMap oeffnen.
+ * Where a chunk is written: a separate world folder per server, containing
+ * the dimensions in vanilla layout. This lets every server folder be opened
+ * directly as a world in Amulet, MCA Selector or BlueMap.
  *
  * <pre>
  * webmatica_recording/
@@ -30,7 +30,7 @@ public final class RecordingTarget {
         return mc.runDirectory.toPath().resolve("webmatica_recording");
     }
 
-    /** Ordnername fuer den aktuellen Server (Adresse ohne Port, nur sichere Zeichen). */
+    /** Folder name for the current server (address without port, safe characters only). */
     public static String serverId(MinecraftClient mc) {
         if (mc.isInSingleplayer()) {
             return "singleplayer";
@@ -47,7 +47,7 @@ public final class RecordingTarget {
         return sanitize(addr);
     }
 
-    /** Pfad relativ zum Server-Ordner, in dem der region/-Ordner der Dimension liegt. */
+    /** Path relative to the server folder that contains the dimension's region/ folder. */
     public static String dimensionDir(RegistryKey<World> dim) {
         if (World.OVERWORLD.equals(dim)) {
             return "";

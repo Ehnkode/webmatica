@@ -17,14 +17,14 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Printer und Litematica-Schichten von der Webseite aus steuern.
+ * Control the Printer and Litematica layers from the web page.
  *
- * Der Viewer haelt den gewuenschten Zustand (Printer an/aus, Reichweite, Tempo,
- * welche Schicht Litematica zeigt) mit einer laufenden Nummer. Aendert sich die
- * Nummer, wird der Zustand hier im Client-Thread gesetzt. Zurueck geht der echte
- * Zustand im Spiel, damit die Webseite auch Aenderungen per Hotkey sieht.
+ * The viewer holds the desired state (Printer on/off, range, speed, which
+ * layer Litematica shows) with a sequence number. When the number changes,
+ * the state is applied here on the client thread. The real in-game state is
+ * sent back so the web page also sees changes made via hotkey.
  *
- * Alles per Reflection: ohne Printer oder Litematica fehlt nur der jeweilige Teil.
+ * All via reflection: without Printer or Litematica only that part is missing.
  */
 public final class BuildControl {
 
@@ -104,9 +104,9 @@ public final class BuildControl {
         c.disconnect();
     }
 
-    // ------------------------------------------------------------ Client-Thread
+    // ------------------------------------------------------------ Client thread
 
-    /** Schutz-Schalter fuer den Autobau, oder null wenn der Viewer seit 5 s nicht geantwortet hat. */
+    /** Guard switches for auto-build, or null if the viewer hasn't answered for 5 s. */
     public JsonObject guard() {
         JsonObject w = wanted;
         if (w == null || System.currentTimeMillis() - wantedAt > 5000L || !w.has("guard") || !w.get("guard").isJsonObject()) {
@@ -197,7 +197,7 @@ public final class BuildControl {
                     } else {
                         Method smin = range.getClass().getMethod("setLayerRangeMin", int.class);
                         Method smax = range.getClass().getMethod("setLayerRangeMax", int.class);
-                        // Grenzen in der Reihenfolge setzen, die nie min > max ergibt
+                        // set limits in an order that never yields min > max
                         smax.invoke(range, max);
                         smin.invoke(range, min);
                         smax.invoke(range, max);

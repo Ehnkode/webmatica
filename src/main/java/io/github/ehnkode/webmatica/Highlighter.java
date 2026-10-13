@@ -10,9 +10,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Markiert Kisten im Spiel (Knopf "Im Spiel zeigen" auf der Webseite): eine
- * Lichtsaeule aus Partikeln ueber jeder Kiste, 60 Sekunden lang. Nur im eigenen
- * Client sichtbar, der Server bekommt davon nichts mit.
+ * Highlights chests in game ("Show in game" button on the web page): a
+ * light pillar of particles above each chest, for 60 seconds. Only visible in
+ * your own client, the server knows nothing about it.
  */
 public final class Highlighter {
 
@@ -27,7 +27,7 @@ public final class Highlighter {
     private long until;
     private int tick;
 
-    /** Client-Thread. */
+    /** Client thread. */
     public int set(JsonArray pts, String label) {
         points.clear();
         if (pts != null) {
@@ -60,7 +60,7 @@ public final class Highlighter {
             if (dx * dx + dz * dz > 160 * 160) {
                 continue;
             }
-            // Saeule nach oben, damit man sie auch hinter Waenden von weitem sieht
+            // pillar upwards so it can be seen from afar, even behind walls
             for (int k = 0; k < 6; k++) {
                 double y = q[1] + 1.0 + k * 1.5 + (tick % 9) / 6.0;
                 mc.world.addParticleClient(ParticleTypes.END_ROD, true, true, q[0] + 0.5, y, q[2] + 0.5, 0.0, 0.02, 0.0);

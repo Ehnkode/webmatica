@@ -29,12 +29,12 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * "Holen" von der Webseite: Baritone laeuft zur Kiste, die Mod oeffnet sie und
- * nimmt per Shift-Klick die gewuenschten Stacks (bestimmte Slots oder Items mit
- * Anzahl), dann wird die Kiste wieder geschlossen.
+ * "Fetch" from the web page: Baritone walks to the chest, the mod opens it and
+ * shift-clicks the requested stacks (specific slots or items with a
+ * count), then the chest is closed again.
  *
- * Langsam getaktet (ein Klick alle paar Ticks), damit der Server nicht meckert.
- * "Stopp" auf der Webseite bricht ab.
+ * Slowly paced (one click every few ticks) so the server doesn't complain.
+ * "Stop" on the web page aborts.
  */
 public final class FetchTask {
 
@@ -52,7 +52,7 @@ public final class FetchTask {
     private String id;
     private BlockPos pos;
     private final Set<Integer> wantSlots = new HashSet<>();
-    // Einlagern: Spieler-Inventar-Index -> Item, das dort liegen soll
+    // Storing: player inventory index -> item that should go there
     private final Map<Integer, String> storeSlots = new LinkedHashMap<>();
     private boolean store;
     private Slot storeLast;
@@ -62,7 +62,7 @@ public final class FetchTask {
     private int tick;
     private int taken;
     private int openTries;
-    private boolean noShulker;   // Autobau: Baritone kann aus Shulkern nicht bauen
+    private boolean noShulker;   // auto-build: Baritone can't build from shulkers
     private ScreenHandler opened;
     private final List<String> notes = new ArrayList<>();
 
@@ -70,7 +70,7 @@ public final class FetchTask {
         return phase != Phase.IDLE;
     }
 
-    /** Client-Thread. */
+    /** Client thread. */
     public void start(String cmdId, JsonObject cmd) {
         if (busy()) {
             finish(false, "abgebrochen, neuer Auftrag");
@@ -130,7 +130,7 @@ public final class FetchTask {
 
     private long frozenAt;
 
-    /** Unterwegs zur Kiste (noch nichts offen): Essen darf dazwischen. */
+    /** On the way to the chest (nothing open yet): eating may happen in between. */
     public boolean walking() {
         return phase == Phase.WALK;
     }
@@ -154,7 +154,7 @@ public final class FetchTask {
             return;
         }
         if (AutoGuard.paused() || AutoGuard.eating()) {
-            // Spieler in der Naehe oder Essen: warten, ohne dass die Zeitgrenzen weiterlaufen
+            // player nearby or eating: wait without the time limits running on
             if (frozenAt == 0L) {
                 frozenAt = System.currentTimeMillis();
             }
@@ -175,7 +175,7 @@ public final class FetchTask {
                     stopBaritone();
                     finish(false, "Kiste nicht erreicht (3 min)");
                 } else if (age > 3000L && !baritoneActive()) {
-                    // Baritone ist fertig, aber zu weit weg: noch einmal versuchen, dann aufgeben
+                    // Baritone is done but too far away: try once more, then give up
                     if (openTries++ < 2) {
                         try {
                             walkTo(pos);
@@ -212,7 +212,7 @@ public final class FetchTask {
                     return;
                 }
                 if (age < 400L || tick % CLICK_EVERY != 0) {
-                    return;   // Inhalt kommt einen Moment nach dem Oeffnen
+                    return;   // contents arrive a moment after opening
                 }
                 if (store) {
                     storeStep(mc, p, h);
@@ -238,7 +238,7 @@ public final class FetchTask {
                 if (left != null) {
                     wantItems.put(iid, left - before.getCount());
                 } else {
-                    // Shulker mit dem gesuchten Item darin genommen
+                    // took a shulker containing the wanted item
                     ContainerComponent inner = before.get(DataComponentTypes.CONTAINER);
                     if (inner != null) {
                         for (ItemStack c : inner.iterateNonEmpty()) {
@@ -270,7 +270,7 @@ public final class FetchTask {
         return false;
     }
 
-    /** Einlagern: ein Stack pro Aufruf aus dem Inventar in die Kiste. */
+    /** Storing: one stack per call from the inventory into the chest. */
     private void storeStep(MinecraftClient mc, ClientPlayerEntity p, ScreenHandler h) {
         if (storeLast != null && storeLast.hasStack()
                 && Registries.ITEM.getId(storeLast.getStack().getItem()).toString().equals(storeLastId)) {
@@ -300,7 +300,7 @@ public final class FetchTask {
         finish(true, null);
     }
 
-    /** Naechster Slot der Kiste, der genommen werden soll. */
+    /** Next chest slot to take. */
     private Slot nextSlot(ScreenHandler h) {
         Slot shulkerFallback = null;
         for (Slot s : h.slots) {
@@ -363,7 +363,7 @@ public final class FetchTask {
         }
     }
 
-    // ------------------------------------------------------------ Baritone (API per Reflection)
+    // ------------------------------------------------------------ Baritone (API via reflection)
 
     private static Object baritone() throws Exception {
         Object provider = Class.forName("baritone.api.BaritoneAPI").getMethod("getProvider").invoke(null);

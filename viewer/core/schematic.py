@@ -1,8 +1,8 @@
-"""Schematics laden, drehen/spiegeln, Materialliste und Abgleich mit der Welt.
+"""Load schematics, rotate/mirror, material list and comparison with the world.
 
-Formate: Sponge .schem (v1-v3, WorldEdit/FAWE/Axiom), Litematica .litematic,
-Vanilla-Strukturen .nbt. Intern ist eine Schematic ein Quader globaler
-Block-IDs ``blocks[y, z, x]`` (siehe :data:`chunk.BLOCKS`).
+Formats: Sponge .schem (v1-v3, WorldEdit/FAWE/Axiom), Litematica .litematic,
+vanilla structures .nbt. Internally a schematic is a cuboid of global
+block IDs ``blocks[y, z, x]`` (see :data:`chunk.BLOCKS`).
 """
 
 from __future__ import annotations
@@ -24,8 +24,8 @@ class Schem:
     name: str
     blocks: np.ndarray                    # uint16 (H, L, W)
     block_entities: list = field(default_factory=list)   # [{"pos": [x, y, z], "id": str, "data": dict}]
-    # Lage der Ecke blocks[0,0,0] im Koordinatensystem der Datei (Litematica: Regionen
-    # koennen negativ liegen). Braucht die Bruecke zu Litematica fuer den Ursprung.
+    # Position of corner blocks[0,0,0] in the file's coordinate system (Litematica: regions
+    # can be negative). Needed by the Litematica bridge for the origin.
     offset: tuple = (0, 0, 0)
 
     @property
@@ -34,7 +34,7 @@ class Schem:
         return W, H, L
 
 
-# --------------------------------------------------------------------------- Laden
+# --------------------------------------------------------------------------- Loading
 
 def _decompress(data: bytes) -> bytes:
     if data[:2] == b"\x1f\x8b":
@@ -46,7 +46,7 @@ def _decompress(data: bytes) -> bytes:
 
 
 def _norm_state(s: str) -> str:
-    """'stone' / 'minecraft:oak_stairs[half=bottom,facing=north]' -> kanonischer Schluessel."""
+    """'stone' / 'minecraft:oak_stairs[half=bottom,facing=north]' -> canonical key."""
     s = s.strip()
     name, _, rest = s.partition("[")
     if ":" not in name:
@@ -111,7 +111,7 @@ def _sponge(root: dict, name: str) -> Schem:
 
 
 def _unpack_spanning(longs: np.ndarray, bits: int, count: int) -> np.ndarray:
-    """Litematica-Bitpacking: Werte duerfen ueber Long-Grenzen gehen."""
+    """Litematica bit packing: values may cross long boundaries."""
     L = np.asarray(longs, dtype=np.uint64)
     L = np.concatenate([L, np.zeros(1, np.uint64)])
     start = np.arange(count, dtype=np.int64) * bits
@@ -193,7 +193,7 @@ def load(data: bytes, filename: str) -> Schem:
     return _sponge(root, name)
 
 
-# --------------------------------------------------------------------------- Drehen / Spiegeln
+# --------------------------------------------------------------------------- Rotate / mirror
 
 _H = ["north", "east", "south", "west"]
 _RAIL = {"north_south": "east_west", "east_west": "north_south",
@@ -209,7 +209,7 @@ def _rot_dir(d: str, steps: int) -> str:
 
 
 def transform_state(state: str, rot: int, mirror: bool) -> str:
-    """Block-State drehen (rot in 90-Grad-Schritten im Uhrzeigersinn) und an X spiegeln."""
+    """Rotate a block state (rot in 90-degree steps clockwise) and mirror on X."""
     props = state_props(state)
     if not props:
         return state
@@ -278,7 +278,7 @@ def transform(s: Schem, rot: int, mirror: bool) -> Schem:
     return Schem(s.name, np.ascontiguousarray(b), bes)
 
 
-# --------------------------------------------------------------------------- Materialliste
+# --------------------------------------------------------------------------- Material list
 
 _SKIP = {"air", "cave_air", "void_air", "structure_void", "light", "barrier", "piston_head", "moving_piston",
          "fire", "soul_fire", "nether_portal", "end_portal", "end_gateway", "frosted_ice", "bubble_column"}
@@ -297,7 +297,7 @@ _UPPER_HALF = ("half=upper",)
 
 
 def item_for(state: str) -> tuple[str | None, int]:
-    """Block-State -> (Item, Anzahl) fuer die Materialliste; (None, 0) = nicht zaehlen."""
+    """Block state -> (item, count) for the material list; (None, 0) = don't count."""
     name = base_name(state).split(":", 1)[-1]
     if name in _SKIP:
         return None, 0
@@ -349,7 +349,7 @@ def _is_air(state: str) -> bool:
 
 def verify(s: Schem, rec, dim, x0: int, y0: int, z0: int, max_points: int = 60000,
            near: tuple | None = None, max_todo: int = 400) -> dict:
-    """Vergleicht die platzierte Schematic mit der aufgezeichneten Welt."""
+    """Compares the placed schematic with the recorded world."""
     b = s.blocks
     H, L, W = b.shape
     world = np.zeros_like(b)
@@ -368,7 +368,7 @@ def verify(s: Schem, rec, dim, x0: int, y0: int, z0: int, max_points: int = 6000
                 ch.blocks[ay - ch.min_y:by - ch.min_y + 1, az & 15:(bz & 15) + 1, ax & 15:(bx & 15) + 1]
             known[ay - y0:by - y0 + 1, az - z0:bz - z0 + 1, ax - x0:bx - x0 + 1] = True
 
-    # Vergleich auf Ebene des Blocknamens (Ausrichtung zaehlt als "falsch gedreht")
+    # Compare at block name level (orientation counts as "wrongly rotated")
     names = BLOCKS.names
     n = len(names)
     base_id = np.zeros(n, np.int32)
@@ -403,8 +403,8 @@ def verify(s: Schem, rec, dim, x0: int, y0: int, z0: int, max_points: int = 6000
             xs, ys, zs = xs[sel], ys[sel], zs[sel]
         return np.stack([xs, ys, zs], -1).astype(np.int32).reshape(-1).tolist()
 
-    # Bauliste: was fehlt oder falsch ist, mit Weltkoordinaten. Von unten nach oben,
-    # innerhalb einer Ebene das Naechste zuerst (so baut man auch von Hand).
+    # Build list: what is missing or wrong, with world coordinates. Bottom to top,
+    # within a layer nearest first (that's how you build by hand too).
     todo = []
     ys, zs, xs = np.nonzero(missing | wrong | rotated)
     if len(xs):

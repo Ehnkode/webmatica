@@ -30,12 +30,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Shulker aus dem Inventar auspacken: kurz neben dir abstellen, die gesuchten
- * Items herausnehmen, wieder abbauen und einsammeln. Fuer den Autobau, weil
- * Baritone nur aus losen Items bauen kann.
+ * Unpack shulkers from the inventory: place briefly next to you, take out the
+ * wanted items, break it again and pick it up. For auto-build, because
+ * Baritone can only build from loose items.
  *
- * Der Shulker wird nie in den Schematic-Rahmen gestellt (falls einer mitkommt)
- * und nur dorthin, wo darueber Platz zum Aufklappen ist.
+ * The shulker is never placed inside the schematic frame (if one is given)
+ * and only where there is room above to open it.
  */
 public final class UnpackTask {
 
@@ -51,7 +51,7 @@ public final class UnpackTask {
     private Phase phase = Phase.IDLE;
     private String id;
     private final Map<String, Integer> want = new LinkedHashMap<>();
-    private int[] box;            // x0 y0 z0 x1 y1 z1, darf nicht bebaut werden
+    private int[] box;            // x0 y0 z0 x1 y1 z1, must not be built on
     private BlockPos placed;
     private String shulkerId;
     private long phaseStart;
@@ -66,7 +66,7 @@ public final class UnpackTask {
         return phase != Phase.IDLE;
     }
 
-    /** Client-Thread. */
+    /** Client thread. */
     public void start(String cmdId, JsonObject cmd) {
         if (busy()) {
             finish(false, "abgebrochen, neuer Auftrag");
@@ -116,7 +116,7 @@ public final class UnpackTask {
             return;
         }
         if (AutoGuard.paused() || AutoGuard.eating()) {
-            // Spieler in der Naehe oder Essen: warten, ohne dass die Zeitgrenzen weiterlaufen
+            // player nearby or eating: wait without the time limits running on
             if (frozenAt == 0L) {
                 frozenAt = System.currentTimeMillis();
             }
@@ -155,7 +155,7 @@ public final class UnpackTask {
                 }
                 int hot = toHotbar(mc, p, inv);
                 if (hot < 0) {
-                    return;   // Tausch laeuft, naechster Tick
+                    return;   // swap in progress, next tick
                 }
                 BlockPos spot = findSpot(p, w);
                 if (spot == null) {
@@ -179,7 +179,7 @@ public final class UnpackTask {
                     return;
                 }
                 if (age > 6000L) {
-                    setPhase(Phase.BREAK);   // aufheben trotzdem
+                    setPhase(Phase.BREAK);   // pick it up anyway
                     return;
                 }
                 if (tick % 20 == 1) {
@@ -245,7 +245,7 @@ public final class UnpackTask {
             case PICKUP -> {
                 boolean back = countItem(p, shulkerId) > shulkersLeft;
                 if (!back && !walked && age > 1500L) {
-                    // nicht von allein eingesammelt: kurz hinlaufen (ohne Abbauen)
+                    // not picked up by itself: walk over briefly (without breaking)
                     walked = true;
                     try {
                         BaritoneSafety.walkOnly();
@@ -294,13 +294,13 @@ public final class UnpackTask {
         return best;
     }
 
-    /** Liegt der Shulker in der Hotbar? Sonst per Tausch hinlegen und -1 liefern. */
+    /** Is the shulker in the hotbar? Otherwise swap it there and return -1. */
     private static int toHotbar(MinecraftClient mc, ClientPlayerEntity p, int slot) {
         if (slot < PlayerInventory.getHotbarSize()) {
             return slot;
         }
         int hot = p.getInventory().getSelectedSlot();
-        // Spieler-Inventar: Slot-Nummer im Fenster = Index fuer 9..35, Taste = Hotbar-Platz
+        // Player inventory: slot number in the window = index for 9..35, key = hotbar slot
         mc.interactionManager.clickSlot(p.playerScreenHandler.syncId, slot, hot, SlotActionType.SWAP, p);
         return -1;
     }
@@ -327,7 +327,7 @@ public final class UnpackTask {
             for (int dx = -2; dx <= 2; dx++) {
                 for (int dz = -2; dz <= 2; dz++) {
                     if (dx == 0 && dz == 0) {
-                        continue;   // nicht unter/in den Spieler
+                        continue;   // not under/inside the player
                     }
                     BlockPos pos = feet.add(dx, dy, dz);
                     if (inBox(pos) || inBox(pos.up())) {

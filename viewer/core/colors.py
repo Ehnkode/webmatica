@@ -1,7 +1,7 @@
-"""Kartenfarben: Block-State + Biom -> RGB.
+"""Map colors: block state + biome -> RGB.
 
-Grundfarbe = Mittelwert der Oberseiten-Textur aus dem Atlas. Graue Texturen
-(Gras, Laub, Wasser) werden wie im Spiel mit der Biomfarbe eingefaerbt.
+Base color = average of the top texture from the atlas. Gray textures
+(grass, leaves, water) are tinted with the biome color as in the game.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from .chunk import AIR_NAMES, BIOMES, BLOCKS, base_name
 
 ASSETS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
 
-# Biom -> (Gras, Laub, Wasser). Werte aus dem Spiel (Java Edition), gerundet.
+# Biome -> (grass, foliage, water). Values from the game (Java Edition), rounded.
 _BIOME_COLORS = {
     "plains": ("91bd59", "77ab2f", "3f76e4"),
     "sunflower_plains": ("91bd59", "77ab2f", "3f76e4"),
@@ -75,7 +75,7 @@ _BIOME_COLORS = {
 }
 _DEFAULT_BIOME = _BIOME_COLORS["plains"]
 
-# Texturen, die das Spiel mit der Biomfarbe einfaerbt.
+# Textures the game tints with the biome color.
 _GRASS_TINT = ("grass_block", "short_grass", "tall_grass", "fern", "large_fern",
                "potted_fern", "sugar_cane")
 _FOLIAGE_TINT = ("oak_leaves", "jungle_leaves", "acacia_leaves", "dark_oak_leaves",
@@ -88,7 +88,7 @@ _FIXED_TINT = {
     "attached_pumpkin_stem": "e0c71c",
 }
 
-# Fallbacks fuer Bloecke ohne Atlas-Kachel (z. B. Block-Entity-Renderer).
+# Fallbacks for blocks without an atlas tile (e.g. block entity renderers).
 _FALLBACK = {
     "chest": (160, 120, 60), "trapped_chest": (160, 120, 60), "ender_chest": (40, 55, 55),
     "barrel": (125, 92, 51), "water": (128, 128, 128), "lava": (207, 92, 23),
@@ -102,7 +102,7 @@ def _hex(h: str) -> tuple:
 
 
 class Palette:
-    """Lookup-Tabellen, die mit der BLOCKS/BIOMES-Registry mitwachsen."""
+    """Lookup tables that grow with the BLOCKS/BIOMES registry."""
 
     def __init__(self, assets: str = ASSETS):
         self._lock = threading.Lock()
@@ -178,13 +178,13 @@ class Palette:
             rgb = tuple(c * t / 255.0 for c, t in zip(rgb, f))
         if short == "grass_block":
             tint = TINT_GRASS
-        # Duenne Bloecke (Glasscheiben, Fackeln, Blumen) sollen den Boden
-        # nicht ganz verdecken, aber sichtbar bleiben.
+        # Thin blocks (glass panes, torches, flowers) should not fully cover
+        # the ground, but stay visible.
         alpha = max(0.35, min(1.0, alpha))
         return rgb, alpha, tint, False
 
     def sync(self):
-        """Tabellen auf die aktuelle Registry-Groesse bringen."""
+        """Grow the tables to the current registry size."""
         n, m = len(BLOCKS), len(BIOMES)
         if self.block_rgb.shape[0] >= n and self.biome_rgb.shape[0] >= m:
             return

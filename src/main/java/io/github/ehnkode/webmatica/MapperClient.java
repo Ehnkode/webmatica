@@ -18,7 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Client-Entrypoint. Verdrahtet die Fabric-Events mit dem Recorder.
+ * Client entrypoint. Wires the Fabric events to the recorder.
  */
 public class MapperClient implements ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("webmatica");
@@ -53,7 +53,7 @@ public class MapperClient implements ClientModInitializer {
     private static void onEndTick(MinecraftClient mc) {
         RegionStore store = RegionStore.getInstance();
 
-        // Dimensionswechsel: offene Aenderungen gehoeren zur alten Welt.
+        // Dimension change: pending changes belong to the old world.
         if (mc.world != lastWorld) {
             lastWorld = mc.world;
             store.onDisconnect();
