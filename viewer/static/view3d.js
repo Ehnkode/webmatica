@@ -1,6 +1,6 @@
 /* Webmatica – 3D-Ansicht.
  *
- * Nah: echte Chunk-Meshes (MSH2, siehe viewer/core/mesher.py) rund um die Kamera.
+ * Nah: echte Chunk-Meshes (MSH3, siehe viewer/core/mesher.py) rund um die Kamera.
  * Fern: je Region ein Hoehenfeld mit der Kartenkachel als Textur (Fernsicht),
  * damit die ganze Aufnahme ohne Nebel sichtbar ist.
  *
@@ -40,15 +40,36 @@ export function create(container, ctx) {
   renderer.localClippingEnabled = true;
   const track = (m) => { m.clippingPlanes = clip.planes; clipped.add(m); return m; };
 
+  /* Licht aus der Aufnahme (Grafik "Schoen"): je Ecke Block- und Himmelslicht 0..1.
+   * Himmelslicht dimmt Sonne und Himmel (Hoehlen, Innenraeume), Blocklicht
+   * (Fackeln, Lava, Leuchtstein) leuchtet warm, nachts staerker. */
+  const lightUniforms = { uDay: { value: 1 } };
+  const withBlockLight = (m) => {
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uDay = lightUniforms.uDay;
+      sh.vertexShader = 'attribute vec2 light;\nvarying vec2 vLight;\n' +
+        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvLight = light;');
+      sh.fragmentShader = 'uniform float uDay;\nvarying vec2 vLight;\n' +
+        sh.fragmentShader.replace('#include <opaque_fragment>', `
+  // Helligkeitskurve wie Minecraft: l / (4 - 3 l)
+  float bl = vLight.x / (4.0 - 3.0 * vLight.x);
+  float sk = vLight.y / (4.0 - 3.0 * vLight.y);
+  outgoingLight *= mix(0.07, 1.0, sk) * mix(0.55, 1.0, uDay);
+  outgoingLight += diffuseColor.rgb * bl * vec3(1.0, 0.82, 0.58) * mix(1.1, 0.25, uDay);
+  #include <opaque_fragment>`);
+    };
+    return m;
+  };
   const makeMaterials = (opacity = 1, fancy = false) => {
     const Lit = fancy ? THREE.MeshLambertMaterial : THREE.MeshBasicMaterial;
     const extra = fancy ? { flatShading: true } : {};
     const Water = fancy ? THREE.MeshPhongMaterial : THREE.MeshBasicMaterial;
     const water = fancy ? { flatShading: true, shininess: 80, specular: 0x666666 } : {};
+    const lit = fancy ? withBlockLight : (m) => m;
     return [
-      track(new Lit({ map: atlas, vertexColors: true, transparent: opacity < 1, opacity, ...extra })),
-      track(new Lit({ map: atlas, vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, transparent: opacity < 1, opacity, ...extra })),
-      track(new Water({ map: atlas, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: Math.min(opacity, 1), ...water })),
+      track(lit(new Lit({ map: atlas, vertexColors: true, transparent: opacity < 1, opacity, ...extra }))),
+      track(lit(new Lit({ map: atlas, vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, transparent: opacity < 1, opacity, ...extra }))),
+      track(lit(new Water({ map: atlas, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: Math.min(opacity, 1), ...water }))),
     ];
   };
   const materials = makeMaterials();
@@ -110,7 +131,7 @@ export function create(container, ctx) {
   function parse(buf) {
     const dv = new DataView(buf);
     const magic = String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3));
-    if (magic !== 'MSH2') throw new Error('falsches Mesh-Format ' + magic);
+    if (magic !== 'MSH3') throw new Error('falsches Mesh-Format ' + magic);
     let o = 12;
     const out = [];
     for (let p = 0; p < PASSES; p++) {
@@ -121,10 +142,12 @@ export function create(container, ctx) {
       const pos16 = new Int16Array(buf.slice(o, o + n * 24)); o += n * 24;
       const uv16 = new Uint16Array(buf.slice(o, o + n * 16)); o += n * 16;
       const rgb = new Uint8Array(buf.slice(o, o + n * 12)); o += n * 12;
+      const light = new Uint8Array(buf.slice(o, o + n * 8)); o += n * 8;
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(pos16, 3));
       g.setAttribute('uv', new THREE.BufferAttribute(uv16, 2));
       g.setAttribute('color', new THREE.BufferAttribute(rgb, 3, true));
+      g.setAttribute('light', new THREE.BufferAttribute(light, 2, true));
       g.setIndex(new THREE.BufferAttribute(indexFor(n), 1));
       g.computeBoundingSphere();
       out.push(g);
@@ -277,8 +300,11 @@ export function create(container, ctx) {
       sh.vertexShader = 'attribute float valid;\nvarying vec2 vLocal;\nvarying float vValid;\n' +
         sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvLocal = position.xz;\nvValid = valid;');
       // Dreiecke, die in eine Datenluecke reichen, nicht als schraege Wand zeichnen
-      sh.fragmentShader = 'uniform sampler2D uMask;\nvarying vec2 vLocal;\nvarying float vValid;\n' +
-        sh.fragmentShader.replace('void main() {', 'void main() {\n  if (vValid < 0.99 || texture2D(uMask, vLocal / 512.0).r > 0.5) discard;');
+      sh.uniforms.uDay = lightUniforms.uDay;
+      sh.fragmentShader = 'uniform sampler2D uMask;\nuniform float uDay;\nvarying vec2 vLocal;\nvarying float vValid;\n' +
+        sh.fragmentShader.replace('void main() {', 'void main() {\n  if (vValid < 0.99 || texture2D(uMask, vLocal / 512.0).r > 0.5) discard;')
+          // nachts so dunkel wie die nahen Chunks (dort im Licht-Shader)
+          .replace('#include <opaque_fragment>', (st.fancy ? 'outgoingLight *= mix(0.55, 1.0, uDay);\n' : '') + '#include <opaque_fragment>');
     };
     return m;
   }
@@ -995,9 +1021,27 @@ export function create(container, ctx) {
         camera.rotation.set(-Math.PI / 2 + 0.0001, st.yaw, 0);
       }
     }
-    renderer.render(scene, camera);
+    render();
   }
   requestAnimationFrame(frame);
+
+  /* Weit draussen (2b2t: Millionen Bloecke) rechnet die Grafikkarte Weltpositionen
+   * nur in float32, Schatten flackern dann. Darum fuer das Zeichnen die ganze Szene
+   * samt Kamera in 4096er-Schritten Richtung 0,0 schieben (Idee aus BlueMap). */
+  const ORIGIN_STEP = 4096;
+  function render() {
+    const ox = Math.round(camera.position.x / ORIGIN_STEP) * ORIGIN_STEP;
+    const oz = Math.round(camera.position.z / ORIGIN_STEP) * ORIGIN_STEP;
+    if (!ox && !oz) { renderer.render(scene, camera); return; }
+    scene.position.set(-ox, 0, -oz);
+    camera.position.x -= ox; camera.position.z -= oz;
+    renderer.render(scene, camera);
+    camera.position.x += ox; camera.position.z += oz;
+    // Zurueck, damit Klicks (Raycaster) wieder in Weltkoordinaten rechnen
+    scene.position.set(0, 0, 0);
+    scene.updateMatrixWorld();
+    camera.updateMatrixWorld();
+  }
 
   function resize() {
     const w = container.clientWidth, h = container.clientHeight;
@@ -1060,6 +1104,7 @@ export function create(container, ctx) {
     hemi.intensity = 1.7 - 0.5 * day;   // nachts bleibt alles erkennbar (Mondlicht)
     hemi.color.setRGB(0.62, 0.70, 0.95).lerp(tmpC.setRGB(0.75, 0.85, 1.0), day);
     sun.userData.dir = dir;
+    lightUniforms.uDay.value = day;
     if (st.fancy) {
       scene.background = null;
       if (scene.fog) scene.fog.color.copy(skyUniforms.uHorizon.value);

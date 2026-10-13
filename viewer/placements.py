@@ -18,7 +18,7 @@ import time
 import uuid
 
 from .core import schematic as sch
-from .core.mesher import mesh_volume
+from .core.mesher import MAGIC, mesh_volume
 from .core.models import MODELS
 
 EXTS = (".schem", ".litematic", ".nbt", ".schematic")
@@ -110,7 +110,7 @@ class Placements:
         p = self.resolve(pl["file"])
         mt = os.path.getmtime(p)
         key = (p, mt, pl.get("rot", 0) % 360, bool(pl.get("mirror")))
-        etag = f'"{MODELS.version}-{abs(hash(key))}"'
+        etag = f'"{MODELS.version}-{MAGIC.decode()}-{abs(hash(key))}"'
         data = self._meshes.get(key)
         if data is None:
             s = self.schem(pl["file"], pl.get("rot", 0), pl.get("mirror", False))
