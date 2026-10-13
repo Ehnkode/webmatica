@@ -174,6 +174,7 @@ export function create(container, ctx) {
     while (pending.length && (n < 1 || performance.now() - t0 < budgetMs)) { pending.shift()(); n++; }
   }
 
+  const currentQuery = () => clip.query + (st.full ? '&full' : '');
   async function loadChunk(cx, cz, force) {
     const key = `${cx},${cz}`;
     let c = st.chunks.get(key);
@@ -183,17 +184,17 @@ export function create(container, ctx) {
     st.queue++;
     try {
       const url = `/api/mesh/${encodeURIComponent(st.srv)}/${encodeURIComponent(st.dim)}/${cx}/${cz}?full=${st.full ? 1 : 0}${clip.query}`;
-      const query = clip.query;
+      const query = clip.query + (st.full ? '&full' : '');
       const r = await fetch(url);
       if (st.chunks.get(key) !== c) return;
       if (r.status === 204) {
-        c.empty = true; c.stale = false;
+        c.empty = true; if (query === currentQuery()) c.stale = false;
         if (c.group) { scene.remove(c.group); disposeGroup(c.group); c.group = null; setMask(cx, cz, false); }
         return;
       }
       if (!r.ok) { c.empty = true; ctx.toast && ctx.toast('3D: ' + (await r.text())); return; }
       const etag = r.headers.get('ETag');
-      if (c.group && etag && etag === c.etag) { if (query === clip.query) c.stale = false; return; }
+      if (c.group && etag && etag === c.etag) { if (query === currentQuery()) c.stale = false; return; }
       const buf = await r.arrayBuffer();
       // Einbauen erst im naechsten Frame mit Zeitbudget, damit viele fertige Chunks nicht auf einmal ruckeln
       await new Promise((resolve) => pending.push(() => {
@@ -205,7 +206,7 @@ export function create(container, ctx) {
           group.scale.setScalar(1 / 16);
           if (c.group) { scene.remove(c.group); disposeGroup(c.group); }
           c.group = group; c.etag = etag; c.empty = false;
-          if (query === clip.query) c.stale = false;
+          if (query === currentQuery()) c.stale = false;
           scene.add(group);
           setMask(cx, cz, true);
           if (st.spawn) loadSpawn(cx, cz, c);
@@ -422,33 +423,23 @@ export function create(container, ctx) {
       const [x, z] = key.split(',').map(Number);
       if (Math.abs(x - ccx) > R + 2 || Math.abs(z - ccz) > R + 2) dropChunk(key);
     }
+    // Fehlende Chunks und veraltete (nach Schichten- oder Hoehlen-Wechsel) in einer Liste,
+    // nah zuerst. Getrennt wuerden die veralteten bei grosser Sichtweite ewig warten,
+    // solange noch neue Chunks laden.
     const want = [];
     for (let dz = -R; dz <= R; dz++) {
       for (let dx = -R; dx <= R; dx++) {
         if (dx * dx + dz * dz > R * R) continue;
         const key = `${ccx + dx},${ccz + dz}`;
-        if (!st.chunks.has(key)) want.push([dx * dx + dz * dz, ccx + dx, ccz + dz]);
+        const c = st.chunks.get(key);
+        if (!c) want.push([dx * dx + dz * dz, ccx + dx, ccz + dz, false]);
+        else if (c.stale && !c.loading) want.push([dx * dx + dz * dz, ccx + dx, ccz + dz, true]);
       }
     }
     want.sort((a, b) => a[0] - b[0]);
-    for (const [, x, z] of want) {
+    for (const [, x, z, force] of want) {
       if (st.queue >= 8) break;
-      loadChunk(x, z);
-    }
-    // Nach einem Schichten-Wechsel: vorhandene Chunks nach und nach (nah zuerst) neu holen,
-    // das alte Netz bleibt sichtbar, bis das neue da ist.
-    if (st.queue < 8) {
-      const stale = [];
-      for (const [key, c] of st.chunks) {
-        if (!c.stale || c.loading) continue;
-        const [x, z] = key.split(',').map(Number);
-        stale.push([(x - ccx) ** 2 + (z - ccz) ** 2, x, z]);
-      }
-      stale.sort((a, b) => a[0] - b[0]);
-      for (const [, x, z] of stale) {
-        if (st.queue >= 8) break;
-        loadChunk(x, z, true);
-      }
+      loadChunk(x, z, force);
     }
 
     const LR = st.lod;
@@ -1213,7 +1204,7 @@ export function create(container, ctx) {
     setClip,
     setLod(r) { st.lod = r; setSky(); },
     setFog(f) { st.fog = f; setSky(); },
-    setFull(f) { if (st.full !== f) { st.full = f; for (const c of st.chunks.values()) c.stale = true; } },
+    setFull(f) { if (st.full !== f) { st.full = f; for (const c of st.chunks.values()) if (c.group || c.empty) { c.stale = true; c.empty = false; } } },
     updatePlayer,
     setCam,
     cam() { return st.cam; },
