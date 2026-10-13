@@ -1,5 +1,7 @@
 package io.github.ehnkode.webmatica;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.ChatFormatting;
@@ -10,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
@@ -78,12 +81,23 @@ final class ViewerLauncher {
     }
 
     private static void run(Minecraft mc) throws IOException, InterruptedException {
+        ModContainer mod = FabricLoader.getInstance().getModContainer("webmatica").orElseThrow();
+        Path src = mod.findPath(BUNDLE).orElseThrow(() -> new IOException("viewer missing from the mod jar"));
+        String version = mod.getMetadata().getVersion().getFriendlyString() + " " + fingerprint(src);
         if (listening()) {
-            browse(mc);
-            return;
+            if (version.equals(runningVersion())) {
+                browse(mc);
+                return;
+            }
+            // A viewer from an older mod build is still running: ask it to quit, then start the new one.
+            if (!quitRunning()) {
+                say(mc, "Ein alter Viewer läuft noch. Bitte Python im Task-Manager beenden und F10 erneut drücken.",
+                        ChatFormatting.RED, null);
+                return;
+            }
         }
         Path app = mc.gameDirectory.toPath().toAbsolutePath().normalize().resolve(BUNDLE);
-        unpack(app);
+        unpack(app, src, version);
 
         List<String> py = findPython();
         if (py == null) {
@@ -131,10 +145,7 @@ final class ViewerLauncher {
     }
 
     /** Copies the bundled viewer next to the game whenever it changed. Built block images stay. */
-    private static void unpack(Path app) throws IOException {
-        ModContainer mod = FabricLoader.getInstance().getModContainer("webmatica").orElseThrow();
-        Path src = mod.findPath(BUNDLE).orElseThrow(() -> new IOException("viewer missing from the mod jar"));
-        String version = mod.getMetadata().getVersion().getFriendlyString() + " " + fingerprint(src);
+    private static void unpack(Path app, Path src, String version) throws IOException {
         Path stamp = app.resolve(STAMP);
         if (Files.isRegularFile(stamp) && version.equals(Files.readString(stamp, StandardCharsets.UTF_8).trim())) {
             return;
@@ -214,6 +225,53 @@ final class ViewerLauncher {
             return -1;
         }
         return p.exitValue();
+    }
+
+    /** Version stamp of the viewer on the port; empty for one that predates /api/version. */
+    private static String runningVersion() {
+        try {
+            HttpURLConnection c = (HttpURLConnection) URI.create(URL + "/api/version").toURL().openConnection();
+            c.setConnectTimeout(1000);
+            c.setReadTimeout(2000);
+            if (c.getResponseCode() != 200) {
+                return "";
+            }
+            try (InputStream in = c.getInputStream()) {
+                JsonElement v = JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8))
+                        .getAsJsonObject().get("version");
+                return v == null || v.isJsonNull() ? "" : v.getAsString();
+            }
+        } catch (IOException | RuntimeException e) {
+            return "";
+        }
+    }
+
+    /** Asks the running viewer to quit and waits until the port is free. */
+    private static boolean quitRunning() throws InterruptedException {
+        try {
+            HttpURLConnection c = (HttpURLConnection) URI.create(URL + "/api/quit").toURL().openConnection();
+            c.setConnectTimeout(1000);
+            c.setReadTimeout(2000);
+            c.setRequestMethod("POST");
+            c.setDoOutput(true);
+            c.setRequestProperty("Content-Type", "application/json");
+            try (var out = c.getOutputStream()) {
+                out.write("{}".getBytes(StandardCharsets.UTF_8));
+            }
+            if (c.getResponseCode() != 200) {
+                return false;
+            }
+        } catch (IOException e) {
+            return !listening();
+        }
+        for (int i = 0; i < 50; i++) {
+            if (!listening()) {
+                Thread.sleep(500);
+                return true;
+            }
+            Thread.sleep(200);
+        }
+        return false;
     }
 
     private static boolean listening() {
