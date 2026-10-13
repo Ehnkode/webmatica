@@ -58,7 +58,6 @@ import multiprocessing
 import os
 import re
 import shutil
-import sys
 import threading
 import time
 
@@ -1081,13 +1080,28 @@ def _reset_cache_on_update(cache: str) -> None:
         f.write(VERSION)
 
 
-def _exit_with_stdin(srv) -> None:
-    """The game holds our stdin open; when it closes, even after a crash, the game is gone."""
-    try:
-        while sys.stdin.buffer.read(4096):
-            pass
-    except (OSError, ValueError):
-        pass
+def _exit_with_parent(srv, pid: int) -> None:
+    """Quit once the game process is gone, even after a crash.
+
+    Watches the process itself instead of a pipe: on Windows a thread blocked reading
+    stdin stalls the start of the worker processes, and with them every 3D request.
+    """
+    if os.name == "nt":
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x00100000, False, pid)   # SYNCHRONIZE
+        if h:
+            k32.WaitForSingleObject(h, 0xFFFFFFFF)
+            k32.CloseHandle(h)
+    else:
+        while True:
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                break
+            except PermissionError:
+                pass
+            time.sleep(2)
     srv.shutdown()
 
 
@@ -1098,8 +1112,8 @@ def main(argv=None):
     ap.add_argument("--cache", default="", help="tile cache (default: <recording>/.viewer-cache)")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8770)
-    ap.add_argument("--exit-with-stdin", action="store_true",
-                    help="quit when stdin closes (the mod keeps it open while Minecraft runs)")
+    ap.add_argument("--parent-pid", type=int, default=0,
+                    help="quit when this process ends (the mod passes the game's)")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1),
                     help="processes for pre-rendering the map (0 = off)")
     args = ap.parse_args(argv)
@@ -1118,8 +1132,8 @@ def main(argv=None):
                          daemon=True, name="prerender").start()
     srv = ThreadingHTTPServer((args.host, args.port), make_handler(app))
     srv.daemon_threads = True
-    if args.exit_with_stdin:
-        threading.Thread(target=_exit_with_stdin, args=(srv,), daemon=True, name="parent-watch").start()
+    if args.parent_pid > 0:
+        threading.Thread(target=_exit_with_parent, args=(srv, args.parent_pid), daemon=True, name="parent-watch").start()
     dims = app.rec.dimensions()
     print(f"Webmatica: http://{args.host}:{args.port}")
     print(f"Recording: {app.rec.root}  ({len(dims)} dimension(s))")
