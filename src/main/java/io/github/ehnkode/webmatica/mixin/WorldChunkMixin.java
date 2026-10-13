@@ -26,7 +26,7 @@ public abstract class WorldChunkMixin {
         LevelChunk self = (LevelChunk) (Object) this;
         // null = block was already like this, nothing changed.
         if (cir.getReturnValue() != null && self.getLevel().isClientSide()) {
-            RegionStore.getInstance().markDirty(self.getPos().x, self.getPos().z);
+            RegionStore.getInstance().markDirty(Mc.x(self.getPos()), Mc.z(self.getPos()));
         }
     }
 }

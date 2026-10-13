@@ -11,7 +11,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -99,7 +98,7 @@ public final class AutoGuard {
 
     private static void maybeEat(Minecraft mc, LocalPlayer p) {
         long now = System.currentTimeMillis();
-        if (now < nextTry || p.getFoodData().getFoodLevel() > HUNGRY || mc.screen != null
+        if (now < nextTry || p.getFoodData().getFoodLevel() > HUNGRY || Mc.screen(mc) != null
                 || p.isUsingItem() || FetchTask.getInstance().busy() && !FetchTask.getInstance().walking()
                 || UnpackTask.getInstance().busy() || FarmTask.getInstance().handlingChest()) {
             return;
@@ -135,7 +134,7 @@ public final class AutoGuard {
                     break;
                 }
             }
-            mc.gameMode.handleInventoryMouseClick(p.inventoryMenu.containerId, best, hot, ClickType.SWAP, p);
+            Mc.swap(mc, p.inventoryMenu.containerId, best, hot, p);
         }
         pausedForEating = !paused && BaritoneBridge.exec("pause");
         inv.setSelectedSlot(hot);
@@ -148,7 +147,7 @@ public final class AutoGuard {
 
     private static void continueEat(Minecraft mc, LocalPlayer p) {
         long age = System.currentTimeMillis() - eatStart;
-        if (p.getFoodData().getFoodLevel() > foodBefore || age > EAT_TIMEOUT || mc.screen != null
+        if (p.getFoodData().getFoodLevel() > foodBefore || age > EAT_TIMEOUT || Mc.screen(mc) != null
                 || age > 600L && !p.isUsingItem()) {
             boolean ok = p.getFoodData().getFoodLevel() > foodBefore;
             endEat(mc);
@@ -179,7 +178,7 @@ public final class AutoGuard {
 
     private static void say(Minecraft mc, String msg, ChatFormatting f) {
         if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr(msg)).withStyle(f), true);
+            Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(msg)).withStyle(f));
         }
     }
 }

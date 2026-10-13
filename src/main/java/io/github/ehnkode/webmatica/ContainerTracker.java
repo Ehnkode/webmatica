@@ -96,7 +96,7 @@ public final class ContainerTracker {
             usePos = null;      // a briefly placed shulker is not a chest
             return;
         }
-        AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
+        AbstractContainerMenu h = Mc.screen(mc) instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
         if (h != current) {
             flush(mc);
             current = null;
@@ -168,7 +168,7 @@ public final class ContainerTracker {
             o.add("other", other);
         }
         try {
-            Component title = mc.screen != null ? mc.screen.getTitle() : null;
+            Component title = Mc.screen(mc) != null ? Mc.screen(mc).getTitle() : null;
             if (title != null) {
                 o.addProperty("title", title.getString());
             }
@@ -190,7 +190,7 @@ public final class ContainerTracker {
             ItemContainerContents inner = st.get(DataComponents.CONTAINER);
             if (inner != null) {
                 JsonArray content = new JsonArray();
-                for (ItemStack c : inner.nonEmptyItems()) {
+                for (ItemStack c : Mc.items(inner)) {
                     content.add(item(c));
                 }
                 if (!content.isEmpty()) {
@@ -210,7 +210,7 @@ public final class ContainerTracker {
         ItemContainerContents inner = st.get(DataComponents.CONTAINER);
         if (inner != null) {
             JsonArray content = new JsonArray();
-            for (ItemStack c : inner.nonEmptyItems()) {
+            for (ItemStack c : Mc.items(inner)) {
                 content.add(item(c));
             }
             if (!content.isEmpty()) {
@@ -265,8 +265,8 @@ public final class ContainerTracker {
                     Minecraft mc = Minecraft.getInstance();
                     mc.execute(() -> {
                         if (mc.player != null) {
-                            mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr("Kiste gespeichert (" + n + " Stacks)"))
-                                    .withStyle(net.minecraft.ChatFormatting.GOLD), true);
+                            Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr("Kiste gespeichert (" + n + " Stacks)"))
+                                    .withStyle(net.minecraft.ChatFormatting.GOLD));
                         }
                     });
                 }

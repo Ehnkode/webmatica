@@ -130,7 +130,7 @@ public final class BuildControl {
                 appliedSeq = seq;
                 String msg = apply(w);
                 if (msg != null) {
-                    mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr(msg)).withStyle(ChatFormatting.AQUA), true);
+                    Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(msg)).withStyle(ChatFormatting.AQUA));
                 }
             }
         }
