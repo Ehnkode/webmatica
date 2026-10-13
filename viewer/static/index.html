@@ -49,8 +49,8 @@
 
 
 <nav id="rail" class="panel rail" aria-label="Bereiche">
-  <!-- Neue Bereiche: hier einen Knopf mit data-tab eintragen, eine <section data-pane> in #side
-       anlegen und (bei Unterseiten) in AREAS in app.js die Gruppe ergaenzen. -->
+  <!-- New areas: add a button with data-tab here, create a <section data-pane> in #side
+       and (for subpages) add the group to AREAS in js/sidebar.js. -->
   <span class="rail-head">Werkzeuge</span>
   <button data-tab="build" class="tool tool-build" title="Bauen: Editor und Schematics (1)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><span>Bauen</span></button>
   <button data-tab="farm" class="tool tool-auto" title="Automationen: Farmen, Abbauen, Füllen, Ebnen (2)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4M9 13h.01M15 13h.01M9.5 16.5h5M3 13v2M21 13v2"/></svg><span>Automation</span><i id="auto-badge" class="badge live" hidden></i></button>
@@ -351,7 +351,7 @@
   <button id="btn-follow" class="toggle icon-btn" title="Mitlaufen: Karte bzw. 3D-Kamera folgt dir (F)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
 </div>
 
-<!-- Ansicht: eine Leiste oben fuer 2D und 3D, mit Suche. Popover-Inhalte haengen darunter. -->
+<!-- View: one bar at the top for 2D and 3D, with search. Popover contents hang below it. -->
 <div id="dock" class="panel dock">
   <div class="seg view-seg">
     <button id="btn-2d" class="on" title="Karte (Tab)">2D</button>
@@ -445,6 +445,19 @@
 <div id="inv-tip" hidden></div>
 <script src="/static/vendor/leaflet/leaflet.js"></script>
 <script src="/static/interp.js"></script>
-<script src="/static/app.js"></script>
+<script src="/static/js/core.js"></script>
+<script src="/static/js/sidebar.js"></script>
+<script src="/static/js/places.js"></script>
+<script src="/static/js/player.js"></script>
+<script src="/static/js/selection.js"></script>
+<script src="/static/js/schematics.js"></script>
+<script src="/static/js/materials.js"></script>
+<script src="/static/js/chests.js"></script>
+<script src="/static/js/history.js"></script>
+<script src="/static/js/keyboard.js"></script>
+<script src="/static/js/automation.js"></script>
+<script src="/static/js/radar.js"></script>
+<script src="/static/js/farm.js"></script>
+<script src="/static/js/start.js"></script>
 </body>
 </html>

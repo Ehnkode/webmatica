@@ -1,8 +1,6 @@
-/* Sprachumschaltung: die Oberflaeche ist auf Deutsch geschrieben. Bei Englisch
- * werden alle Texte (Textknoten, title, placeholder, aria-label, alert/confirm/
- * prompt) beim Erscheinen ueber static/i18n/<lang>.tsv uebersetzt.
- * UI language switch: the UI is written in German; for English every text is
- * translated on the fly from static/i18n/<lang>.tsv. */
+/* UI language switch: the UI is written in German. For English, every text
+ * (text nodes, title, placeholder, aria-label, alert/confirm/prompt) is
+ * translated when it appears, using static/i18n/<lang>.tsv. */
 (function () {
   const KEY = 'webmatica.lang';
   let lang = null;
@@ -23,7 +21,7 @@
 
   const exact = new Map();
   const patterns = [];
-  // Rand: Leerzeichen und Satzzeichen zaehlen beim Vergleich nicht mit
+  // Edges: whitespace and punctuation don't count in the comparison
   const EDGE = /^([\s,:;·–]*)([\s\S]*?)([\s,.:;·–]*)$/;
   const norm = (s) => s.replace(/\s+/g, ' ');
   try {
@@ -64,7 +62,7 @@
     let r = cache.get(m[2]);
     if (r === undefined) {
       r = core(m[2]);
-      // zusammengesetzte Zeilen Stueck fuer Stueck
+      // composed lines piece by piece
       for (const sep of [' · ', ', ']) {
         if (r !== null || !m[2].includes(sep)) continue;
         const parts = m[2].split(sep);
@@ -78,7 +76,7 @@
     const lead = s.match(/^\s*/)[0], trail = s.match(/\s*$/)[0];
     return lead + m[1].trim() + (m[1].trim() ? ' ' : '') + r + m[3].trim() + trail;
   }
-  // mehrzeilige Meldungen (confirm) zeilenweise
+  // multi-line messages (confirm) line by line
   const tLines = (s) => (typeof s === 'string' ? s.split('\n').map(t).join('\n') : s);
   I18N.t = t;
 
