@@ -1060,3 +1060,39 @@ Mit Baritone hingehen	Walk there with Baritone
 In 3D ansehen	View in 3D
 Koordinaten kopieren	Copy coordinates
 Kopiert: {}	Copied: {}
+# --- Flatten preview
+Vorschau	Preview
+Auf der Karte zeigen (rot abbauen, blau füllen)	Show on the map (red break, blue fill)
+Abtragen	Clearing
+Auffüllen	Filling
+Abbauen (Y {} bis {})	Break (Y {} to {})
+Abtragen (über Y {})	Clear (above Y {})
+Leere Stellen füllen	Fill empty spots
+Löcher füllen (bis Y {})	Fill holes (up to Y {})
+{}: {} dabei	{}: {} carried
+fehlen {}	{} missing
+reicht	enough
+Nimm noch {} {} mit ({}).	Bring {} more {} ({}).
+Das sammelt Baritone beim Abtragen ein	Baritone collects this while clearing
+Fürs Einsammeln brauchst du etwa {} freie Slots, sonst lagert Baritone zwischendurch in die Kiste ein.	To collect everything you need about {} free slots, otherwise Baritone stores into the chest in between.
+Hier gibt es nichts zu tun.	Nothing to do here.
+{} von {} Blöcken abgetragen	{} of {} blocks cleared
+{} von {} Löchern gefüllt	{} of {} holes filled
+ · danach wird aufgefüllt	 · filling comes after
+Ausblenden (kommt beim nächsten Start wieder)	Hide (comes back on the next start)
+Ebnen	Flatten
+Füllen	Fill
+Auf der Karte zeigen (orange: Chunks, die Fackeln brauchen)	Show on the map (orange: chunks that need torches)
+Ausleuchten	Light up
+Bereich ausleuchten	Light up area
+Bereich auf der Karte aufziehen, dann setzt Baritone Fackeln auf die Spawnstellen	Drag an area on the map, then Baritone puts torches on the spawn spots
+Baritone setzt Fackeln auf die Stellen, an denen Monster spawnen können, bis im Bereich alles hell genug ist. Braucht eine Aufnahme mit Licht.	Baritone puts torches on the spots where monsters can spawn until the whole area is bright enough. Needs a recording with light.
+2 · Lichtquelle	2 · Light source
+Setzen	Place
+Füllen mit	Fill with
+Spawnstellen im Bereich	Spawn spots in the area
+Fackeln dafür (etwa)	Torches needed (about)
+alles hell	all lit
+Erst Bereich wählen und Fackeln angeben	First pick an area and enter torches
+Wo Monster spawnen können: rot jederzeit, orange nur nachts. Auf der Karte die oberste offene Stelle jeder Spalte, ab mittlerer Zoomstufe.	Where monsters can spawn: red any time, orange only at night. On the map the topmost open spot of each column, from medium zoom on.
+Hier spawnt nichts (oder die Aufnahme hat noch kein Licht: einmal neu hinfliegen).	Nothing spawns here (or the recording has no light yet: fly there once more).

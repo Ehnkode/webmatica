@@ -37,8 +37,9 @@ Endpoints (all JSON, except images):
         POST /api/auto {srv, farm: {area, dim, targets, chest, placeChest}}   start farming
         POST /api/auto {srv, farm: {area, dim, flatten: {kind: flat|clear|fill, level, clear, fill, block}, chest, placeChest}}   flatten
         GET  /api/farm/scan?srv=&dim=&x0=..      which blocks are in the area
-        GET  /api/farm/flatscan?..&kind=&level=  automations: how many blocks to break, how many holes
+        GET  /api/farm/flatscan?..&kind=&level=  flatten preview: blocks to break / holes to fill, per chunk, what gets mined
         GET  /api/spawn/<srv>/<dim>/<cx>/<cz>    where mobs can spawn (needs light in the recording)
+        GET  /api/spawn-tile/<srv>/<dim>/<rx>/<rz>.png[?ymax=]   the same as a 2D overlay per region
         POST /api/fix {srv, pid, extra}          have wrong/rotated (and extra) blocks broken
         GET  /api/radar?srv=                     log: who was within view distance when
         GET  /editor?file=                       schematic editor (separate page)
@@ -662,6 +663,28 @@ def make_handler(app: App):
                     return self.json(app.auto.get_settings())
                 if p == "/api/auto":
                     return self.json(app.auto.view(q["srv"][0]))
+                if p.startswith("/api/spawn-tile/"):
+                    # 2D overlay: one PNG per region, cached until the region file changes
+                    parts = [unquote(x) for x in p.split("/")[3:]]
+                    dim = app.rec.dimension(parts[0], parts[1]) if len(parts) == 4 else None
+                    if dim is None:
+                        return self.fail(404, "keine Aufnahme")
+                    rx, rz = int(parts[2]), int(parts[3][:-4] if parts[3].endswith(".png") else parts[3])
+                    ymax = int(q["ymax"][0]) if "ymax" in q else None
+                    reg = dim.region(rx, rz)
+                    h = reg.header() if reg else None
+                    if h is None:
+                        return self.send(200, empty_png, "image/png", "no-cache")
+                    etag = f'"spawn-{h.mtime_ns}-{ymax}"'
+                    if self.headers.get("If-None-Match") == etag:
+                        return self.send(304, b"", "image/png", "no-cache", {"ETag": etag})
+                    key = ("spawn", dim.id, rx, rz, h.mtime_ns, ymax)
+                    png = app.meshes.get(key)
+                    if png is None:
+                        png = (app.mesh_pool.submit(_spawn_job, dim.server, dim.key, rx, rz, ymax).result()
+                               if app.mesh_pool is not None else spawn.region_png(app.rec, dim, rx, rz, ymax)) or empty_png
+                        app.meshes.put(key, png)
+                    return self.send(200, png, "image/png", "no-cache", {"ETag": etag})
                 if p.startswith("/api/spawn/"):
                     parts = [unquote(x) for x in p.split("/")[3:]]
                     dim = app.rec.dimension(parts[0], parts[1]) if len(parts) == 4 else None
@@ -676,10 +699,12 @@ def make_handler(app: App):
                     try:
                         a = farm.norm_area({k: q[k][0] for k in ("x0", "z0", "x1", "z1", "y0", "y1")})
                         kind = q.get("kind", ["flat"])[0]
-                        level = a["y0"] - 1 if kind == "clear" else a["y1"] if kind == "fill" else int(q["level"][0])
-                        above = dict(a, y0=level + 1)
-                        clear = farm.count(app.rec, dim, above, {farm.ANY})[farm.ANY] if above["y0"] <= above["y1"] else 0
-                        return self.json({"clear": clear, "fill": len(farm.holes(app.rec, dim, a, level, every=kind == "fill"))})
+                        if kind == "light":
+                            plan = spawn.torch_plan(app.rec, dim, a)
+                            return self.json({"clear": 0, "fill": len(plan["torches"]), "spots": plan["spots"], "mined": [],
+                                              "chunks": [[cx, cz, 0, n] for (cx, cz), n in sorted(plan["chunks"].items())]})
+                        level = int(q["level"][0]) if kind == "flat" else 0
+                        return self.json(farm.flat_preview(app.rec, dim, a, kind, level))
                     except (KeyError, ValueError) as e:
                         return self.fail(400, str(e))
                 if p == "/api/farm/scan":
@@ -1088,6 +1113,12 @@ _WORKER: dict = {}
 def _mesh_init(recording):
     _WORKER["rec"] = Recording(recording)
     _WORKER["hist"] = History(recording)
+
+
+def _spawn_job(server, dim_key, rx, rz, ymax):
+    rec = _WORKER["rec"]
+    dim = rec.dimension(server, dim_key)
+    return None if dim is None else spawn.region_png(rec, dim, rx, rz, ymax)
 
 
 def _xray_compute(rec, dim, cx, cz, names):

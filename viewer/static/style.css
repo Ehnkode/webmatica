@@ -500,7 +500,8 @@ body.mode3d .tl-badge { position: fixed; z-index: 600; top: 112px; }
 
 /* Automations: the mode shows/hides parts of the card */
 #fl-card[data-mode="clear"] .fl-blockrow, #fl-card:not([data-mode="flat"]) .fl-flat, #fl-card[data-mode="flat"] .fl-fillonly { display: none; }
-.fm-mode { flex-wrap: wrap; }
+.fm-mode { display: grid; grid-template-columns: repeat(5, auto); width: 100%; }
+.fm-mode button { padding: 5px 4px; font-size: 12.5px; }
 #view3d.picking canvas { cursor: crosshair; }
 /* long label ("Automationen") doesn't fit into the 64 px otherwise */
 .rail button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
@@ -586,3 +587,31 @@ body.xray-on:not(.mode3d) #map .leaflet-tile-pane { filter: brightness(0.38) sat
 .xray-pin-ring .ico.none { border-radius: 3px; background: var(--c); width: 10px !important; height: 10px !important; }
 .xray-pop { display: flex; flex-direction: column; gap: 6px; min-width: 190px; }
 .xray-pop-head { display: flex; align-items: center; gap: 8px; }
+
+/* Flatten preview and progress */
+.fl-prev { margin-top: 8px; }
+.fl-prev summary { cursor: pointer; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+.fl-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; font-size: 13px; }
+.fl-row > span:nth-last-child(2) { flex: 1; }
+.fl-row .sw { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.fl-row .sw-red, .fl-bar .red, .fl-bar.red span { background: var(--danger); }
+.fl-row .sw-blue, .fl-bar .blue, .fl-bar.blue span { background: #3b82f6; }
+.fl-bar { height: 8px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); overflow: hidden; margin: 4px 0 6px; }
+.fl-bar span { display: block; height: 100%; background: var(--accent); transition: width .6s ease; }
+.fl-bar.warn span { background: var(--warn); }
+.fl-mined { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 6px 0; font-size: 12px; }
+.fl-mined > span { display: inline-flex; align-items: center; gap: 4px; }
+.fl-float { position: fixed; z-index: 700; left: 50%; bottom: 18px; transform: translateX(-50%); width: 320px; padding: 10px 14px; cursor: pointer; }
+.fl-float[hidden] { display: none; }
+.fl-float-head { display: flex; align-items: center; gap: 8px; }
+.fl-float-head b { flex: 1; }
+.fl-float .muted { font-size: 12px; }
+.item-pin-wrap { background: none; border: none; }
+.item-pin { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box;
+  border-radius: 5px; border: 2px solid var(--c); background: rgba(14, 16, 20, 0.85); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
+.item-pin.dim { opacity: 0.6; border-width: 1px; }
+.item-pin .ico.none { width: 8px !important; height: 8px !important; border-radius: 2px; background: var(--c); }
+.pop-checks [data-icon] .ico { vertical-align: -3px; margin-right: 4px; }
+.fl-row .sw-orange { background: var(--warn); }
+.spawn-legend #spawn-light { margin-left: auto; }
+.spawn-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }

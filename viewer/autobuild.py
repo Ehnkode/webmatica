@@ -35,7 +35,7 @@ import re
 import threading
 import time
 
-from . import farm
+from . import farm, spawn
 
 FRESH_PLAYER = 6.0       # s: max age of the last position
 STEP_EVERY = 2.0         # s
@@ -53,6 +53,7 @@ MINE_BATCH = 48
 MINE_TIMEOUT = 360.0     # s for one mining job
 FREE_MIN = 3             # this many free slots, otherwise store items first
 FILL_BATCH = 128         # holes per fill job
+LIGHT_BATCH = 8          # torches per job, then plan again with the new light
 # stays in the inventory when storing
 KEEP = re.compile(r"pickaxe|_axe|shovel|_hoe|sword|shears|chest$|shulker_box|totem|elytra|helmet|chestplate|leggings|boots|"
                   r"flint_and_steel|bucket|ender_pearl|golden_apple|golden_carrot|bread|cooked_|steak|baked_potato|firework")
@@ -829,13 +830,17 @@ class AutoBuild:
             raise ValueError("für diese Dimension gibt es keine Aufnahme")
         fl = req.get("flatten") or {}
         kind = str(fl.get("kind") or "flat")
-        if kind not in ("flat", "clear", "fill"):
+        if kind not in ("flat", "clear", "fill", "light"):
             raise ValueError("unbekannte Automation")
         # Breaking = clear everything in the area (layer below the area), filling = every empty spot up to the top
         if kind == "clear":
             level, clear, fill = area["y0"] - 1, True, False
         elif kind == "fill":
             level, clear, fill = area["y1"], False, True
+        elif kind == "light":
+            # torches onto the spawn spots, until nothing spawns any more
+            level, clear, fill = area["y1"], False, True
+            fl = dict(fl, block=fl.get("block") or "minecraft:torch")
         else:
             level = int(fl["level"])
             clear, fill = bool(fl.get("clear", True)), bool(fl.get("fill", True))
@@ -861,6 +866,8 @@ class AutoBuild:
             self._log(srv, f"Abbauen gestartet: Y {area['y0']} bis {area['y1']}")
         elif kind == "fill":
             self._log(srv, f"Füllen gestartet: mit {block.split(':')[-1]}, Y {area['y0']} bis {area['y1']}")
+        elif kind == "light":
+            self._log(srv, f"Ausleuchten gestartet: {block.split(':')[-1]} auf die Spawnstellen, Y {area['y0']} bis {area['y1']}")
         else:
             what = " und ".join(x for x in ("abtragen" if clear else "", f"mit {block.split(':')[-1]} auffüllen" if fill else "") if x)
             self._log(srv, f"Ebnen auf Y {level} gestartet: {what}")
@@ -898,6 +905,7 @@ class AutoBuild:
             ok = self._judge(srv, st, left)
             with self.lock:
                 fl["clearLeft"] = left
+                fl["clearTotal"] = max(fl.get("clearTotal") or 0, left)   # for the progress bar
             pts = farm.positions(self.app.rec, dim, above, {farm.ANY}, near, limit=MINE_BATCH, skip=st["skip"]) if left and ok else []
             if not pts:
                 self._log(srv, "abgetragen" if left == 0 else f"abgetragen, {left} Blöcke kommen nicht weg")
@@ -921,18 +929,26 @@ class AutoBuild:
             self._set(srv, phase="mine", cmd=cid, batch=pts)
             return self._log(srv, f"trägt {len(pts)} Blöcke ab bei {pts[0][0]} {pts[0][1]} {pts[0][2]} (noch {left})")
         # Filling
-        every = farm.holes(self.app.rec, dim, st["area"], fl["level"], near, every=fl.get("kind") == "fill")
+        light = fl.get("kind") == "light"
+        if light:
+            every = spawn.torch_plan(self.app.rec, dim, st["area"], near)["torches"]
+        else:
+            every = farm.holes(self.app.rec, dim, st["area"], fl["level"], near, every=fl.get("kind") == "fill")
         with self.lock:
             fl["fillLeft"] = len(every)
+            fl["fillTotal"] = max(fl.get("fillTotal") or 0, len(every))
         if not every:
+            if light:
+                return self._end(srv, "done", "fertig: im Bereich spawnt nichts mehr")
             if fl.get("kind") == "fill":
                 return self._end(srv, "done", "fertig: Bereich gefüllt")
             return self._end(srv, "done", f"fertig: Bereich ist auf Y {fl['level']} eben")
         if not self._judge(srv, st, len(every)):
-            return self._end(srv, "error", f"kommt beim Auffüllen nicht weiter, {len(every)} Löcher offen")
+            return self._end(srv, "error", f"kommt beim {'Ausleuchten' if light else 'Auffüllen'} nicht weiter, "
+                                           f"{len(every)} {'Fackeln' if light else 'Löcher'} offen")
         holes = [h for h in every if h not in st["skip"]]
         if not holes:
-            return self._end(srv, "error", f"{len(every)} Löcher lassen sich nicht füllen (nicht erreichbar?)")
+            return self._end(srv, "error", f"{len(every)} {'Stellen lassen sich nicht ausleuchten' if light else 'Löcher lassen sich nicht füllen'} (nicht erreichbar?)")
         inv, _free = self._inventory(srv)
         if inv is None:
             with self.lock:
@@ -943,7 +959,12 @@ class AutoBuild:
         if have <= 0:
             return self._end(srv, "error", f"kein {name} mehr im Inventar, es fehlen noch {len(holes)} Blöcke")
         batch = holes[:min(have, FILL_BATCH)]
-        cid = self._push(srv, {"kind": "breakboxes", "boxes": farm.boxes(batch), "label": "Füllen" if fl.get("kind") == "fill" else "Auffüllen", "pickup": False,
+        if light:
+            batch = holes[:min(have, LIGHT_BATCH)]
+        label = "Ausleuchten" if light else "Füllen" if fl.get("kind") == "fill" else "Auffüllen"
+        cid = self._push(srv, {"kind": "breakboxes", "boxes": farm.boxes(batch), "label": label, "pickup": False,
                                "fill": fl["block"], "timeout": int(MINE_TIMEOUT)})
         self._set(srv, phase="mine", cmd=cid, batch=batch)
+        if light:
+            return self._log(srv, f"setzt {len(batch)} {name} (noch etwa {len(holes)} nötig, {have} dabei)")
         self._log(srv, f"füllt {len(batch)} Löcher mit {name} (noch {len(holes)}, {have} dabei)")
