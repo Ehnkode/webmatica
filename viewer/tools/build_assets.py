@@ -108,7 +108,7 @@ class ModelResolver:
             cur = norm_id(parent) if parent and not parent.startswith("builtin/") else None
         textures, elements, ao = {}, None, True
         for m in reversed(chain):
-            textures.update(m.get("textures", {}))
+            textures.update({k: sprite(v) for k, v in m.get("textures", {}).items()})
             if "ambientocclusion" in m:
                 ao = m["ambientocclusion"]
         for m in chain:
@@ -116,7 +116,8 @@ class ModelResolver:
                 elements = m["elements"]
                 break
 
-        def tex(ref: str):
+        def tex(ref):
+            ref = sprite(ref)
             seen = 0
             while ref and ref.startswith("#") and seen < 10:
                 ref = textures.get(ref[1:])
@@ -147,6 +148,11 @@ class ModelResolver:
             out_el.append(el)
         particle = tex(textures.get("particle", "")) if textures.get("particle") else None
         return {"elements": out_el, "particle": particle, "ao": ao}
+
+
+def sprite(ref):
+    """Texture reference as a string. Newer versions also allow {"sprite": ..., "force_translucent": ...}."""
+    return ref.get("sprite") if isinstance(ref, dict) else ref
 
 
 def build(src: Source, out_dir: str = OUT):
