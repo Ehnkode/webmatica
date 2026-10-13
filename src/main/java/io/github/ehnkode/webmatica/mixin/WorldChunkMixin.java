@@ -1,9 +1,9 @@
 package io.github.ehnkode.webmatica.mixin;
 
 import io.github.ehnkode.webmatica.RegionStore;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -17,15 +17,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * no packet back). Loading a chunk from the packet doesn't use
  * this method, so it only fires on real changes.
  */
-@Mixin(WorldChunk.class)
+@Mixin(LevelChunk.class)
 public abstract class WorldChunkMixin {
 
     @Inject(method = "setBlockState", at = @At("RETURN"))
     private void mapper$onSetBlockState(BlockPos pos, BlockState state, int flags,
                                         CallbackInfoReturnable<BlockState> cir) {
-        WorldChunk self = (WorldChunk) (Object) this;
+        LevelChunk self = (LevelChunk) (Object) this;
         // null = block was already like this, nothing changed.
-        if (cir.getReturnValue() != null && self.getWorld().isClient()) {
+        if (cir.getReturnValue() != null && self.getLevel().isClientSide()) {
             RegionStore.getInstance().markDirty(self.getPos().x, self.getPos().z);
         }
     }

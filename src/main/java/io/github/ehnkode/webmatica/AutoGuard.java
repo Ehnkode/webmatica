@@ -1,19 +1,18 @@
 package io.github.ehnkode.webmatica;
 
 import com.google.gson.JsonObject;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.FoodComponent;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-
 import java.util.Set;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Protection during auto-build, toggled by the viewer (/api/control "guard"):
@@ -59,13 +58,13 @@ public final class AutoGuard {
     }
 
     /** Client thread. */
-    public static void tick(MinecraftClient mc) {
+    public static void tick(Minecraft mc) {
         JsonObject g = BuildControl.getInstance().guard();
         boolean eat = g != null && g.has("eat") && g.get("eat").getAsBoolean();
         boolean tools = g != null && g.has("tools") && g.get("tools").getAsBoolean();
         tools(tools);
-        ClientPlayerEntity p = mc.player;
-        if (p == null || mc.interactionManager == null) {
+        LocalPlayer p = mc.player;
+        if (p == null || mc.gameMode == null) {
             if (eating) {
                 endEat(mc);
             }
@@ -98,20 +97,20 @@ public final class AutoGuard {
 
     // ------------------------------------------------------------ Eating
 
-    private static void maybeEat(MinecraftClient mc, ClientPlayerEntity p) {
+    private static void maybeEat(Minecraft mc, LocalPlayer p) {
         long now = System.currentTimeMillis();
-        if (now < nextTry || p.getHungerManager().getFoodLevel() > HUNGRY || mc.currentScreen != null
+        if (now < nextTry || p.getFoodData().getFoodLevel() > HUNGRY || mc.screen != null
                 || p.isUsingItem() || FetchTask.getInstance().busy() && !FetchTask.getInstance().walking()
                 || UnpackTask.getInstance().busy() || FarmTask.getInstance().handlingChest()) {
             return;
         }
         nextTry = now + 10_000L;
-        PlayerInventory inv = p.getInventory();
+        Inventory inv = p.getInventory();
         int best = -1, bestFood = 0;
         for (int i = 0; i < 36; i++) {
-            ItemStack st = inv.getStack(i);
-            FoodComponent f = st.isEmpty() ? null : st.get(DataComponentTypes.FOOD);
-            if (f == null || NO_EAT.contains(Registries.ITEM.getId(st.getItem()).toString())) {
+            ItemStack st = inv.getItem(i);
+            FoodProperties f = st.isEmpty() ? null : st.get(DataComponents.FOOD);
+            if (f == null || NO_EAT.contains(BuiltInRegistries.ITEM.getKey(st.getItem()).toString())) {
                 continue;
             }
             int score = f.nutrition() * 2 + (i < 9 ? 1 : 0);
@@ -121,7 +120,7 @@ public final class AutoGuard {
             }
         }
         if (best < 0) {
-            say(mc, "Hunger, aber kein Essen im Inventar", Formatting.RED);
+            say(mc, "Hunger, aber kein Essen im Inventar", ChatFormatting.RED);
             nextTry = now + 60_000L;
             return;
         }
@@ -131,43 +130,43 @@ public final class AutoGuard {
             // swap into a hotbar slot: an empty one, else the currently selected one
             hot = prevSlot;
             for (int i = 0; i < 9; i++) {
-                if (inv.getStack(i).isEmpty()) {
+                if (inv.getItem(i).isEmpty()) {
                     hot = i;
                     break;
                 }
             }
-            mc.interactionManager.clickSlot(p.playerScreenHandler.syncId, best, hot, SlotActionType.SWAP, p);
+            mc.gameMode.handleInventoryMouseClick(p.inventoryMenu.containerId, best, hot, ClickType.SWAP, p);
         }
         pausedForEating = !paused && BaritoneBridge.exec("pause");
         inv.setSelectedSlot(hot);
-        foodBefore = p.getHungerManager().getFoodLevel();
+        foodBefore = p.getFoodData().getFoodLevel();
         eatStart = now;
         eating = true;
-        mc.options.useKey.setPressed(true);
-        mc.interactionManager.interactItem(p, Hand.MAIN_HAND);
+        mc.options.keyUse.setDown(true);
+        mc.gameMode.useItem(p, InteractionHand.MAIN_HAND);
     }
 
-    private static void continueEat(MinecraftClient mc, ClientPlayerEntity p) {
+    private static void continueEat(Minecraft mc, LocalPlayer p) {
         long age = System.currentTimeMillis() - eatStart;
-        if (p.getHungerManager().getFoodLevel() > foodBefore || age > EAT_TIMEOUT || mc.currentScreen != null
+        if (p.getFoodData().getFoodLevel() > foodBefore || age > EAT_TIMEOUT || mc.screen != null
                 || age > 600L && !p.isUsingItem()) {
-            boolean ok = p.getHungerManager().getFoodLevel() > foodBefore;
+            boolean ok = p.getFoodData().getFoodLevel() > foodBefore;
             endEat(mc);
             if (ok) {
-                say(mc, "gegessen (" + p.getHungerManager().getFoodLevel() + "/20)", Formatting.GREEN);
+                say(mc, "gegessen (" + p.getFoodData().getFoodLevel() + "/20)", ChatFormatting.GREEN);
                 nextTry = System.currentTimeMillis() + 1500L;
             }
             return;
         }
-        mc.options.useKey.setPressed(true);
+        mc.options.keyUse.setDown(true);
         if (!p.isUsingItem() && age % 1000L < 50L) {
-            mc.interactionManager.interactItem(p, Hand.MAIN_HAND);
+            mc.gameMode.useItem(p, InteractionHand.MAIN_HAND);
         }
     }
 
-    private static void endEat(MinecraftClient mc) {
+    private static void endEat(Minecraft mc) {
         eating = false;
-        mc.options.useKey.setPressed(false);
+        mc.options.keyUse.setDown(false);
         if (mc.player != null && prevSlot >= 0) {
             mc.player.getInventory().setSelectedSlot(prevSlot);
         }
@@ -178,9 +177,9 @@ public final class AutoGuard {
         pausedForEating = false;
     }
 
-    private static void say(MinecraftClient mc, String msg, Formatting f) {
+    private static void say(Minecraft mc, String msg, ChatFormatting f) {
         if (mc.player != null) {
-            mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(msg)).formatted(f), true);
+            mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr(msg)).withStyle(f), true);
         }
     }
 }

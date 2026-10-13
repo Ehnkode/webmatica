@@ -1,12 +1,11 @@
 package io.github.ehnkode.webmatica;
 
 import com.google.gson.JsonObject;
-import net.minecraft.client.MinecraftClient;
-
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import net.minecraft.client.Minecraft;
 
 /**
  * Tells the viewer where to look: on startup writes
@@ -23,18 +22,18 @@ final class ClientInfo {
     private static boolean done;
 
     /** Client thread, once after startup. */
-    static void write(MinecraftClient mc) {
+    static void write(Minecraft mc) {
         if (done) {
             return;
         }
         done = true;
         try {
             JsonObject o = new JsonObject();
-            Path game = mc.runDirectory.toPath().toAbsolutePath().normalize();
+            Path game = mc.gameDirectory.toPath().toAbsolutePath().normalize();
             o.addProperty("recording", RecordingTarget.root(mc).toAbsolutePath().normalize().toString());
             o.addProperty("gameDir", game.toString());
             try {
-                Path jar = Path.of(MinecraftClient.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                Path jar = Path.of(Minecraft.class.getProtectionDomain().getCodeSource().getLocation().toURI());
                 o.addProperty("gameJar", jar.toAbsolutePath().toString());
             } catch (Throwable ignored) {
                 // without a jar path the viewer asks for it on first start

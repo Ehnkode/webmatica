@@ -4,13 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.BlockMirror;
-import net.minecraft.util.BlockRotation;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
@@ -30,6 +23,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 
 /**
  * Bridge viewer -> Litematica: schematics set to "In game" in the viewer are
@@ -143,12 +142,12 @@ public final class LitematicaBridge {
     private final Map<String, Object> managed = new HashMap<>();     // viewer ID -> SchematicPlacement
     private final Map<String, String> managedFile = new HashMap<>();
     private final Map<String, String> errors = new HashMap<>();
-    private ClientWorld lastWorld;
+    private ClientLevel lastWorld;
     private boolean adopted;
     private int tickCount;
 
-    public void tick(MinecraftClient mc) {
-        if (mc.world == null || mc.player == null) {
+    public void tick(Minecraft mc) {
+        if (mc.level == null || mc.player == null) {
             serverId = null;
             return;
         }
@@ -159,9 +158,9 @@ public final class LitematicaBridge {
             }
             return;
         }
-        if (mc.world != lastWorld) {
+        if (mc.level != lastWorld) {
             // Litematica reloads its own list on world/dimension change
-            lastWorld = mc.world;
+            lastWorld = mc.level;
             managed.clear();
             managedFile.clear();
             adopted = false;
@@ -170,7 +169,7 @@ public final class LitematicaBridge {
         if (all == null || ++tickCount % 10 != 0) {
             return;
         }
-        String dim = dimKey(mc.world);
+        String dim = dimKey(mc.level);
         List<Want> here = new ArrayList<>();
         for (Want w : all) {
             if (dim.equals(w.dim())) {
@@ -209,8 +208,8 @@ public final class LitematicaBridge {
         }
     }
 
-    private static String dimKey(ClientWorld w) {
-        Identifier id = w.getRegistryKey().getValue();
+    private static String dimKey(ClientLevel w) {
+        Identifier id = w.dimension().identifier();
         return "minecraft".equals(id.getNamespace()) ? id.getPath() : id.toString();
     }
 
@@ -324,31 +323,31 @@ public final class LitematicaBridge {
         if (!want.equals(call(pl, "getOrigin"))) {
             call(pl, "setOrigin", want, quiet("fi.dy.masa.malilib.interfaces.IStringConsumer"));
         }
-        BlockRotation r = rotation(w.rotation());
+        Rotation r = rotation(w.rotation());
         if (call(pl, "getRotation") != r) {
             call(pl, "setRotation", r, quiet("fi.dy.masa.malilib.gui.interfaces.IMessageConsumer"));
         }
-        BlockMirror m = mirror(w.mirror());
+        Mirror m = mirror(w.mirror());
         if (call(pl, "getMirror") != m) {
             call(pl, "setMirror", m, quiet("fi.dy.masa.malilib.gui.interfaces.IMessageConsumer"));
         }
     }
 
     // reference constants directly: enum names are intermediary at runtime (valueOf doesn't work)
-    private static BlockRotation rotation(String s) {
+    private static Rotation rotation(String s) {
         return switch (s) {
-            case "CLOCKWISE_90" -> BlockRotation.CLOCKWISE_90;
-            case "CLOCKWISE_180" -> BlockRotation.CLOCKWISE_180;
-            case "COUNTERCLOCKWISE_90" -> BlockRotation.COUNTERCLOCKWISE_90;
-            default -> BlockRotation.NONE;
+            case "CLOCKWISE_90" -> Rotation.CLOCKWISE_90;
+            case "CLOCKWISE_180" -> Rotation.CLOCKWISE_180;
+            case "COUNTERCLOCKWISE_90" -> Rotation.COUNTERCLOCKWISE_90;
+            default -> Rotation.NONE;
         };
     }
 
-    private static BlockMirror mirror(String s) {
+    private static Mirror mirror(String s) {
         return switch (s) {
-            case "FRONT_BACK" -> BlockMirror.FRONT_BACK;
-            case "LEFT_RIGHT" -> BlockMirror.LEFT_RIGHT;
-            default -> BlockMirror.NONE;
+            case "FRONT_BACK" -> Mirror.FRONT_BACK;
+            case "LEFT_RIGHT" -> Mirror.LEFT_RIGHT;
+            default -> Mirror.NONE;
         };
     }
 
