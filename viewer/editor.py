@@ -223,7 +223,8 @@ class Editor:
             s["name"], s["path"] = n, new_path
             os.replace(self.pl.resolve(file_id), new_path)
             # Name in the file too, but only write the saved state (unsaved stays unsaved)
-            disk = sch.load(open(new_path, "rb").read(), n + ".schem")
+            with open(new_path, "rb") as f:
+                disk = sch.load(f.read(), n + ".schem")
             with open(new_path + ".tmp", "wb") as f:
                 f.write(schem_write(disk.blocks.astype(np.uint16), n, self._bes_out(disk)))
             os.replace(new_path + ".tmp", new_path)
