@@ -253,10 +253,32 @@ class TileStore:
 
     # ------------------------------------------------------------ Zoomstufen < 0
 
+    def raw_region_tile(self, dim: Dimension, layer: Layer, rx: int, rz: int) -> str | None:
+        """Wie ``region_tile``, aber Farben ohne Hoehenschattierung (fuer die 3D-Fernsicht,
+        die ihre Schattierung selbst aus den Hoehen rechnet)."""
+        if self.region_tile(dim, layer, rx, rz) is None:
+            return None
+        d = self._dir(dim, layer, 0)
+        npz = os.path.join(d, f"{rx}_{rz}.npz")
+        png = os.path.join(d, f"{rx}_{rz}.raw.png")
+        with self._lock(png):
+            try:
+                if os.path.getmtime(png) >= os.path.getmtime(npz):
+                    return png
+            except OSError:
+                pass
+            with np.load(npz) as z:
+                rgb, has = z["rgb"].astype(np.float32), z["has"]
+            img = np.dstack([np.clip(rgb, 0, 255).astype(np.uint8), np.where(has, 255, 0).astype(np.uint8)])
+            tmp = png + ".tmp"
+            Image.fromarray(img, "RGBA").save(tmp, "PNG", compress_level=3)
+            os.replace(tmp, png)
+            return png
+
     def tile(self, dim: Dimension, layer: Layer, zoom: int, tx: int, tz: int,
-             regions: set | None = None) -> str | None:
+             regions: set | None = None, raw: bool = False) -> str | None:
         if zoom >= 0:
-            return self.region_tile(dim, layer, tx, tz)
+            return self.raw_region_tile(dim, layer, tx, tz) if raw else self.region_tile(dim, layer, tx, tz)
         if regions is None:
             regions = {(r.rx, r.rz) for r in dim.regions()}
         span = 1 << (-zoom)
@@ -266,10 +288,10 @@ class TileStore:
         children = []
         for dz in (0, 1):
             for dx in (0, 1):
-                p = self.tile(dim, layer, zoom + 1, tx * 2 + dx, tz * 2 + dz, regions)
+                p = self.tile(dim, layer, zoom + 1, tx * 2 + dx, tz * 2 + dz, regions, raw)
                 children.append((dx, dz, p))
         d = self._dir(dim, layer, zoom)
-        png = os.path.join(d, f"{tx}_{tz}.png")
+        png = os.path.join(d, f"{tx}_{tz}{'.raw' if raw else ''}.png")
         with self._lock(png):
             newest = max((os.path.getmtime(p) for _, _, p in children if p), default=0)
             if os.path.exists(png) and os.path.getmtime(png) >= newest:
@@ -350,7 +372,7 @@ class PastTiles(TileStore):
             return png
 
     def tile(self, dim: Dimension, layer: Layer, zoom: int, tx: int, tz: int,
-             regions: set | None = None) -> str | None:
+             regions: set | None = None, raw: bool = False) -> str | None:
         if regions is None:
             regions = set(self._by_region())
         return super().tile(dim, layer, zoom, tx, tz, regions)

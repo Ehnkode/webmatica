@@ -6,7 +6,7 @@ Endpunkte (alle JSON, ausser Bildern):
 
     GET  /                                   Oberflaeche
     GET  /api/worlds                         Server, Dimensionen, Schichten
-    GET  /api/tile/<srv>/<dim>/<layer>/<z>/<x>/<y>.png[?at=JJJJ-MM-TT]   (at: Stand an dem Tag, nur geaenderte Chunks)
+    GET  /api/tile/<srv>/<dim>/<layer>/<z>/<x>/<y>.png[?at=JJJJ-MM-TT|raw=1]   (at: Stand an dem Tag, nur geaenderte Chunks; raw: ohne Schattierung)
     GET  /api/changes?srv=&dim=&since=       Regionen, die sich seit <since> geaendert haben
     GET  /api/column?srv=&dim=&x=&z=&layer=  oberster Block, Hoehe, Biom an einer Stelle
     GET  /api/markers?srv=&dim=&layer=       Schilder + Behaelter je Chunk
@@ -786,7 +786,10 @@ def make_handler(app: App):
             if at and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", at):
                 return self.fail(400, "Datum: JJJJ-MM-TT")
             store = app.past(srv, dim_key, at) if at else app.tiles
-            path = store.tile(dim, Layer.parse(layer_s), zoom, tx, tz)
+            if (q or {}).get("raw", [""])[0] == "1" and not at:
+                path = store.tile(dim, Layer.parse(layer_s), zoom, tx, tz, raw=True)
+            else:
+                path = store.tile(dim, Layer.parse(layer_s), zoom, tx, tz)
             if path is None:
                 return self.send(200, empty_png, "image/png", "no-cache")
             etag = f'"{int(os.path.getmtime(path) * 1000)}"'

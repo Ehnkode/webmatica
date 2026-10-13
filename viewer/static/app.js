@@ -782,7 +782,10 @@ function miniStart() {
   if (!mini.map) {
     mini.map = L.map('mini-map', { crs: L.CRS.Simple, minZoom: MIN_ZOOM, maxZoom: 2, zoomSnap: 1, attributionControl: false, zoomControl: false,
       dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false });
-    mini.me = L.circleMarker([0, 0], { radius: 5, color: '#fff', weight: 2, fillColor: '#22a06b', fillOpacity: 1 }).addTo(mini.map);
+    // Spieler wie auf der grossen Karte: Kopf mit Blickrichtungs-Pfeil
+    mini.me = L.marker([0, 0], { keyboard: false, interactive: false, opacity: 0, icon: L.divIcon({
+      className: '', iconSize: [22, 22], iconAnchor: [11, 11],
+      html: '<div class="player-pin mini-pin"><div class="arrow"></div><img alt="" style="visibility:hidden"></div>' }) }).addTo(mini.map);
     mini.map.on('click', (e) => {
       const c = fromLatLng(e.latlng);
       const p = view3d.position();
@@ -818,8 +821,16 @@ function miniTick(force) {
   const ang = Math.atan2(t.x - p.x, -(t.z - p.z)) * 180 / Math.PI;   // 0 = Norden (oben)
   $('#mini-arrow').style.transform = `translate(-50%, -50%) rotate(${ang}deg)`;
   const pl = state.player;
-  if (pl && pl.active && pl.dim === state.dim) { mini.me.setLatLng(toLatLng(pl.x, pl.z)); mini.me.setStyle({ opacity: 1, fillOpacity: 1 }); }
-  else mini.me.setStyle({ opacity: 0, fillOpacity: 0 });
+  if (pl && pl.active && pl.dim === state.dim) {
+    mini.me.setLatLng(toLatLng(pl.x, pl.z));
+    mini.me.setOpacity(1);
+    const el = mini.me.getElement();
+    if (el) {
+      const img = el.querySelector('img');
+      if (head.url && img.getAttribute('src') !== head.url) { img.src = head.url; img.style.visibility = ''; }
+      el.querySelector('.arrow').style.transform = `rotate(${pl.yaw + 180}deg)`;
+    }
+  } else mini.me.setOpacity(0);
 }
 $('#mini-in').addEventListener('click', (e) => { e.stopPropagation(); miniZoom(1); });
 $('#mini-out').addEventListener('click', (e) => { e.stopPropagation(); miniZoom(-1); });
