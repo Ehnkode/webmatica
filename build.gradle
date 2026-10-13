@@ -27,6 +27,12 @@ processResources {
     from("viewer/static/i18n") {
         into "assets/webmatica/i18n"
     }
+    // The viewer ships inside the jar; the mod copies it next to the game (ViewerLauncher)
+    from(rootDir) {
+        include "viewer/**", "requirements.txt", "start-viewer.bat", "start-viewer.sh", "LICENSE"
+        exclude "**/__pycache__/**", "**/*.pyc", "viewer/tests/**", "viewer/assets/**"
+        into "webmatica-viewer"
+    }
     filesMatching("fabric.mod.json") {
         expand "version": project.version
     }

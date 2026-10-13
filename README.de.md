@@ -45,13 +45,16 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
 ## Installation
 
-1. `webmatica-<version>.jar` von den [Releases](https://github.com/Ehnkode/webmatica/releases)
-   in den `mods`-Ordner legen.
-2. Minecraft einmal mit der Mod starten.
-3. Dieses Repository herunterladen (Code → Download ZIP), entpacken und `start-viewer.bat`
-   starten (Linux/macOS: `./start-viewer.sh`). Der erste Start dauert etwa eine Minute.
+1. `webmatica-<version>.jar` von Modrinth oder den
+   [Releases](https://github.com/Ehnkode/webmatica/releases) in den `mods`-Ordner legen.
+2. Minecraft starten und **F10** drücken. Der Viewer startet und öffnet sich im Browser. Der erste
+   Start dauert etwa eine Minute (er installiert numpy und Pillow und erzeugt die Blockbilder).
 
-**F9** im Spiel schaltet die Aufnahme an und aus. **?** im Viewer zeigt alle Tastenkürzel.
+Der Viewer steckt in der Mod und liegt danach in `<Spielordner>/webmatica-viewer/`. Er endet, wenn
+du das Spiel schließt. Ohne Spiel startest du ihn mit `start-viewer.bat` in diesem Ordner
+(Linux/macOS: `./start-viewer.sh`).
+
+**F9** im Spiel schaltet die Aufnahme an und aus, **F10** öffnet den Viewer. **?** im Viewer zeigt alle Tastenkürzel.
 
 ## Mod bauen
 

@@ -24,6 +24,7 @@ public class MapperClient implements ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("webmatica");
 
     private static KeyBinding toggleKey;
+    private static KeyBinding viewerKey;
     private static ClientWorld lastWorld;
 
     @Override
@@ -33,11 +34,16 @@ public class MapperClient implements ClientModInitializer {
         ClientChunkEvents.CHUNK_LOAD.register(store::onChunkLoad);
         ClientChunkEvents.CHUNK_UNLOAD.register(store::onChunkUnload);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> store.onDisconnect());
-        ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> store.shutdown());
+        ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> {
+            store.shutdown();
+            ViewerLauncher.shutdown();
+        });
 
+        KeyBinding.Category category = KeyBinding.Category.create(Identifier.of("webmatica", "main"));
         toggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.webmatica.toggle", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_F9,
-                KeyBinding.Category.create(Identifier.of("webmatica", "main"))));
+                "key.webmatica.toggle", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_F9, category));
+        viewerKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.webmatica.viewer", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_F10, category));
 
         ClientTickEvents.END_CLIENT_TICK.register(MapperClient::onEndTick);
 
@@ -66,6 +72,10 @@ public class MapperClient implements ClientModInitializer {
                 mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr("Aufnahme " + (on ? "AN" : "AUS")))
                         .formatted(on ? Formatting.GREEN : Formatting.RED), true);
             }
+        }
+
+        while (viewerKey.wasPressed()) {
+            ViewerLauncher.open(mc);
         }
 
         ClientInfo.write(mc);

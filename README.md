@@ -44,13 +44,16 @@ Litematica and Baritone. Works on any server or Singleplayer.
 
 ## Install
 
-1. Put `webmatica-<version>.jar` from [Releases](https://github.com/Ehnkode/webmatica/releases)
-   into your `mods` folder.
-2. Start Minecraft once with the mod.
-3. Download this repository (Code → Download ZIP), unzip it and run `start-viewer.bat`
-   (Linux/macOS: `./start-viewer.sh`). The first start takes about a minute.
+1. Put `webmatica-<version>.jar` from Modrinth or
+   [Releases](https://github.com/Ehnkode/webmatica/releases) into your `mods` folder.
+2. Start Minecraft and press **F10**. The viewer starts and opens in your browser. The first
+   start takes about a minute (it installs numpy and Pillow and builds the block images).
 
-**F9** in game toggles recording. **?** in the viewer shows all shortcuts.
+The viewer comes with the mod and lives in `<game folder>/webmatica-viewer/`. It stops when you
+close the game. To use it without the game, run `start-viewer.bat` in that folder
+(Linux/macOS: `./start-viewer.sh`).
+
+**F9** in game toggles recording, **F10** opens the viewer. **?** in the viewer shows all shortcuts.
 
 ## Build the mod
 
