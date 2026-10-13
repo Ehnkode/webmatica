@@ -754,6 +754,7 @@ async function set3d(on) {
   $('#btn-3d').classList.toggle('on', on);
   if (on) showHint3d();
   else $('#set3d').hidden = true;
+  if (sel.on) setSelect(false);
   if (farmUi.pick3d) pick3dStop();
   renderPickLabel();
   drawFarmArea();
@@ -913,27 +914,54 @@ $('#spawn3d').addEventListener('change', (e) => {
 // ------------------------------------------------------------------ Schematic-Auswahl
 
 const DIM_Y = { overworld: [-64, 319], the_nether: [0, 127], the_end: [0, 255] };
-const sel = { on: false, start: null, rect: null, box: null };
+const sel = { on: false, start: null, rect: null, box: null, corner: null };
 
 function setSelect(on) {
-  if (on && mode3d) return;
+  if (on && farmUi.pick3d) pick3dStop();
   sel.on = on;
   $('#btn-select').classList.toggle('on', on);
-  document.body.classList.toggle('selecting', on);
+  document.body.classList.toggle('selecting', on && !mode3d);
   $('#sel-panel').hidden = !on;
   if (on) {
     if (state.follow) setFollow(false);
-    map.dragging.disable();
     const [y0, y1] = DIM_Y[state.dim] || [-64, 319];
     $('#sel-y0').value = y0;
     $('#sel-y1').value = y1;
+    if (mode3d && view3d) sel3dStart();
+    else { map.dragging.disable(); $('#sel-hint').textContent = 'Auf der Karte ein Rechteck aufziehen.'; }
   } else {
     map.dragging.enable();
     if (sel.rect) { sel.rect.remove(); sel.rect = null; }
     sel.box = null;
     sel.start = null;
+    if (sel.corner !== null && view3d) { view3d.setBlockPick(null); sel.corner = null; drawFarmArea(); }
   }
   updateSel();
+}
+
+/* In 3D: zwei Bloecke anklicken, die gegenueberliegenden Ecken. Hoehe kommt aus den Bloecken. */
+function sel3dStart() {
+  sel.corner = undefined;
+  $('#sel-hint').textContent = 'Klick in 3D auf den ersten Eckblock.';
+  view3d.setBlockPick((b) => {
+    if (!sel.on) return;
+    if (!sel.corner) {
+      sel.corner = b;
+      sel.box = null;
+      view3d.setArea({ x0: b.x, x1: b.x, y0: b.y, y1: b.y, z0: b.z, z1: b.z });
+      $('#sel-hint').textContent = `Erste Ecke ${b.x} ${b.y} ${b.z}. Jetzt auf die gegenüberliegende Ecke klicken.`;
+      updateSel();
+      return;
+    }
+    const a = sel.corner;
+    sel.corner = undefined;   // naechster Klick beginnt eine neue Auswahl
+    sel.box = { x0: Math.min(a.x, b.x), z0: Math.min(a.z, b.z), x1: Math.max(a.x, b.x), z1: Math.max(a.z, b.z) };
+    $('#sel-y0').value = Math.min(a.y, b.y);
+    $('#sel-y1').value = Math.max(a.y, b.y);
+    view3d.setArea({ x0: sel.box.x0, x1: sel.box.x1, z0: sel.box.z0, z1: sel.box.z1, y0: Math.min(a.y, b.y), y1: Math.max(a.y, b.y) });
+    $('#sel-hint').textContent = 'Klick in 3D auf den ersten Eckblock.';
+    updateSel();
+  });
 }
 
 function updateSel() {
@@ -942,7 +970,8 @@ function updateSel() {
   $('#sel-edit').disabled = !b;
   $('#sel-farm').disabled = !b;
   if (!b) { $('#sel-size').textContent = ''; $('#sel-hint').hidden = false; return; }
-  $('#sel-hint').hidden = true;
+  $('#sel-hint').hidden = mode3d ? false : true;
+  if (mode3d) $('#sel-hint').textContent = 'Neue Auswahl: wieder zwei Eckblöcke anklicken.';
   const y0 = Number($('#sel-y0').value), y1 = Number($('#sel-y1').value);
   const w = b.x1 - b.x0 + 1, l = b.z1 - b.z0 + 1, h = Math.abs(y1 - y0) + 1;
   $('#sel-size').textContent = `${fmt(w)} × ${fmt(h)} × ${fmt(l)}`;
@@ -1011,8 +1040,16 @@ $('#sel-edit').addEventListener('click', () => {
   openEditor({ cut: { srv: state.server, dim: state.dim, name: $('#sel-name').value.trim() || 'ausschnitt',
     x0: b.x0, z0: b.z0, x1: b.x1, z1: b.z1, y0: Number($('#sel-y0').value), y1: Number($('#sel-y1').value) } });
 });
-$('#sel-y0').addEventListener('input', updateSel);
-$('#sel-y1').addEventListener('input', updateSel);
+function selYChanged() {
+  updateSel();
+  const b = sel.box;
+  if (mode3d && view3d && b) {
+    const y0 = Number($('#sel-y0').value), y1 = Number($('#sel-y1').value);
+    view3d.setArea({ ...b, y0: Math.min(y0, y1), y1: Math.max(y0, y1) });
+  }
+}
+$('#sel-y0').addEventListener('input', selYChanged);
+$('#sel-y1').addEventListener('input', selYChanged);
 
 // ------------------------------------------------------------------ Spur
 
@@ -2233,6 +2270,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 't' || e.key === 'T') { setTrail(!state.trail); return; }
   if (mode3d) {
     if ((e.key === 'f' || e.key === 'F') && state.player && state.player.active) view3d.gotoPlayer(state.player);
+    else if (e.key === 'e' || e.key === 'E') setSelect(!sel.on);
+    else if (e.key === 'Escape' && sel.on) setSelect(false);
     return;
   }
   if (e.key === '?') { toggleHelp(); return; }
@@ -2575,7 +2614,8 @@ function drawFarmArea() {
   const a = (farmUi.auto && farmUi.auto.farm && FARM_RUN.includes(farmUi.auto.phase)) ? farmUi.auto.farm.area : farmArea();
   const visible = farmRunning() || (!$('#side').hidden && sideTab === 'farm') || sel.on;
   const show = a && visible && (farmUi.dim || state.dim) === state.dim;
-  if (view3d && view3d.setArea && !farmUi.pick3d) view3d.setArea(show ? a : null);
+  // waehrend einer 3D-Auswahl zeigt der Rahmen die Auswahl
+  if (view3d && view3d.setArea && !farmUi.pick3d && !(sel.on && mode3d)) view3d.setArea(show ? a : null);
   if (!show) { if (farmUi.rect) { farmUi.rect.remove(); farmUi.rect = null; } return; }
   const bounds = L.latLngBounds(toLatLng(a.x0, a.z0), toLatLng(a.x1 + 1, a.z1 + 1));
   if (farmUi.rect) farmUi.rect.setBounds(bounds);
