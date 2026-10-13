@@ -299,12 +299,18 @@ export function create(container, ctx) {
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uMask = { value: mask };
       sh.uniforms.uSize = { value: size };
-      sh.vertexShader = 'attribute float valid;\nvarying vec2 vLocal;\nvarying float vValid;\n' +
-        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvLocal = position.xz;\nvValid = valid;');
+      sh.vertexShader = 'attribute float valid;\nvarying vec2 vLocal;\nvarying float vValid;\nvarying vec3 vPos;\n' +
+        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvLocal = position.xz;\nvValid = valid;\nvPos = position;');
       // Dreiecke, die in eine Datenluecke reichen, nicht als schraege Wand zeichnen
       sh.uniforms.uDay = lightUniforms.uDay;
-      sh.fragmentShader = 'uniform sampler2D uMask;\nuniform float uSize;\nuniform float uDay;\nvarying vec2 vLocal;\nvarying float vValid;\n' +
+      sh.fragmentShader = 'uniform sampler2D uMask;\nuniform float uSize;\nuniform float uDay;\nvarying vec2 vLocal;\nvarying float vValid;\nvarying vec3 vPos;\n' +
         sh.fragmentShader.replace('void main() {', 'void main() {\n  if (vValid < 0.99 || texture2D(uMask, vLocal / uSize).r > 0.5) discard;')
+          /* Die Kartenfarbe kommt ohne Schattierung (raw=1). Hier die gleiche Helligkeit je
+           * Flaechenrichtung wie bei den echten Chunks (oben 1, Nord/Sued 0.8, Ost/West 0.6),
+           * aus der Neigung des Gelaendes; so gibt es keine Kante zwischen nah und fern. */
+          .replace('#include <map_fragment>', `#include <map_fragment>
+  { vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos)));
+    diffuseColor.rgb *= n.y * n.y + 0.8 * n.z * n.z + 0.6 * n.x * n.x; }`)
           // nachts so dunkel wie die nahen Chunks (dort im Licht-Shader)
           .replace('#include <opaque_fragment>', (st.fancy ? 'outgoingLight *= mix(0.55, 1.0, uDay);\n' : '') + '#include <opaque_fragment>');
     };
@@ -386,7 +392,7 @@ export function create(container, ctx) {
       if (r.mesh && etag === r.etag) return;
       const h = new Int16Array(await res.arrayBuffer());
       const layer = st.dim === 'the_nether' ? 'cave127' : 'surface320';
-      const tex = await new THREE.TextureLoader().loadAsync(`/api/tile/${base}/${layer}/0/${rx}/${rz}.png?v=${encodeURIComponent(etag || Date.now())}`);
+      const tex = await new THREE.TextureLoader().loadAsync(`/api/tile/${base}/${layer}/0/${rx}/${rz}.png?raw=1&v=${encodeURIComponent(etag || Date.now())}`);
       if (st.regions.get(key) !== r) { tex.dispose(); return; }
       tex.magFilter = THREE.NearestFilter;
       tex.colorSpace = THREE.NoColorSpace;
@@ -471,7 +477,7 @@ export function create(container, ctx) {
       const etag = res.headers.get('ETag');
       const h = new Int16Array(await res.arrayBuffer());
       const layer = st.dim === 'the_nether' ? 'cave127' : 'surface320';
-      const tex = await new THREE.TextureLoader().loadAsync(`/api/tile/${base}/${layer}/${-2 * level}/${x}/${z}.png?v=${encodeURIComponent(etag || Date.now())}`);
+      const tex = await new THREE.TextureLoader().loadAsync(`/api/tile/${base}/${layer}/${-2 * level}/${x}/${z}.png?raw=1&v=${encodeURIComponent(etag || Date.now())}`);
       if (farTiles.get(key) !== t) { tex.dispose(); return; }
       tex.colorSpace = THREE.NoColorSpace;
       t.mask = newMask(4);
