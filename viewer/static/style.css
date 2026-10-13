@@ -564,3 +564,15 @@ body:not(.mode3d) .only3d { display: none !important; }
 /* Selection: actions as a 2x2 grid, each label on one line */
 .sel-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
 .sel-actions button { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 7px 8px; }
+
+/* X-ray (3D) */
+.xray-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.xray-presets .chip, .xray-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--card); color: var(--fg); font-size: 13px; }
+.xray-presets .chip { cursor: pointer; }
+.xray-presets .chip.on { border-color: var(--c); background: color-mix(in srgb, var(--c) 18%, transparent); }
+.xray-presets .sw, .xray-chip .sw { width: 9px; height: 9px; border-radius: 2px; background: var(--c); box-shadow: 0 0 6px var(--c); }
+.xray-sel { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.xray-chip b { font-weight: 600; }
+.xray-chip button { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0 0 0 2px; font-size: 12px; }
+.xray-chip button:hover { color: var(--fg); }
