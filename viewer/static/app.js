@@ -729,7 +729,7 @@ async function set3d(on) {
     $('#view3d').hidden = false;
     document.body.classList.add('mode3d');
     view3d.setRadius(Number($('#radius3d').value));
-    view3d.setLod(Number($('#lod3d').value));
+    view3d.setLod(LOD_BLOCKS[Number($('#lod3d').value)] ?? 0);
     view3d.setFog($('#fog3d').checked);
     view3d.setHour(Number($('#hour3d').value));
     view3d.setFancy($('#fancy3d').checked);
@@ -850,11 +850,21 @@ $('#cam-close').addEventListener('click', () => {
 });
 $('#btn-3d').addEventListener('click', () => set3d(!mode3d));
 const hourText = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
+// Fernsicht-Regler: Stufe -> Bloecke (weit draussen grobe Kacheln, siehe view3d.js)
+const LOD_BLOCKS = [0, 512, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 24576, 32768, 49152, 65536];
 const sliderText = {
   radius3d: (v) => `${v}`,
-  lod3d: (v) => (v > 0 ? `${fmt(v * 512)} Blöcke` : 'aus'),
+  lod3d: (v) => (v > 0 ? `${fmt(LOD_BLOCKS[v])} Blöcke` : 'aus'),
   hour3d: hourText,
 };
+// alter Fernsicht-Wert (Regler in 512er-Schritten) auf die neue Tabelle umrechnen
+if (!prefs.lod3dv) {
+  if (prefs.lod3d !== undefined) {
+    const blocks = prefs.lod3d * 512;
+    savePref('lod3d', LOD_BLOCKS.reduce((best, b, i) => (Math.abs(b - blocks) < Math.abs(LOD_BLOCKS[best] - blocks) ? i : best), 0));
+  }
+  savePref('lod3dv', 2);
+}
 for (const [id, fn] of [['radius3d', 'setRadius'], ['lod3d', 'setLod'], ['hour3d', 'setHour']]) {
   const el = $('#' + id);
   if (prefs[id] !== undefined) el.value = prefs[id];
@@ -862,7 +872,7 @@ for (const [id, fn] of [['radius3d', 'setRadius'], ['lod3d', 'setLod'], ['hour3d
   el.addEventListener('input', () => {
     $(`#${id}-val`).textContent = sliderText[id](Number(el.value));
     savePref(id, Number(el.value));
-    if (view3d) view3d[fn](Number(el.value));
+    if (view3d) view3d[fn](id === 'lod3d' ? LOD_BLOCKS[Number(el.value)] : Number(el.value));
   });
 }
 $('#fancy3d').checked = !!prefs.fancy3d;

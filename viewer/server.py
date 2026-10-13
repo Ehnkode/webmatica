@@ -14,7 +14,7 @@ Endpunkte (alle JSON, ausser Bildern):
     POST /api/position                       Live-Position von der Mod
     GET  /api/player                         letzte Position (+ active)
     GET  /api/skin/face.png | full.png       Skin aus dem Client
-    GET  /api/lod/<srv>/<dim>/<rx>/<rz>      Hoehenfeld einer Region fuer die 3D-Fernsicht
+    GET  /api/lod/<srv>/<dim>/<x>/<z>[?level=0..3]  Hoehenfeld fuer die 3D-Fernsicht (Stufe 0 = Region, je Stufe 4x groesser)
     GET  /api/trail?srv=&dim=                Spur des Spielers
     GET  /api/schematics?srv=&dim=           platzierte Schematics
     GET  /api/schematics/library             Schematic-Dateien in den Ordnern
@@ -187,39 +187,76 @@ class App:
 
     # -------------------------------------------------------------- Fernsicht
 
-    def lod(self, dim, rx: int, rz: int) -> tuple[bytes, str] | None:
-        """Hoehenfeld 129x129 (alle 4 Bloecke, inkl. Rand zur Nachbarregion) als int16, -32768 = keine Daten."""
-        png = self.tiles.region_tile(dim, Layer.parse(self.layers_for(dim.key)[0]["id"]), rx, rz)
-        if png is None:
+    def lod(self, dim, rx: int, rz: int, level: int = 0) -> tuple[bytes, str] | None:
+        """Hoehenfeld 129x129 einer Fernsicht-Kachel als int16, -32768 = keine Daten.
+
+        Stufe 0 ist eine Region (512 Bloecke, alle 4 Bloecke ein Punkt), jede weitere
+        Stufe fasst 4 x 4 Kacheln der Stufe davor zusammen (2048 Bloecke alle 16,
+        8192 Bloecke alle 64). Die Farben liefert die Kartenkachel der Zoomstufe -2 * level.
+        Zeile/Spalte 128 kommt aus den Nachbarkacheln, damit keine Naht bleibt.
+        """
+        layer = Layer.parse(self.layers_for(dim.key)[0]["id"])
+        if self.tiles.tile(dim, layer, -2 * level, rx, rz) is None:
             return None
-        npz = png[:-4] + ".npz"
-        stamp = str(int(os.path.getmtime(npz) * 1000))
-        key = ("lod", dim.id, rx, rz, stamp)
-        hit = self.meshes.get(key)
-        if hit is not None:
-            return hit, stamp
-        with np.load(npz) as z:
-            height, has = z["height"], z["has"]
-        h = np.where(has, height, -32768).astype(np.int32)
-        # 4x4-Bloecke -> Maximum; dann Rand (Zeile/Spalte 128) aus den eigenen Werten fortsetzen
-        g = h.reshape(128, 4, 128, 4).max(axis=(1, 3))
-        g = np.pad(g, ((0, 1), (0, 1)), mode="edge")
-        # Naht zu den Nachbarregionen schliessen (nur wenn deren Kachel schon existiert)
-        base = os.path.dirname(npz)
+        res = self._lod_grid(dim, layer, level, rx, rz)
+        if res is None:
+            return None
+        g, stamp = res
+        g = np.pad(g.astype(np.int32), ((0, 1), (0, 1)), mode="edge")
         for (dx, dz), sl, take in (((1, 0), (slice(0, 128), 128), lambda a: a[:, 0]),
                                    ((0, 1), (128, slice(0, 128)), lambda a: a[0, :]),
                                    ((1, 1), (128, 128), lambda a: a[0, 0])):
-            nb = os.path.join(base, f"{rx + dx}_{rz + dz}.npz")
-            if os.path.exists(nb):
+            nb = self._lod_grid(dim, layer, level, rx + dx, rz + dz, cached_only=True)
+            if nb is not None:
+                g[sl] = take(nb[0])
+        return gzip.compress(g.astype("<i2").tobytes(), 5), stamp
+
+    def _lod_grid(self, dim, layer, level: int, x: int, z: int, cached_only: bool = False):
+        """(128x128 int16, Stand) oder None. Stufe 0 aus der Region-Kachel (.npz),
+        hoehere Stufen aus den 16 Kacheln darunter (Maximum je 4 x 4), auf Platte zwischengespeichert."""
+        d = self.tiles._dir(dim, layer, -2 * level)
+        if level == 0:
+            npz = os.path.join(d, f"{x}_{z}.npz")
+            try:
+                mtime = os.path.getmtime(npz)
+            except OSError:
+                return None
+            stamp = str(int(mtime * 1000))
+            key = ("lodg", dim.id, x, z, stamp)
+            hit = self.meshes.get(key)
+            if hit is None:
                 try:
-                    with np.load(nb) as z:
-                        nh = np.where(z["has"], z["height"], -32768).astype(np.int32).reshape(128, 4, 128, 4).max(axis=(1, 3))
-                    g[sl] = take(nh)
+                    with np.load(npz) as f:
+                        h = np.where(f["has"], f["height"], -32768).astype(np.int32)
                 except (OSError, ValueError, KeyError):
-                    pass
-        data = gzip.compress(g.astype("<i2").tobytes(), 5)
-        self.meshes.put(key, data)
-        return data, stamp
+                    return None
+                hit = h.reshape(128, 4, 128, 4).max(axis=(1, 3)).astype(np.int16)
+                self.meshes.put(key, hit)
+            return hit, stamp
+        path = os.path.join(d, f"{x}_{z}.lod.npy")
+        if cached_only:
+            try:
+                return np.load(path), str(int(os.path.getmtime(path) * 1000))
+            except (OSError, ValueError):
+                return None
+        kids = [(i, j, self._lod_grid(dim, layer, level - 1, x * 4 + i, z * 4 + j)) for j in range(4) for i in range(4)]
+        if all(k is None for _, _, k in kids):
+            return None
+        newest = max(int(k[1]) for _, _, k in kids if k is not None)
+        try:
+            mtime = int(os.path.getmtime(path) * 1000)
+            if mtime >= newest:
+                return np.load(path), str(mtime)
+        except (OSError, ValueError):
+            pass
+        g = np.full((128, 128), -32768, np.int16)
+        for i, j, k in kids:
+            if k is not None:
+                g[j * 32:(j + 1) * 32, i * 32:(i + 1) * 32] = k[0].reshape(32, 4, 32, 4).max(axis=(1, 3))
+        tmp = path + ".tmp.npy"
+        np.save(tmp, g)
+        os.replace(tmp, path)
+        return g, str(int(os.path.getmtime(path) * 1000))
 
     # -------------------------------------------------------------- 3D
 
@@ -481,7 +518,7 @@ def make_handler(app: App):
                     dim = app.rec.dimension(parts[0], parts[1])
                     if dim is None:
                         return self.fail(404, "Dimension unbekannt")
-                    res = app.lod(dim, int(parts[2]), int(parts[3]))
+                    res = app.lod(dim, int(parts[2]), int(parts[3]), max(0, min(3, int(q.get("level", ["0"])[0]))))
                     if res is None:
                         return self.send(204, b"")
                     data, stamp = res
