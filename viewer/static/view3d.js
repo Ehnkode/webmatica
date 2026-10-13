@@ -161,6 +161,13 @@ export function create(container, ctx) {
       g.computeBoundingSphere();
       out.push(g);
     }
+    // X-ray: positions of the searched blocks behind the passes (see viewer/xray.py)
+    if (buf.byteLength >= o + 8 && dv.getUint32(o, true) === 0x31595258) {
+      const m = dv.getUint32(o + 4, true); o += 8;
+      const counts = new Uint32Array(buf.slice(o, o + m * 4)); o += m * 4;
+      const n = dv.getUint32(o, true); o += 4;
+      out.xray = { counts, pts: new Int16Array(buf.slice(o, o + n * 8)) };
+    }
     return out;
   }
 
@@ -173,6 +180,7 @@ export function create(container, ctx) {
     if (!c) return;
     if (c.group) { scene.remove(c.group); disposeGroup(c.group); const [x, z] = key.split(',').map(Number); setMask(x, z, false); }
     dropSpawn(c);
+    if (c.xray) xrayDirty();
     st.chunks.delete(key);
   }
 
@@ -183,7 +191,7 @@ export function create(container, ctx) {
     while (pending.length && (n < 1 || performance.now() - t0 < budgetMs)) { pending.shift()(); n++; }
   }
 
-  const currentQuery = () => clip.query + (st.full ? '&full' : '');
+  const currentQuery = () => clip.query + xray.query + (st.full ? '&full' : '');
   async function loadChunk(cx, cz, force) {
     const key = `${cx},${cz}`;
     let c = st.chunks.get(key);
@@ -192,13 +200,14 @@ export function create(container, ctx) {
     c.loading = true;
     st.queue++;
     try {
-      const url = `/api/mesh/${encodeURIComponent(st.srv)}/${encodeURIComponent(st.dim)}/${cx}/${cz}?full=${st.full ? 1 : 0}${clip.query}`;
-      const query = clip.query + (st.full ? '&full' : '');
+      const url = `/api/mesh/${encodeURIComponent(st.srv)}/${encodeURIComponent(st.dim)}/${cx}/${cz}?full=${st.full ? 1 : 0}${clip.query}${xray.query}`;
+      const query = currentQuery();
       const r = await fetch(url);
       if (st.chunks.get(key) !== c) return;
       if (r.status === 204) {
         c.empty = true; if (query === currentQuery()) c.stale = false;
         if (c.group) { scene.remove(c.group); disposeGroup(c.group); c.group = null; setMask(cx, cz, false); }
+        if (c.xray) { c.xray = null; xrayDirty(); }
         return;
       }
       if (!r.ok) { c.empty = true; ctx.toast && ctx.toast('3D: ' + (await r.text())); return; }
@@ -215,6 +224,7 @@ export function create(container, ctx) {
           group.scale.setScalar(1 / 16);
           if (c.group) { scene.remove(c.group); disposeGroup(c.group); }
           c.group = group; c.etag = etag; c.empty = false;
+          if (c.xray || geos.xray) { c.xray = geos.xray ? { ...geos.xray, cx, cz } : null; xrayDirty(); }
           if (query === currentQuery()) c.stale = false;
           scene.add(group);
           setMask(cx, cz, true);
@@ -294,6 +304,114 @@ export function create(container, ctx) {
       if (!st.spawn) { dropSpawn(c); continue; }
       if (c.group) { const [x, z] = key.split(',').map(Number); loadSpawn(x, z, c); }
     }
+  }
+
+  // ------------------------------------------------------------ X-ray
+
+  /* Only the searched blocks: chunks come from the server with everything else as air
+   * (?xray=a,b), the far view is off. Around each find a glowing box, so single ores
+   * can still be seen from far away; the boxes are rebuilt from all loaded chunks. */
+  const XRAY_BG = 0x0b0e14;
+  const XRAY_MAX = 20000;
+  const xray = { on: false, names: [], colors: [], query: '', timer: null, mesh: null, sorted: [], visited: new Set() };
+  const haloGeo = new THREE.BoxGeometry(1.25, 1.25, 1.25);
+  const haloMat = track(new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  // Bright edges, only a hint of fill: from close up the block itself stays visible
+  haloMat.onBeforeCompile = (sh) => {
+    sh.vertexShader = 'varying vec2 vEdgeUv;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvEdgeUv = uv;');
+    sh.fragmentShader = 'varying vec2 vEdgeUv;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
+  float e = min(min(vEdgeUv.x, 1.0 - vEdgeUv.x), min(vEdgeUv.y, 1.0 - vEdgeUv.y));
+  float w = fwidth(e) * 1.5;
+  outgoingLight *= mix(0.1, 0.9, 1.0 - smoothstep(0.04, 0.04 + w, e));
+  #include <opaque_fragment>`);
+  };
+
+  function xrayDirty() {
+    if (xray.timer) return;
+    xray.timer = setTimeout(() => { xray.timer = null; rebuildXray(); }, 250);
+  }
+
+  function rebuildXray() {
+    if (xray.mesh) { scene.remove(xray.mesh); xray.mesh.dispose(); xray.mesh = null; }
+    const counts = xray.names.map(() => 0);
+    const all = [];
+    if (xray.on) {
+      for (const c of st.chunks.values()) {
+        if (!c.xray) continue;
+        const { pts, cx, cz } = c.xray;
+        c.xray.counts.forEach((v, k) => { if (k < counts.length) counts[k] += v; });
+        for (let i = 0; i < pts.length; i += 4) {
+          const k = pts[i + 3];
+          if (k < 0 || k >= counts.length) continue;
+          all.push([cx * 16 + pts[i], pts[i + 1], cz * 16 + pts[i + 2], k]);
+        }
+      }
+    }
+    const p = camera.position;
+    const d2 = (a) => (a[0] + 0.5 - p.x) ** 2 + (a[1] + 0.5 - p.y) ** 2 + (a[2] + 0.5 - p.z) ** 2;
+    all.sort((a, b) => d2(a) - d2(b));
+    xray.sorted = all;
+    const n = Math.min(all.length, XRAY_MAX);
+    if (n) {
+      const mesh = new THREE.InstancedMesh(haloGeo, haloMat, n);
+      const m4 = new THREE.Matrix4(), col = new THREE.Color();
+      for (let i = 0; i < n; i++) {
+        const a = all[i];
+        m4.makeTranslation(a[0] + 0.5, a[1] + 0.5, a[2] + 0.5);
+        mesh.setMatrixAt(i, m4);
+        mesh.setColorAt(i, col.set(xray.colors[a[3]] || '#ffffff'));
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.instanceColor.needsUpdate = true;
+      mesh.frustumCulled = false;
+      mesh.renderOrder = 2;
+      xray.mesh = mesh;
+      scene.add(mesh);
+    }
+    ctx.onXray && ctx.onXray({ on: xray.on, counts, total: all.length });
+  }
+
+  /* names: block ids ("minecraft:diamond_ore"), colors: one CSS color per name.
+   * Empty list = X-ray off. */
+  function setXray(names, colors = []) {
+    const pairs = names.map((n, i) => [n.includes(':') ? n : 'minecraft:' + n, colors[i]]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+    const sorted = pairs.map((x) => x[0]);
+    const query = sorted.length ? '&xray=' + encodeURIComponent(sorted.join(',')) : '';
+    xray.colors = pairs.map((x) => x[1]);
+    const changed = query !== xray.query;
+    xray.names = sorted;
+    xray.on = sorted.length > 0;
+    if (changed) {
+      xray.query = query;
+      xray.visited.clear();
+      for (const c of st.chunks.values()) { if (c.group || c.empty) { c.stale = true; c.empty = false; } c.xray = null; }
+    }
+    setSky();
+    rebuildXray();
+  }
+
+  /* Fly to the nearest find not visited yet (then the next one, and so on). */
+  function xrayNext() {
+    const p = camera.position;
+    const d2 = (a) => (a[0] + 0.5 - p.x) ** 2 + (a[1] + 0.5 - p.y) ** 2 + (a[2] + 0.5 - p.z) ** 2;
+    const left = xray.sorted.filter((a) => !xray.visited.has(a.join(',')));
+    if (!left.length) {
+      if (!xray.sorted.length) return null;
+      xray.visited.clear();
+      return xrayNext();
+    }
+    let best = left[0];
+    for (const a of left) if (d2(a) < d2(best)) best = a;
+    xray.visited.add(best.join(','));
+    st.cam = 'free';
+    ctx.onCam && ctx.onCam('free');
+    // a few blocks away, looking at it from slightly above
+    const dx = p.x - best[0] - 0.5, dz = p.z - best[2] - 0.5;
+    const len = Math.hypot(dx, dz) || 1;
+    camera.position.set(best[0] + 0.5 + (dx / len) * 5, best[1] + 3.5, best[2] + 0.5 + (dz / len) * 5);
+    st.yaw = Math.atan2(dx / len, dz / len);
+    st.pitch = -Math.atan2(3, 5);
+    return { x: best[0], y: best[1], z: best[2], name: xray.names[best[3]] };
   }
 
   // ------------------------------------------------------------ Regions (far view)
@@ -419,7 +537,7 @@ export function create(container, ctx) {
       mesh.receiveShadow = true;
       if (r.mesh) disposeRegionMesh(r.mesh);
       r.mesh = mesh; r.etag = etag; r.empty = false;
-      mesh.visible = st.lod > 0;
+      mesh.visible = lodOn();
       scene.add(mesh);
       setFarMask(1, rx, rz, true);
     } catch (e) {
@@ -444,8 +562,9 @@ export function create(container, ctx) {
   const farQueue = [0, 0, 0];   // running requests per level
 
   // Range per level in tiles: level 0 up to 2560, level 1 up to 10240 blocks, level 2 the rest
+  const lodOn = () => st.lod > 0 && !xray.on;
   function lodRanges() {
-    const d = st.lod;
+    const d = xray.on ? 0 : st.lod;
     const r0 = d > 0 ? Math.min(Math.ceil(d / 512), 5) : 0;
     const r1 = d > r0 * 512 ? Math.min(Math.ceil(d / 2048), 5) : 0;
     const r2 = d > r1 * 2048 && r1 ? Math.min(Math.ceil(d / 8192), 8) : 0;
@@ -502,7 +621,7 @@ export function create(container, ctx) {
       const mesh = new THREE.Mesh(lodGeometry(h, FAR_SIZE[level] / 128), lodMaterial(tex, t.mask, FAR_SIZE[level]));
       mesh.position.set(x * FAR_SIZE[level], 0, z * FAR_SIZE[level]);
       mesh.layers.set(FAR);
-      mesh.visible = st.lod > 0;
+      mesh.visible = lodOn();
       t.mesh = mesh; t.etag = etag;
       scene.add(mesh);
       if (level === 1) setFarMask(2, x, z, true);
@@ -1153,7 +1272,7 @@ export function create(container, ctx) {
   // With the wide far view, two passes: first sky and coarse tiles (layer 1) with
   // their own near/far range, then clear depth and draw everything near precisely.
   function renderPasses() {
-    const far = lodRanges()[1] > 0 && st.lod > 0;
+    const far = lodRanges()[1] > 0 && lodOn();
     if (!far) {
       camera.layers.enable(FAR);
       renderer.render(scene, camera);
@@ -1320,12 +1439,12 @@ export function create(container, ctx) {
   }
 
   function setSky() {
-    const c = SKY[st.dim] ?? SKY.overworld;
+    const c = xray.on ? XRAY_BG : SKY[st.dim] ?? SKY.overworld;
     const near = st.radius * 16;
-    const far = st.lod > 0 ? Math.max(near, st.lod) : near;
+    const far = lodOn() ? Math.max(near, st.lod) : near;
     // without the wide levels one pass reaches the view distance, otherwise only up to level 0
     const nearFar = lodRanges()[1] > 0 ? Math.max(near, lodRanges()[0] * 512 + 512) : far;
-    const fancySky = st.fancy && st.dim !== 'the_nether' && st.dim !== 'the_end';
+    const fancySky = st.fancy && !xray.on && st.dim !== 'the_nether' && st.dim !== 'the_end';
     scene.background = fancySky ? null : new THREE.Color(c);
     skyDome.visible = fancySky;
     const fogCol = fancySky ? skyUniforms.uHorizon.value.clone() : new THREE.Color(c);
@@ -1334,8 +1453,8 @@ export function create(container, ctx) {
       : fancySky ? new THREE.Fog(fogCol, far * 0.35, far * 1.05) : new THREE.Fog(fogCol, far * 0.8, far * 1.05);
     camera.far = nearFar * 1.2 + 200;
     camera.updateProjectionMatrix();
-    for (const r of st.regions.values()) if (r.mesh) r.mesh.visible = st.lod > 0;
-    for (const t of farTiles.values()) if (t.mesh) t.mesh.visible = st.lod > 0;
+    for (const r of st.regions.values()) if (r.mesh) r.mesh.visible = lodOn();
+    for (const t of farTiles.values()) if (t.mesh) t.mesh.visible = lodOn();
     updateLighting();
   }
 
@@ -1399,6 +1518,8 @@ export function create(container, ctx) {
     setVerify,
     setDiff,
     setSpawn,
+    setXray,
+    xrayNext,
     setBlockPick,
     setArea,
     setOthers,

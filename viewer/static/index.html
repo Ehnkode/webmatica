@@ -367,6 +367,7 @@
     <button type="button" id="goto-btn" class="icon-btn" title="Suchen: Koordinaten oder Wegpunkt (/)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
     <input id="goto-input" placeholder="Koordinaten oder Wegpunkt …" aria-label="Suchen oder zu Koordinaten springen" list="goto-list" tabindex="-1"><datalist id="goto-list"></datalist>
   </form>
+  <button id="btn-xray" class="toggle icon-btn only3d" data-pop="pop-xray" title="X-Ray: nur gesuchte Blöcke zeigen (X)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><path d="M12 8.5l3 1.75v3.5L12 15.5l-3-1.75v-3.5z"/></svg></button>
   <button id="shot3d" class="icon-btn only3d" title="Bildschirmfoto speichern"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
 </div>
 
@@ -382,6 +383,19 @@
     <input type="number" id="cut-yn" min="-64" max="319" value="64" aria-label="Schnitthöhe">
   </div>
   <p class="hint">Karte: oberster Block bis zu dieser Höhe. 3D: alles darüber wird weggeschnitten. Tasten <kbd>,</kbd> <kbd>.</kbd></p>
+</div>
+
+<div id="pop-xray" class="panel pop" hidden>
+  <div class="pop-title">X-Ray</div>
+  <label class="check"><input type="checkbox" id="xray-on"> Alles außer den gesuchten Blöcken ausblenden</label>
+  <div class="xray-presets" id="xray-presets"></div>
+  <form id="xray-form" class="sp-row" autocomplete="off">
+    <input id="xray-input" list="xray-list" placeholder="Block suchen, z. B. Diamanterz …" aria-label="Block suchen"><datalist id="xray-list"></datalist>
+    <button type="submit">Hinzufügen</button>
+  </form>
+  <div id="xray-sel" class="xray-sel"></div>
+  <div class="sp-row"><button id="xray-next" disabled>Zum nächsten Fund</button></div>
+  <p class="hint" id="xray-hint">Zeigt, was die Mod aufgezeichnet hat, im Umkreis der Sichtweite. Leuchtende Kästen markieren jeden Fund.</p>
 </div>
 
 <div id="pop-view" class="panel pop" hidden>
@@ -430,6 +444,8 @@
       <div><kbd>Esc</kbd><span>schließen</span></div>
       <h4>3D</h4>
       <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>fliegen, <kbd>Leer</kbd>/<kbd>Shift</kbd> hoch/runter, <kbd>Strg</kbd> schneller</span></div>
+      <div><kbd>X</kbd><span>X-Ray an/aus</span></div>
+      <div><kbd>N</kbd><span>X-Ray: zum nächsten Fund</span></div>
     </div>
   </div>
 </div>
@@ -458,6 +474,7 @@
 <script src="/static/js/automation.js"></script>
 <script src="/static/js/radar.js"></script>
 <script src="/static/js/farm.js"></script>
+<script src="/static/js/xray.js"></script>
 <script src="/static/js/start.js"></script>
 </body>
 </html>

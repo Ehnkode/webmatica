@@ -1000,3 +1000,32 @@ Viewer antwortet nicht, Details in {}	Viewer does not respond, details in {}
 Viewer offen: {}	Viewer open: {}
 Viewer ist schon im Browser offen: {}	The viewer is already open in the browser: {}
 Ein alter Viewer läuft noch. Bitte Python im Task-Manager beenden und F10 erneut drücken.	An old viewer is still running. Please end Python in the Task Manager and press F10 again.
+# --- X-ray (3D)
+X-Ray	X-ray
+X-Ray: nur gesuchte Blöcke zeigen (X)	X-ray: show only the blocks you search for (X)
+Alles außer den gesuchten Blöcken ausblenden	Hide everything except the blocks you search for
+Block suchen, z. B. Diamanterz …	Search a block, e.g. diamond ore …
+Block suchen	Search a block
+Hinzufügen	Add
+Zum nächsten Fund	Go to next find
+Zeigt, was die Mod aufgezeichnet hat, im Umkreis der Sichtweite. Leuchtende Kästen markieren jeden Fund.	Shows what the mod recorded, within view distance. Glowing boxes mark every find.
+Noch nichts gesucht. Wähle oben einen Block oder tippe einen Namen.	Nothing searched yet. Pick a block above or type a name.
+Entfernen	Remove
+Diamanterz	Diamond ore
+Antiker Schutt	Ancient debris
+Spawner	Spawner
+Truhen	Chests
+Shulkerkisten	Shulker boxes
+Smaragderz	Emerald ore
+Golderz	Gold ore
+Eisenerz	Iron ore
+Endportal	End portal
+X-Ray an	X-ray on
+X-Ray aus	X-ray off
+X-Ray an/aus	X-ray on/off
+X-Ray: zum nächsten Fund	X-ray: go to next find
+X-Ray: in Sichtweite nichts gefunden	X-ray: nothing found within view distance
+{} bei {} {} {}	{} at {} {} {}
+X-Ray: keinen Block gefunden für „{}“	X-ray: no block found for "{}"
+X-Ray: {} Blöcke passen, bitte genauer suchen	X-ray: {} blocks match, please be more specific
+X-Ray: höchstens {} Blöcke gleichzeitig, der Rest wird ignoriert.	X-ray: at most {} blocks at once, the rest is ignored.

@@ -244,7 +244,7 @@ async function set3d(on) {
     if (!view3d) {
       try {
         const mod = await import('/static/view3d.js');
-        view3d = mod.create($('#view3d'), { toast, onSelect: on3dSelect, onCam: on3dCam });
+        view3d = mod.create($('#view3d'), { toast, onSelect: on3dSelect, onCam: on3dCam, onXray: (x) => xrayStats(x) });
         window.__view3d = view3d;
         view3d.updatePlayer(state.player);
       } catch (e) { toast('3D konnte nicht starten: ' + e.message); return; }
@@ -263,6 +263,7 @@ async function set3d(on) {
     view3d.setFancy($('#fancy3d').checked);
     view3d.setClip(cut.mode, cut.y);
     view3d.setSpawn($('#spawn3d').checked);
+    xrayApply();
     view3d.open(state.server, state.dim, c.x, y, c.z);
     view3d.setSchematics(schem.list);
     drawHistory();
