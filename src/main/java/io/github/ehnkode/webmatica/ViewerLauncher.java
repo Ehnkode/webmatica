@@ -71,7 +71,7 @@ final class ViewerLauncher {
         t.start();
     }
 
-    /** Ends a viewer this game started; one started by hand keeps running. */
+    /** Ends a viewer this game started; one started by hand keeps running. A crash closes its stdin, which ends it as well. */
     static void shutdown() {
         Process p = process;
         if (p != null && p.isAlive()) {
@@ -123,6 +123,8 @@ final class ViewerLauncher {
         List<String> cmd = new ArrayList<>(py);
         cmd.add("-m");
         cmd.add("viewer");
+        cmd.add("--exit-with-stdin");
+        // stdin stays a pipe to the game: when the game ends, even by a crash, the pipe closes and the viewer quits.
         process = new ProcessBuilder(cmd).directory(app.toFile())
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.appendTo(log.toFile()))
