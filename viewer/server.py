@@ -43,7 +43,8 @@ Endpoints (all JSON, except images):
         GET  /api/radar?srv=                     log: who was within view distance when
         GET  /editor?file=                       schematic editor (separate page)
         GET  /api/editor/blocks|voxels|mesh|info editor data   POST /api/editor/open|new|cut|edit|undo|redo|save|discard
-        GET  /api/xray/names                     block names for the X-ray search (mesh with ?xray=a,b: only those blocks)
+        GET  /api/mesh/<srv>/<dim>/<cx>/<cz>     3D chunk [?full=1 caves, ylo/yhi layer cut, xray=a,b only those blocks, at=YYYY-MM-DD state on that day]
+        GET  /api/xray/names                     block names for the X-ray search
         GET  /api/history/dates?srv=&dim=        timeline: days with a backed-up state
         GET  /api/history/diff?srv=&dim=&date=   changes since that day
 """
@@ -276,8 +277,10 @@ class App:
             parts.append(f"{int(h.timestamps[i])}.{int(h.offsets[i])}" if h is not None else "-")
         return "-".join(parts)
 
-    def mesh(self, dim, cx: int, cz: int, full: bool, ylo=None, yhi=None, names=()) -> tuple[bytes, str] | None:
+    def mesh(self, dim, cx: int, cz: int, full: bool, ylo=None, yhi=None, names=(), at=None) -> tuple[bytes, str] | None:
         stamp = self.chunk_stamp(dim, cx, cz) + ("F" if full else "") + (f"C{ylo}:{yhi}" if yhi is not None else "")
+        if at:
+            stamp += "A" + at
         if names:
             stamp += "X" + hashlib.sha1(",".join(names).encode()).hexdigest()[:10]
         key = (dim.id, cx, cz, stamp)
@@ -286,9 +289,9 @@ class App:
             return hit, stamp
         if self.mesh_pool is not None:
             # Separate processes: otherwise Python computes all chunks one after another because of the GIL
-            data = self.mesh_pool.submit(_mesh_job, dim.server, dim.key, cx, cz, full, ylo, yhi, names).result()
+            data = self.mesh_pool.submit(_mesh_job, dim.server, dim.key, cx, cz, full, ylo, yhi, names, at).result()
         else:
-            data = _mesh_compute(self.rec, dim, cx, cz, full, ylo, yhi, names)
+            data = _mesh_compute(self.rec, dim, cx, cz, full, ylo, yhi, names, at, self.history)
         if data is None:
             return None
         self.meshes.put(key, data)
@@ -766,7 +769,10 @@ def make_handler(app: App):
                 names = xray.parse_names(q.get("xray", [""])[0])
             except ValueError as e:
                 return self.fail(400, str(e))
-            res = app.mesh(dim, cx, cz, q.get("full", ["0"])[0] == "1", opt("ylo"), opt("yhi"), names)
+            at = q.get("at", [""])[0] or None
+            if at and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", at):
+                return self.fail(400, "Datum: JJJJ-MM-TT")
+            res = app.mesh(dim, cx, cz, q.get("full", ["0"])[0] == "1", opt("ylo"), opt("yhi"), names, at)
             if res is None:
                 return self.send(204, b"", "application/octet-stream")
             data, stamp = res
@@ -995,11 +1001,13 @@ def make_handler(app: App):
 _LOOKUPS: dict = {}
 
 
-def _mesh_compute(rec, dim, cx, cz, full, ylo=None, yhi=None, names=()):
-    ch = rec.chunk(dim, cx, cz)
+def _mesh_compute(rec, dim, cx, cz, full, ylo=None, yhi=None, names=(), at=None, hist=None):
+    # at: state at the start of that day (timelapse), from the mod's daily backups
+    get = (lambda x, z: hist.chunk_at(rec, dim, at, x, z)) if at else (lambda x, z: rec.chunk(dim, x, z))
+    ch = get(cx, cz)
     if ch is None:
         return None
-    nb = {(dx, dz): rec.chunk(dim, cx + dx, cz + dz) for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1))}
+    nb = {(dx, dz): get(cx + dx, cz + dz) for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1))}
     if names:
         # X-ray: only the searched blocks, the whole height (or the layer cut), with their positions behind it
         look = _LOOKUPS.get(names)
@@ -1023,12 +1031,13 @@ _WORKER: dict = {}
 
 def _mesh_init(recording):
     _WORKER["rec"] = Recording(recording)
+    _WORKER["hist"] = History(recording)
 
 
-def _mesh_job(server, dim_key, cx, cz, full, ylo=None, yhi=None, names=()):
+def _mesh_job(server, dim_key, cx, cz, full, ylo=None, yhi=None, names=(), at=None):
     rec = _WORKER["rec"]
     dim = rec.dimension(server, dim_key)
-    return None if dim is None else _mesh_compute(rec, dim, cx, cz, full, ylo, yhi, names)
+    return None if dim is None else _mesh_compute(rec, dim, cx, cz, full, ylo, yhi, names, at, _WORKER["hist"])
 
 
 # ------------------------------------------------------------------ Pre-rendering

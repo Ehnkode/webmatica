@@ -109,7 +109,7 @@ export function create(container, ctx) {
   // ------------------------------------------------------------ State
 
   const st = {
-    srv: null, dim: null, radius: 10, lod: 4096, fog: false, full: false, fancy: false, hour: 10,
+    srv: null, dim: null, at: null, radius: 10, lod: 4096, fog: false, full: false, fancy: false, hour: 10,
     chunks: new Map(),      // "cx,cz" -> { group, etag, empty, loading }
     regions: new Map(),     // "rx,rz" -> { mesh, etag, empty, loading }
     queue: 0, lodQueue: 0,
@@ -191,7 +191,8 @@ export function create(container, ctx) {
     while (pending.length && (n < 1 || performance.now() - t0 < budgetMs)) { pending.shift()(); n++; }
   }
 
-  const currentQuery = () => clip.query + xray.query + (st.full ? '&full' : '');
+  const atQuery = () => (st.at ? '&at=' + st.at : '');
+  const currentQuery = () => clip.query + xray.query + atQuery() + (st.full ? '&full' : '');
   async function loadChunk(cx, cz, force) {
     const key = `${cx},${cz}`;
     let c = st.chunks.get(key);
@@ -200,7 +201,7 @@ export function create(container, ctx) {
     c.loading = true;
     st.queue++;
     try {
-      const url = `/api/mesh/${encodeURIComponent(st.srv)}/${encodeURIComponent(st.dim)}/${cx}/${cz}?full=${st.full ? 1 : 0}${clip.query}${xray.query}`;
+      const url = `/api/mesh/${encodeURIComponent(st.srv)}/${encodeURIComponent(st.dim)}/${cx}/${cz}?full=${st.full ? 1 : 0}${clip.query}${xray.query}${atQuery()}`;
       const query = currentQuery();
       const r = await fetch(url);
       if (st.chunks.get(key) !== c) return;
@@ -1495,6 +1496,26 @@ export function create(container, ctx) {
     setClip,
     setLod(blocks) { st.lod = blocks; setSky(); },
     setFog(f) { st.fog = f; setSky(); },
+    /* Timelapse: chunks as they were at the start of that day (null = today). The old meshes stay
+     * until the new ones are there, so playing it back does not flicker. */
+    setAt(date) {
+      date = date || null;
+      if (st.at === date) return;
+      st.at = date;
+      for (const c of st.chunks.values()) if (c.group || c.empty) { c.stale = true; c.empty = false; }
+    },
+    // still loading chunks near the camera (the timelapse waits for this before the next step)
+    busy() {
+      if (st.queue > 0 || pending.length) return true;
+      const ccx = Math.floor(camera.position.x / 16), ccz = Math.floor(camera.position.z / 16);
+      for (const [key, c] of st.chunks) {
+        if (!c.stale && !c.loading) continue;
+        const [x, z] = key.split(',').map(Number);
+        if ((x - ccx) ** 2 + (z - ccz) ** 2 <= st.radius * st.radius) return true;
+      }
+      return false;
+    },
+    canvas() { return renderer.domElement; },
     setFull(f) { if (st.full !== f) { st.full = f; for (const c of st.chunks.values()) if (c.group || c.empty) { c.stale = true; c.empty = false; } } },
     updatePlayer,
     setCam,

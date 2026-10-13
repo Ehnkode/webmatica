@@ -901,12 +901,10 @@ Zeitraffer	Time-lapse
 Abspielen	Play
 Anhalten	Pause
 heute	today
-Schieb nach links, um die Karte zu sehen, wie sie am Morgen dieses Tages aussah. Nur auf der 2D-Karte.	Slide left to see the map as it looked on the morning of that day. 2D map only.
 Noch keine früheren Stände. Die Mod sichert sie, sobald sich ein Chunk an einem neuen Tag ändert.	No earlier states yet. The mod saves them as soon as a chunk changes on a new day.
 Mit heute vergleichen	Compare with today
 Zurück zu heute	Back to today
 Stand {} · zurück zu heute ✕	State {} · back to today ✕
-Der Zeitraffer läuft auf der 2D-Karte	The time-lapse runs on the 2D map
 Datum: JJJJ-MM-TT	Date: YYYY-MM-DD
 # Automationen
 Automationen	Automations
@@ -1029,3 +1027,24 @@ X-Ray: in Sichtweite nichts gefunden	X-ray: nothing found within view distance
 X-Ray: keinen Block gefunden für „{}“	X-ray: no block found for "{}"
 X-Ray: {} Blöcke passen, bitte genauer suchen	X-ray: {} blocks match, please be more specific
 X-Ray: höchstens {} Blöcke gleichzeitig, der Rest wird ignoriert.	X-ray: at most {} blocks at once, the rest is ignored.
+# --- Timelapse
+Von	From
+Bis	To
+Schritt	Step
+Tempo	Speed
+jeder Tag	every day
+jede Woche	every week
+0,5 s pro Bild	0.5 s per frame
+1 s pro Bild	1 s per frame
+2 s pro Bild	2 s per frame
+4 s pro Bild	4 s per frame
+In Schleife abspielen	Loop
+Als GIF speichern	Save as GIF
+Als Video speichern	Save as video
+Schieb nach links, um zu sehen, wie es am Morgen dieses Tages aussah. Läuft auf der Karte und in 3D.	Slide left to see how it looked on the morning of that day. Works on the map and in 3D.
+Bild {} von {} …	Frame {} of {} …
+GIF wird erstellt …	Creating GIF …
+Video wird aufgenommen …	Recording video …
+Gespeichert: {} ({} MB)	Saved: {} ({} MB)
+Export fehlgeschlagen: {}	Export failed: {}
+Dein Browser kann keine Videos aufnehmen, nimm GIF	Your browser cannot record videos, use GIF
