@@ -39,7 +39,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
 ## Requirements
 
 - Minecraft 1.21.11, 26.1, 26.2 or 26.3 with Fabric Loader and Fabric API
-- Python 3.10+ (Windows: tick "Add python.exe to PATH")
+- Python 3.10+
 - Optional: [Baritone](https://github.com/cabaletta/baritone), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib), Litematica Printer
 
 ## Install
