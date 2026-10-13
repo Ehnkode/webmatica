@@ -1,10 +1,10 @@
 package io.github.ehnkode.webmatica;
 
 /**
- * Beim Hinlaufen (goto, Holen) darf Baritone nichts abbauen und nichts setzen,
- * sonst nimmt es den kuerzesten Weg quer durch die Base. Die eigenen Werte von
- * allowBreak/allowPlace werden gemerkt und wieder hergestellt, sobald Baritone
- * fertig ist oder ein Bau-Befehl (Litematica, Freiraeumen) kommt.
+ * While walking (goto, fetching) Baritone must not break or place anything,
+ * otherwise it takes the shortest path straight through the base. The user's own
+ * allowBreak/allowPlace values are saved and restored as soon as Baritone is
+ * done or a build command (Litematica, clearing) arrives.
  */
 public final class BaritoneSafety {
 
@@ -15,7 +15,7 @@ public final class BaritoneSafety {
     private BaritoneSafety() {
     }
 
-    /** Client-Thread. */
+    /** Client thread. */
     public static void walkOnly() {
         try {
             if (saved == null) {
@@ -30,11 +30,11 @@ public final class BaritoneSafety {
             }
             since = System.currentTimeMillis();
         } catch (Throwable ignored) {
-            // kein Baritone: nichts zu tun
+            // no Baritone: nothing to do
         }
     }
 
-    /** Client-Thread. Stellt die Werte von vorher wieder her. */
+    /** Client thread. Restores the previous values. */
     public static void restore() {
         if (saved == null) {
             return;

@@ -1,10 +1,10 @@
-"""Item-Bilder fuer das Kisten-Inventar bauen (assets/items.png + assets/items.json).
+"""Build item images for the chest inventory (assets/items.png + assets/items.json).
 
     python -m viewer.tools.build_items --jar "<.minecraft>/versions/1.21.11/1.21.11.jar"
 
-Braucht vorher ``build_assets`` (Block-Atlas und -Modelle). Bloecke werden wie im
-Inventar schraeg von oben gezeichnet (eigener kleiner Software-Rasterizer ueber die
-Block-Modelle des Viewers), alle anderen Items flach aus ihren Item-Texturen.
+Needs ``build_assets`` first (block atlas and models). Blocks are drawn as in the
+inventory, at an angle from above (own small software rasterizer over the
+viewer's block models), all other items flat from their item textures.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ SIZE = 32
 GRASS = (0x7c, 0xbd, 0x6b)
 FOLIAGE = (0x59, 0xae, 0x30)
 
-# Blickrichtung wie im Inventar (display.gui: rotation [30, 225, 0])
+# View direction as in the inventory (display.gui: rotation [30, 225, 0])
 _a, _b = math.radians(225), math.radians(30)
 RY = np.array([[math.cos(_a), 0, math.sin(_a)], [0, 1, 0], [-math.sin(_a), 0, math.cos(_a)]], np.float32)
 RX = np.array([[1, 0, 0], [0, math.cos(_b), -math.sin(_b)], [0, math.sin(_b), math.cos(_b)]], np.float32)
@@ -49,13 +49,13 @@ class Jar:
             return None
         im = Image.open(io.BytesIO(self.z.read(p))).convert("RGBA")
         w = im.width
-        return im.crop((0, 0, w, w)) if im.height > w else im   # animiert: erstes Bild
+        return im.crop((0, 0, w, w)) if im.height > w else im   # animated: first frame
 
 
-# ------------------------------------------------------------------ Item-Definition aufloesen
+# ------------------------------------------------------------------ Resolve item definition
 
 def pick_model(node):
-    """items/<id>.json -> (Modellname, tints, special?) fuer die Ansicht im Inventar."""
+    """items/<id>.json -> (model name, tints, special?) for the inventory view."""
     if not isinstance(node, dict):
         return None
     t = node.get("type", "").split(":", 1)[-1]
@@ -79,7 +79,7 @@ def pick_model(node):
 
 
 def model_chain(jar: Jar, name: str) -> tuple[dict, list]:
-    """Texturen und Elternkette eines Modells (models/<name>.json)."""
+    """Textures and parent chain of a model (models/<name>.json)."""
     textures, chain = {}, []
     n = name.split(":", 1)[-1]
     for _ in range(12):
@@ -128,7 +128,7 @@ def flat_icon(jar: Jar, textures: dict, tints: list) -> Image.Image | None:
     return out.resize((SIZE, SIZE), Image.NEAREST) if found else None
 
 
-# ------------------------------------------------------------------ Bloecke schraeg zeichnen
+# ------------------------------------------------------------------ Draw blocks at an angle
 
 def render_block(models: BlockModels, atlas: np.ndarray, comp) -> Image.Image | None:
     if comp is None or not len(comp.verts):
@@ -188,7 +188,7 @@ def render_block(models: BlockModels, atlas: np.ndarray, comp) -> Image.Image | 
 
 
 def compile_model(models: BlockModels, model: str, item: str):
-    """Ein Block-Modell unrotiert kompilieren (so zeigt es das Inventar)."""
+    """Compile a block model unrotated (as the inventory shows it)."""
     sel = models._select
     models._select = lambda name, props: [{"model": model}]
     try:
@@ -198,8 +198,8 @@ def compile_model(models: BlockModels, model: str, item: str):
 
 
 def inject_jar_model(jar: Jar, models: BlockModels, name: str) -> bool:
-    """Block-Modell, das der Viewer nicht kennt (z. B. *_inventory), aus der Jar
-    uebernehmen, sofern alle Texturen im Block-Atlas liegen."""
+    """Block model the viewer doesn't know (e.g. *_inventory), taken over from the
+    jar, provided all textures are in the block atlas."""
     textures, chain = model_chain(jar, name)
     elements = None
     for n in chain:

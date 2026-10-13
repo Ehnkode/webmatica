@@ -1,12 +1,12 @@
-"""Schematic-Editor (Server-Seite).
+"""Schematic editor (server side).
 
-Der Browser schickt Bearbeitungen (Block setzen, Bereich fuellen, ersetzen),
-hier werden sie auf das Block-Array angewendet und sofort als Sponge-Schematic
-(.schem) gespeichert. Pro Datei gibt es Rueckgaengig/Wiederholen.
+The browser sends edits (set block, fill area, replace); they are
+applied to the block array here and immediately saved as a Sponge schematic
+(.schem). Each file has undo/redo.
 
-Bearbeitet werden nur Dateien in ``hochgeladen/`` (``.viewer/schematics``).
-Alles andere (Litematica-Ordner, .litematic, gedrehte Platzierungen) wird vorher
-als Kopie dorthin geschrieben, damit nie eine fremde Datei ueberschrieben wird.
+Only files in ``hochgeladen/`` (``.viewer/schematics``) are edited.
+Everything else (Litematica folder, .litematic, rotated placements) is first
+written there as a copy, so a foreign file is never overwritten.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ MAX_EDGE = 512
 MAX_VOLUME = 16 * 1024 * 1024
 UNDO = 40
 
-# Bevorzugte Werte, wenn der Browser einen Block ohne Eigenschaften setzt
+# Preferred values when the browser sets a block without properties
 PREF = {"facing": "north", "half": "bottom", "type": "bottom", "shape": "straight", "axis": "y",
         "face": "floor", "hinge": "left", "open": "false", "powered": "false", "lit": "false",
         "attachment": "floor", "part": "foot", "occupied": "false", "rotation": "0", "east": "false",
@@ -44,7 +44,7 @@ PREF = {"facing": "north", "half": "bottom", "type": "bottom", "shape": "straigh
 
 
 def _block_props(name: str) -> dict:
-    """Eigenschaften eines Blocks mit allen moeglichen Werten (aus den Blockstate-Dateien)."""
+    """Properties of a block with all possible values (from the blockstate files)."""
     bs = MODELS.blockstates.get(name) if MODELS.available else None
     props: dict[str, list] = {}
 
@@ -73,7 +73,7 @@ def _block_props(name: str) -> dict:
 
     for part in bs.get("multipart") or []:
         walk(part.get("when"))
-    # Multipart nennt oft nur die "an"-Werte (Zaun: north=true, Mauer: low|tall)
+    # Multipart often names only the "on" values (fence: north=true, wall: low|tall)
     for k, vals in props.items():
         if set(vals) <= {"true"}:
             vals.append("false")
@@ -92,7 +92,7 @@ class Editor:
         self._props: dict[str, dict] = {}
         self._defaults: dict[str, str] = {}
 
-    # ---------------------------------------------------------------- Bloecke
+    # ---------------------------------------------------------------- Blocks
 
     def props(self, name: str) -> dict:
         p = self._props.get(name)
@@ -122,7 +122,7 @@ class Editor:
         return st
 
     def complete(self, state: str) -> str:
-        """Fehlende Eigenschaften mit Standardwerten auffuellen."""
+        """Fill missing properties with default values."""
         state = sch._norm_state(state or "minecraft:air")
         name = base_name(state)
         if name in AIR_NAMES:
@@ -133,7 +133,7 @@ class Editor:
         return sch._norm_state(name + ("[" + ",".join(f"{k}={v}" for k, v in sorted(full.items())) + "]" if full else ""))
 
     def blocks(self) -> list:
-        """Alle Bloecke, die man setzen kann (mit Item-Bild), samt Eigenschaften."""
+        """All placeable blocks (with item image), including properties."""
         if self._blocks is None:
             items = {}
             try:
@@ -149,7 +149,7 @@ class Editor:
             self._blocks = out
         return self._blocks
 
-    # ---------------------------------------------------------------- Dateien
+    # ---------------------------------------------------------------- Files
 
     def _editable(self, file_id: str) -> bool:
         return file_id.startswith("hochgeladen/") and file_id.lower().endswith(".schem")
@@ -178,7 +178,7 @@ class Editor:
         return out
 
     def open(self, req: dict) -> dict:
-        """Datei oder Platzierung zum Bearbeiten oeffnen; liefert die (ggf. neue) Datei."""
+        """Open a file or placement for editing; returns the (possibly new) file."""
         pid = req.get("pid")
         if pid:
             pl = self.pl.get(str(pid))
@@ -205,7 +205,7 @@ class Editor:
             self.pl._write(pls)
 
     def rename(self, req: dict) -> dict:
-        """Datei umbenennen; Platzierungen zeigen danach auf den neuen Namen."""
+        """Rename a file; placements then point to the new name."""
         file_id = str(req["file"])
         if not self._editable(file_id):
             raise ValueError("nur eigene Schematics lassen sich umbenennen")
@@ -222,7 +222,7 @@ class Editor:
             new_path = os.path.join(self.pl.upload_dir, n + ".schem")
             s["name"], s["path"] = n, new_path
             os.replace(self.pl.resolve(file_id), new_path)
-            # Name auch in der Datei, aber nur den gespeicherten Stand schreiben (Ungespeichertes bleibt ungespeichert)
+            # Name in the file too, but only write the saved state (unsaved stays unsaved)
             disk = sch.load(open(new_path, "rb").read(), n + ".schem")
             with open(new_path + ".tmp", "wb") as f:
                 f.write(schem_write(disk.blocks.astype(np.uint16), n, self._bes_out(disk)))
@@ -253,7 +253,7 @@ class Editor:
         name = self._new_name(str(req.get("name") or "ausschnitt"))
         data, _ = schem_export(self.rec, dim, *c, name=name)
         s = sch.load(data, name + ".schem")
-        # Luft oben abschneiden, sonst ist der Ausschnitt bis zur Bauhoehe hoch
+        # Trim air at the top, otherwise the cutout reaches up to the build height
         filled = np.nonzero(s.blocks.reshape(s.blocks.shape[0], -1).any(1))[0]
         top = int(filled[-1]) + 1 if len(filled) else 1
         blocks = s.blocks[:top]
@@ -292,7 +292,7 @@ class Editor:
                 "data": base64.b64encode(inv.astype("<u2").tobytes()).decode()}
 
     def mesh(self, file_id: str):
-        """Mesh aus dem Bearbeitungsstand (auch ungespeichert), nicht aus der Datei."""
+        """Mesh from the edit state (including unsaved), not from the file."""
         with self.lock:
             s = self._session(file_id)
             key = (s["path"], s["mtime"], s["rev"])
@@ -305,10 +305,10 @@ class Editor:
             s["mesh_key"], s["mesh"], s["mesh_etag"] = key, data, etag
         return data, etag
 
-    # ---------------------------------------------------------------- Bearbeiten
+    # ---------------------------------------------------------------- Editing
 
     def _grow(self, s: dict, lo: tuple, hi: tuple) -> tuple:
-        """Array so vergroessern, dass [lo, hi] hineinpasst. Liefert die Verschiebung (dx, dy, dz)."""
+        """Grow the array so that [lo, hi] fits. Returns the shift (dx, dy, dz)."""
         b = s["blocks"]
         H, L, W = b.shape
         nlo = (min(0, lo[0]), min(0, lo[1]), min(0, lo[2]))
@@ -352,7 +352,7 @@ class Editor:
         return {**self.info(file_id), "shift": shift, "changed": changed}
 
     def _clone(self, s: dict, op: dict, shift: list) -> tuple:
-        """Bereich kopieren/verschieben, dabei drehen/spiegeln. ``to`` ist die neue kleinste Ecke."""
+        """Copy/move an area, rotating/mirroring it. ``to`` is the new minimum corner."""
         bx = [int(v) for v in op["box"]]
         sh = np.array(shift)
         lo = np.minimum(bx[:3], bx[3:]) + sh
@@ -418,7 +418,7 @@ class Editor:
                 frm = str(op.get("from") or "")
                 names = BLOCKS.names
                 if not frm or frm == "*":
-                    mask = view != 0                       # alles ausser Luft
+                    mask = view != 0                       # everything except air
                 elif "[" in frm:
                     mask = view == BLOCKS.id(self.complete(frm))
                 else:
@@ -435,7 +435,7 @@ class Editor:
                     view[1:-1, 1:-1, 1:-1] = 0
             n = int(mask.sum())
             if kind == "replace" and op.get("keep") and sid:
-                # Ausrichtung uebernehmen: Treppe bleibt Treppe in derselben Richtung
+                # Keep orientation: stairs stay stairs facing the same direction
                 tgt = base_name(BLOCKS.names[sid])
                 orig = view.copy()
                 for i in np.unique(orig[mask]).tolist():
@@ -462,7 +462,7 @@ class Editor:
         os.replace(tmp, s["path"])
         s["mtime"] = os.path.getmtime(s["path"])
         if any(shift):
-            # Platzierungen dieser Datei so verschieben, dass die Bloecke in der Welt bleiben
+            # Shift this file's placements so the blocks stay put in the world
             with self.pl.lock:
                 pls = self.pl._read()
                 for p in pls:
@@ -474,13 +474,13 @@ class Editor:
 
     @staticmethod
     def _touch(s: dict, shift):
-        """Bearbeitung nur im Speicher merken; erst ``save`` schreibt die Datei."""
+        """Keep the edit in memory only; ``save`` writes the file."""
         s["dirty"] = True
         s["rev"] += 1
         s["pshift"] = [s["pshift"][i] + int(shift[i]) for i in range(3)]
 
     def save(self, req: dict) -> dict:
-        """Ungespeicherte Bearbeitungen in die Datei schreiben."""
+        """Write unsaved edits to the file."""
         file_id = str(req["file"])
         with self.lock:
             s = self._session(file_id)
@@ -490,7 +490,7 @@ class Editor:
         return {**self.info(file_id), "saved": True}
 
     def discard(self, req: dict) -> dict:
-        """Ungespeicherte Bearbeitungen verwerfen: beim naechsten Zugriff wird die Datei neu gelesen."""
+        """Discard unsaved edits: the file is reread on next access."""
         file_id = str(req["file"])
         with self.lock:
             self.sessions.pop(file_id, None)
@@ -506,7 +506,7 @@ class Editor:
             blocks, bes, sh = src.pop()
             dst.append((s["blocks"].copy(), [dict(be) for be in s["bes"]], sh))
             s["blocks"], s["bes"] = blocks, bes
-            # Verschiebung durch Wachsen ebenfalls zuruecknehmen bzw. wiederholen
+            # Undo or redo the shift from growing as well
             move = tuple(int(v) for v in sh) if redo else tuple(-int(v) for v in sh)
             self._touch(s, move)
         return {**self.info(file_id), "shift": list(move), "changed": 1}

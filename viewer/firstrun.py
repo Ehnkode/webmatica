@@ -1,9 +1,9 @@
-"""Erster Start ohne Handarbeit: Aufnahme-Ordner und Blocktexturen finden.
+"""First start without manual work: find the recording folder and block textures.
 
-Die Mod schreibt beim Spielstart ``~/.webmatica/client.json`` mit dem Pfad zur
-Aufnahme und zur Spiel-Jar. Daraus baut der Viewer einmalig seine Block- und
-Item-Bilder (die gehoeren Mojang und liegen deshalb nicht im Repo) und weiss, welche
-Aufnahme er zeigen soll. Ohne diese Datei helfen ``--recording`` und ``--jar``.
+On game start the mod writes ``~/.webmatica/client.json`` with the path to the
+recording and the game jar. From it the viewer builds its block and item
+images once (they belong to Mojang and are therefore not in the repo) and knows which
+recording to show. Without this file, ``--recording`` and ``--jar`` help.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ def _has_assets(jar: str) -> bool:
 
 
 def find_jar() -> str | None:
-    """Spiel-Jar mit den Minecraft-Assets: erst aus der Mod, dann die ueblichen Orte."""
+    """Game jar with the Minecraft assets: first from the mod, then the usual places."""
     cands = []
     info = client_info()
     if info.get("gameJar"):
@@ -57,7 +57,7 @@ def find_jar() -> str | None:
 def find_recording() -> str | None:
     rec = client_info().get("recording")
     if rec:
-        os.makedirs(rec, exist_ok=True)       # Mod laeuft, hat aber noch nichts aufgenommen
+        os.makedirs(rec, exist_ok=True)       # mod is running but hasn't recorded anything yet
         return rec
     return None
 
@@ -75,7 +75,7 @@ def build_assets(jar: str) -> None:
 
 
 def prepare(argv: list[str]) -> list[str]:
-    """Nimmt ``--jar`` aus den Argumenten, baut fehlende Assets, setzt die Aufnahme als Standard."""
+    """Takes ``--jar`` from the arguments, builds missing assets, sets the recording as default."""
     args = list(argv)
     jar = None
     if "--jar" in args:

@@ -1,8 +1,8 @@
-"""Interessante Block-Entities je Chunk: Schildtexte und Behaelter (Stash-Finder).
+"""Interesting block entities per chunk: sign texts and containers (stash finder).
 
-Der Server schickt dem Client alle Block-Entities eines Chunks mit Typ und
-Position (Inhalte von Truhen aber nicht). Die Mod speichert sie mit, daher
-lassen sich Truhen, Shulker usw. zaehlen, ohne dass man sie geoeffnet hat.
+The server sends the client all block entities of a chunk with type and
+position (but not chest contents). The mod stores them too, so chests,
+shulkers etc. can be counted without having opened them.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ SIGNS = {"sign", "hanging_sign"}
 
 
 def _text(v) -> str:
-    """Textkomponente (JSON-String oder NBT-Compound) -> Klartext."""
+    """Text component (JSON string or NBT compound) -> plain text."""
     if isinstance(v, str):
         s = v.strip()
         if s[:1] in ('"', "{", "["):
@@ -54,7 +54,7 @@ def chunk_markers(ch: Chunk) -> dict:
             for side in ("front_text", "back_text"):
                 msgs = (be.get(side) or {}).get("messages") or []
                 lines += [_text(m) for m in msgs]
-            if not lines and "Text1" in be:  # altes Format
+            if not lines and "Text1" in be:  # old format
                 lines = [_text(be.get(f"Text{i}", "")) for i in range(1, 5)]
             lines = [l for l in lines if l.strip()]
             if lines:

@@ -1,50 +1,50 @@
-"""HTTP-Server des Viewers.
+"""HTTP server of the viewer.
 
     python -m viewer --recording "<.minecraft>/webmatica_recording"
 
-Endpunkte (alle JSON, ausser Bildern):
+Endpoints (all JSON, except images):
 
-    GET  /                                   Oberflaeche
-    GET  /api/worlds                         Server, Dimensionen, Schichten
-    GET  /api/tile/<srv>/<dim>/<layer>/<z>/<x>/<y>.png[?at=JJJJ-MM-TT|raw=1]   (at: Stand an dem Tag, nur geaenderte Chunks; raw: ohne Schattierung)
-    GET  /api/changes?srv=&dim=&since=       Regionen, die sich seit <since> geaendert haben
-    GET  /api/column?srv=&dim=&x=&z=&layer=  oberster Block, Hoehe, Biom an einer Stelle
-    GET  /api/markers?srv=&dim=&layer=       Schilder + Behaelter je Chunk
-    GET  /api/waypoints  POST /api/waypoints Wegpunkte (in waypoints.json der Aufnahme)
-    POST /api/position                       Live-Position von der Mod
-    GET  /api/player                         letzte Position (+ active)
-    GET  /api/skin/face.png | full.png       Skin aus dem Client
-    GET  /api/lod/<srv>/<dim>/<x>/<z>[?level=0..3]  Hoehenfeld fuer die 3D-Fernsicht (Stufe 0 = Region, je Stufe 4x groesser)
-    GET  /api/trail?srv=&dim=                Spur des Spielers
-    GET  /api/schematics?srv=&dim=           platzierte Schematics
-    GET  /api/schematics/library             Schematic-Dateien in den Ordnern
+        GET  /                                   UI
+        GET  /api/worlds                         servers, dimensions, layers
+        GET  /api/tile/<srv>/<dim>/<layer>/<z>/<x>/<y>.png[?at=YYYY-MM-DD|raw=1]   (at: state on that day, changed chunks only; raw: without shading)
+        GET  /api/changes?srv=&dim=&since=       regions changed since <since>
+        GET  /api/column?srv=&dim=&x=&z=&layer=  top block, height, biome at a spot
+        GET  /api/markers?srv=&dim=&layer=       signs + containers per chunk
+        GET  /api/waypoints  POST /api/waypoints waypoints (in the recording's waypoints.json)
+        POST /api/position                       live position from the mod
+        GET  /api/player                         last position (+ active)
+        GET  /api/skin/face.png | full.png       skin from the client
+        GET  /api/lod/<srv>/<dim>/<x>/<z>[?level=0..3]  height field for the 3D far view (level 0 = region, 4x larger per level)
+        GET  /api/trail?srv=&dim=                player trail
+        GET  /api/schematics?srv=&dim=           placed schematics
+        GET  /api/schematics/library             schematic files in the folders
     GET  /api/schematics/<id>/mesh|materials|verify
     POST /api/schematics/place|update|delete
-    POST /api/schematics/upload?name=        Datei hochladen (Rohdaten)
-    GET  /api/litematica?srv=                Platzierungen mit "Ins Spiel" fuer die Mod
-    POST /api/litematica/status              Mod meldet, was in Litematica angekommen ist
-    GET  /api/containers?srv=                Kisten-Inventar     POST /api/containers (Mod) | /delete
-    GET  /api/containers/world?srv=&dim=&x=&z=&r=  alle Kisten in der Aufnahme (auch nie geoeffnete)
-    GET  /api/containers/lid?srv=&dim=        von anderen geoeffnete Kisten   POST (Mod)
-    GET  /api/inventory                      letztes Spieler-Inventar (von der Mod)
-    GET  /api/commands?srv=                  Baritone-Befehle fuer die Mod (abholen)
-    POST /api/commands                       Befehl ablegen      POST /api/commands/result (Mod)
-    GET  /api/auto?srv=                      Autobau-Stand       POST /api/auto {srv, pid} starten / {srv} stoppen
-    GET  /api/control?srv=                   Printer/Schicht-Sollzustand fuer die Mod   POST /api/control (Browser)
-    POST /api/control/status                 Mod meldet Printer/Schicht im Spiel   GET /api/control/state?srv=
-    GET/POST /api/auto/settings              Autobau-Schutz: radar, radarDist, friends, eat, tools, leftovers, fix
-    POST /api/auto {srv, queue: [pid]}       Warteschlange setzen
-    POST /api/auto {srv, farm: {area, dim, targets, chest, placeChest}}   Farmen starten
-    POST /api/auto {srv, farm: {area, dim, flatten: {kind: flat|clear|fill, level, clear, fill, block}, chest, placeChest}}   Ebnen
-    GET  /api/farm/scan?srv=&dim=&x0=..      welche Bloecke im Bereich stehen
-    GET  /api/farm/flatscan?..&kind=&level=  Automationen: wie viele Bloecke ab, wie viele Loecher
-    GET  /api/spawn/<srv>/<dim>/<cx>/<cz>    wo Monster spawnen koennen (braucht Licht in der Aufnahme)
-    POST /api/fix {srv, pid, extra}          falsche/verdrehte (und ueberfluessige) Bloecke abbauen lassen
-    GET  /api/radar?srv=                     Logbuch: wer war wann in Sichtweite
-    GET  /editor?file=                       Schematic-Editor (eigene Seite)
-    GET  /api/editor/blocks|voxels|mesh|info Editor-Daten   POST /api/editor/open|new|cut|edit|undo|redo|save|discard
-    GET  /api/history/dates?srv=&dim=        Zeitleiste: Tage mit gesichertem Stand
-    GET  /api/history/diff?srv=&dim=&date=   Aenderungen seit diesem Tag
+        POST /api/schematics/upload?name=        upload a file (raw data)
+        GET  /api/litematica?srv=                placements with "In game" for the mod
+        POST /api/litematica/status              mod reports what arrived in Litematica
+        GET  /api/containers?srv=                chest inventory     POST /api/containers (mod) | /delete
+        GET  /api/containers/world?srv=&dim=&x=&z=&r=  all chests in the recording (even never opened)
+        GET  /api/containers/lid?srv=&dim=        chests opened by others   POST (mod)
+        GET  /api/inventory                      last player inventory (from the mod)
+        GET  /api/commands?srv=                  Baritone commands for the mod (pick up)
+        POST /api/commands                       drop a command      POST /api/commands/result (mod)
+        GET  /api/auto?srv=                      auto-build state    POST /api/auto {srv, pid} start / {srv} stop
+        GET  /api/control?srv=                   Printer/layer target state for the mod   POST /api/control (browser)
+        POST /api/control/status                 mod reports in-game Printer/layer   GET /api/control/state?srv=
+        GET/POST /api/auto/settings              auto-build protection: radar, radarDist, friends, eat, tools, leftovers, fix
+        POST /api/auto {srv, queue: [pid]}       set the queue
+        POST /api/auto {srv, farm: {area, dim, targets, chest, placeChest}}   start farming
+        POST /api/auto {srv, farm: {area, dim, flatten: {kind: flat|clear|fill, level, clear, fill, block}, chest, placeChest}}   flatten
+        GET  /api/farm/scan?srv=&dim=&x0=..      which blocks are in the area
+        GET  /api/farm/flatscan?..&kind=&level=  automations: how many blocks to break, how many holes
+        GET  /api/spawn/<srv>/<dim>/<cx>/<cz>    where mobs can spawn (needs light in the recording)
+        POST /api/fix {srv, pid, extra}          have wrong/rotated (and extra) blocks broken
+        GET  /api/radar?srv=                     log: who was within view distance when
+        GET  /editor?file=                       schematic editor (separate page)
+        GET  /api/editor/blocks|voxels|mesh|info editor data   POST /api/editor/open|new|cut|edit|undo|redo|save|discard
+        GET  /api/history/dates?srv=&dim=        timeline: days with a backed-up state
+        GET  /api/history/diff?srv=&dim=&date=   changes since that day
 """
 
 from __future__ import annotations
@@ -97,12 +97,12 @@ class App:
         self.skin_full: bytes | None = None
         self.wp_lock = threading.Lock()
         self.meshes = ChunkCache(max_items=8192)
-        self.mesh_pool = None   # ProcessPoolExecutor, siehe main(); ohne Pool wird im Thread gerechnet
+        self.mesh_pool = None   # ProcessPoolExecutor, see main(); without a pool it is computed in the thread
         self.skin_version = 0
         self.skin_fetch_name = None
         self.placements = Placements(recording)
         self.containers = Containers(recording)
-        self.inventory = None          # letztes Spieler-Inventar von der Mod
+        self.inventory = None          # last player inventory from the mod
         self.commands = Commands()
         self.history = History(recording)
         self.control = Control()
@@ -110,17 +110,17 @@ class App:
         self.lids = LidLog(recording)
         self.editor = Editor(self.placements, self.rec)
         self.auto = AutoBuild(self, recording)
-        self.world_chests = {}         # Kisten aus der Aufnahme, kurz zwischengespeichert
-        self.lm_status = {}            # letzte Rueckmeldung der Mod zur Litematica-Bruecke
+        self.world_chests = {}         # chests from the recording, briefly cached
+        self.lm_status = {}            # last feedback from the mod on the Litematica bridge
         self.lm_status_ts = 0.0
         self.trail_path = os.path.join(recording, ".viewer", "trail.json")
         self.trail = self._load_trail()
         self.trail_saved = time.monotonic()
 
-    # -------------------------------------------------------------- Litematica-Bruecke
+    # -------------------------------------------------------------- Litematica bridge
 
     def past(self, server: str, dim_key: str, date: str) -> PastTiles:
-        """Kacheln fuer den Zeitraffer: Karte am Anfang von ``date``."""
+        """Tiles for the timelapse: map at the start of ``date``."""
         key = (server, dim_key, date)
         pt = self._past.get(key)
         if pt is None:
@@ -131,7 +131,7 @@ class App:
         return pt
 
     def with_ingame(self, pls: list) -> list:
-        """Haengt an jede Platzierung, ob sie gerade in Litematica im Spiel ist."""
+        """Adds to each placement whether it is currently in game in Litematica."""
         fresh = time.monotonic() - self.lm_status_ts < 6.0
         st = self.lm_status if fresh else {}
         have = set(st.get("ids") or [])
@@ -140,7 +140,7 @@ class App:
             if not pl.get("ingame"):
                 pl["ingameState"] = None
             elif not fresh:
-                pl["ingameState"] = "offline"         # Spiel/Mod nicht verbunden
+                pl["ingameState"] = "offline"         # game/mod not connected
             elif not st.get("available", False):
                 pl["ingameState"] = "kein Litematica"
             elif pl["id"] in errs:
@@ -151,7 +151,7 @@ class App:
                 pl["ingameState"] = "andere Dimension" if st.get("dim") and st.get("dim") != pl.get("dim") else "wartet"
         return pls
 
-    # -------------------------------------------------------------- Spur
+    # -------------------------------------------------------------- Trail
 
     def _load_trail(self) -> dict:
         try:
@@ -185,15 +185,15 @@ class App:
         except OSError:
             pass
 
-    # -------------------------------------------------------------- Fernsicht
+    # -------------------------------------------------------------- Far view
 
     def lod(self, dim, rx: int, rz: int, level: int = 0) -> tuple[bytes, str] | None:
-        """Hoehenfeld 129x129 einer Fernsicht-Kachel als int16, -32768 = keine Daten.
+        """Height field 129x129 of a far-view tile as int16, -32768 = no data.
 
-        Stufe 0 ist eine Region (512 Bloecke, alle 4 Bloecke ein Punkt), jede weitere
-        Stufe fasst 4 x 4 Kacheln der Stufe davor zusammen (2048 Bloecke alle 16,
-        8192 Bloecke alle 64). Die Farben liefert die Kartenkachel der Zoomstufe -2 * level.
-        Zeile/Spalte 128 kommt aus den Nachbarkacheln, damit keine Naht bleibt.
+        Level 0 is one region (512 blocks, one point every 4 blocks), each further
+        level combines 4 x 4 tiles of the level before (2048 blocks every 16,
+        8192 blocks every 64). Colors come from the map tile at zoom level -2 * level.
+        Row/column 128 comes from the neighbor tiles so no seam remains.
         """
         layer = Layer.parse(self.layers_for(dim.key)[0]["id"])
         if self.tiles.tile(dim, layer, -2 * level, rx, rz) is None:
@@ -212,8 +212,8 @@ class App:
         return gzip.compress(g.astype("<i2").tobytes(), 5), stamp
 
     def _lod_grid(self, dim, layer, level: int, x: int, z: int, cached_only: bool = False):
-        """(128x128 int16, Stand) oder None. Stufe 0 aus der Region-Kachel (.npz),
-        hoehere Stufen aus den 16 Kacheln darunter (Maximum je 4 x 4), auf Platte zwischengespeichert."""
+        """(128x128 int16, stamp) or None. Level 0 from the region tile (.npz),
+        higher levels from the 16 tiles below (max per 4 x 4), cached on disk."""
         d = self.tiles._dir(dim, layer, -2 * level)
         if level == 0:
             npz = os.path.join(d, f"{x}_{z}.npz")
@@ -261,7 +261,7 @@ class App:
     # -------------------------------------------------------------- 3D
 
     def chunk_stamp(self, dim, cx: int, cz: int) -> str:
-        """Aendert sich, sobald der Chunk oder einer seiner 4 Nachbarn neu geschrieben wurde."""
+        """Changes as soon as the chunk or one of its 4 neighbors was rewritten."""
         parts = []
         for dx, dz in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
             x, z = cx + dx, cz + dz
@@ -278,7 +278,7 @@ class App:
         if hit is not None:
             return hit, stamp
         if self.mesh_pool is not None:
-            # Eigene Prozesse: Python rechnet sonst wegen des GIL alle Chunks nacheinander
+            # Separate processes: otherwise Python computes all chunks one after another because of the GIL
             data = self.mesh_pool.submit(_mesh_job, dim.server, dim.key, cx, cz, full, ylo, yhi).result()
         else:
             data = _mesh_compute(self.rec, dim, cx, cz, full, ylo, yhi)
@@ -287,7 +287,7 @@ class App:
         self.meshes.put(key, data)
         return data, stamp
 
-    # -------------------------------------------------------------- Daten
+    # -------------------------------------------------------------- Data
 
     def worlds(self) -> list:
         servers: dict[str, list] = {}
@@ -357,7 +357,7 @@ class App:
         return out
 
     def changed_chunks(self, dim, regs: list, since: float) -> list:
-        """Chunks der geaenderten Regionen, deren Zeitstempel (Sekunden) neuer als <since> ist."""
+        """Chunks of the changed regions whose timestamp (seconds) is newer than <since>."""
         out = []
         cut = int(since) - 1
         for rx, rz in regs:
@@ -369,7 +369,7 @@ class App:
                 out.append([rx * 32 + int(i & 31), rz * 32 + int(i >> 5)])
         return out[:4000]
 
-    # -------------------------------------------------------------- Wegpunkte
+    # -------------------------------------------------------------- Waypoints
 
     def _wp_path(self) -> str:
         return os.path.join(self.rec.root, "waypoints.json")
@@ -640,7 +640,7 @@ def make_handler(app: App):
                 return self.fail(404, "nicht gefunden")
             except (KeyError, ValueError) as e:
                 return self.fail(400, f"Parameter fehlen oder sind ungueltig: {e}")
-            except Exception as e:  # nie die Verbindung kommentarlos abbrechen
+            except Exception as e:  # never drop the connection without a word
                 import traceback
                 traceback.print_exc()
                 return self.fail(500, f"interner Fehler: {e}")
@@ -652,7 +652,7 @@ def make_handler(app: App):
                                "hasSkin": app.skin_full is not None or app.skin_face is not None}).encode()
 
         def player_stream(self):
-            """Server-Sent Events: jede neue Position sofort an den Browser (statt Abfragen im Takt)."""
+            """Server-sent events: every new position to the browser immediately (instead of polling)."""
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
@@ -672,7 +672,7 @@ def make_handler(app: App):
                 return
 
         def skin_by_name(self):
-            """Kein Skin von der Mod: einmalig per Spielername holen (mc-heads.net)."""
+            """No skin from the mod: fetch once by player name (mc-heads.net)."""
             pl = app.player or {}
             name = re.sub(r"[^A-Za-z0-9_]", "", pl.get("name", ""))
             if not name or app.skin_fetch_name == name:
@@ -748,7 +748,7 @@ def make_handler(app: App):
             if res is None:
                 return self.send(204, b"", "application/octet-stream")
             data, stamp = res
-            # Atlas-Version gehoert dazu: neue Assets = neue UVs, alte Netze im Browser-Cache passen nicht mehr
+            # Atlas version is part of it: new assets = new UVs, old meshes in the browser cache no longer fit
             etag = f'"{MODELS.version}-{MAGIC.decode()}-{stamp}"'
             if self.headers.get("If-None-Match") == etag:
                 return self.send(304, b"", "application/octet-stream", "no-cache", {"ETag": etag})
@@ -802,7 +802,7 @@ def make_handler(app: App):
 
         def do_POST(self):
             u = urlparse(self.path)
-            # Nur lokale Seiten duerfen schreiben (Schutz vor fremden Webseiten im Browser).
+            # Only local pages may write (protection against foreign web pages in the browser).
             origin = self.headers.get("Origin")
             if origin and urlparse(origin).hostname not in ("127.0.0.1", "localhost", self.server.server_address[0]):
                 return self.fail(403, "fremde Herkunft")
@@ -963,7 +963,7 @@ def make_handler(app: App):
     return Handler
 
 
-# ------------------------------------------------------------------ 3D-Netze in Worker-Prozessen
+# ------------------------------------------------------------------ 3D meshes in worker processes
 
 def _mesh_compute(rec, dim, cx, cz, full, ylo=None, yhi=None):
     ch = rec.chunk(dim, cx, cz)
@@ -993,7 +993,7 @@ def _mesh_job(server, dim_key, cx, cz, full, ylo=None, yhi=None):
     return None if dim is None else _mesh_compute(rec, dim, cx, cz, full, ylo, yhi)
 
 
-# ------------------------------------------------------------------ Vorrendern
+# ------------------------------------------------------------------ Pre-rendering
 
 def _prerender_one(args):
     recording, cache_dir, server, dim_key, layer_key, rx, rz = args
@@ -1004,7 +1004,7 @@ def _prerender_one(args):
 
 
 def prerender_loop(app: App, recording: str, workers: int, interval: float = 10.0):
-    """Haelt alle Regionskacheln im Hintergrund aktuell (neueste Regionen zuerst)."""
+    """Keeps all region tiles up to date in the background (newest regions first)."""
     done: dict = {}
     with ProcessPoolExecutor(max_workers=workers) as pool:
         while True:

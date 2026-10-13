@@ -31,14 +31,14 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Bloecke gezielt abbauen und einsammeln (Farmen, falsche Bloecke einer
- * Schematic) und volle Inventare in eine selbst aufgestellte Kiste packen.
+ * Break and collect specific blocks (farms, wrong blocks of a
+ * schematic) and pack full inventories into a self-placed chest.
  *
- * Abbauen: jede Box wird eine Baritone-Auswahl, "#sel cleararea" baut genau
- * diese Bloecke ab. Danach laeuft die Mod zu den liegengebliebenen Items.
- * Mit "fill" setzt "#sel fill" stattdessen den Block in die Boxen (Loecher fuellen).
- * Kiste: eine Kiste aus dem Inventar neben dich stellen, die genannten Items
- * hineinlegen und stehen lassen (der Viewer merkt sie sich wie jede Kiste).
+ * Breaking: each box becomes a Baritone selection, "#sel cleararea" breaks exactly
+ * these blocks. Then the mod walks to the dropped items.
+ * With "fill", "#sel fill" places the block into the boxes instead (filling holes).
+ * Chest: place a chest from the inventory next to you, put the given items
+ * in and leave it (the viewer remembers it like any other chest).
  */
 public final class FarmTask {
 
@@ -55,7 +55,7 @@ public final class FarmTask {
     private String id;
     private String label;
     private final Set<String> ids = new HashSet<>();
-    private final Set<Integer> slots = new HashSet<>();    // Kiste: nur diese Inventar-Plaetze
+    private final Set<Integer> slots = new HashSet<>();    // chest: only these inventory slots
     private Box area;
     private boolean pickup;
     private String fill;
@@ -76,12 +76,12 @@ public final class FarmTask {
         return phase != Phase.IDLE;
     }
 
-    /** Stellt gerade eine Kiste auf oder fuellt sie: dann nicht essen. */
+    /** Currently placing or filling a chest: don't eat then. */
     public boolean handlingChest() {
         return phase == Phase.PLACE || phase == Phase.OPEN || phase == Phase.PUT;
     }
 
-    /** Client-Thread. kind "breakboxes" oder "chestdump". */
+    /** Client thread. kind "breakboxes" or "chestdump". */
     public void start(String cmdId, JsonObject cmd) {
         if (busy()) {
             finish(false, "abgebrochen, neuer Auftrag");
@@ -210,7 +210,7 @@ public final class FarmTask {
                 BlockPos at = next.getBlockPos();
                 if (!at.equals(walkTarget) || !goalActive()) {
                     if (at.equals(walkTarget)) {
-                        skippedDrops.add(next.getId());   // zweimal nicht hingekommen
+                        skippedDrops.add(next.getId());   // couldn't reach it twice
                         walkTarget = null;
                         return;
                     }
@@ -299,7 +299,7 @@ public final class FarmTask {
                     int n = s.getStack().getCount();
                     mc.interactionManager.clickSlot(h.syncId, s.id, 0, SlotActionType.QUICK_MOVE, p);
                     if (s.hasStack() && s.getStack().getCount() == n) {
-                        skipped.add(s.id);    // Kiste voll
+                        skipped.add(s.id);    // chest full
                     } else {
                         count += n;
                     }
@@ -360,7 +360,7 @@ public final class FarmTask {
         return -1;
     }
 
-    /** Freier Platz neben dir, mit festem Boden und Luft darueber (zum Aufklappen), ohne Kiste daneben. */
+    /** Free spot next to you, with solid ground and air above (to open), no chest adjacent. */
     private static BlockPos findSpot(ClientPlayerEntity p, ClientWorld w) {
         BlockPos feet = p.getBlockPos();
         BlockPos best = null;
@@ -379,7 +379,7 @@ public final class FarmTask {
                     boolean chestNext = false;
                     for (Direction d : Direction.Type.HORIZONTAL) {
                         if (w.getBlockState(pos.offset(d)).getBlock() instanceof ChestBlock) {
-                            chestNext = true;   // sonst wird es eine Doppelkiste mit fremdem Inhalt
+                            chestNext = true;   // otherwise it becomes a double chest with foreign contents
                         }
                     }
                     double d = p.getEyePos().distanceTo(Vec3d.ofCenter(pos));
@@ -396,7 +396,7 @@ public final class FarmTask {
         return best;
     }
 
-    // ------------------------------------------------------------ Baritone (API per Reflection)
+    // ------------------------------------------------------------ Baritone (API via reflection)
 
     private static Object baritone() throws Exception {
         Object provider = Class.forName("baritone.api.BaritoneAPI").getMethod("getProvider").invoke(null);

@@ -1,16 +1,16 @@
-"""Wo koennen Monster spawnen? Aus Bloecken und dem Licht, das die Mod mitschreibt.
+"""Where can mobs spawn? From blocks and the light the mod records.
 
-Regeln wie in Vanilla (1.21) fuer normale Monster (Zombie, Skelett, Creeper ...):
+Rules as in vanilla (1.21) for normal monsters (zombie, skeleton, creeper ...):
 
-- Boden: Oberseite voll und fest (volle Bloecke, obere/doppelte Stufen, umgedrehte
-  Treppen), nicht Glas/Laub/Eis/Grundgestein, nicht selbst hell (Leuchtstein ...).
-- Platz: der Block darueber und der darueber sind frei (Luft, Gras, Blumen ...),
-  ohne Wasser, Schienen, Teppich, Druckplatten oder Redstone.
-- Licht: Blocklicht 0 (im Nether hoechstens 7, dort spawnen viele Mobs aber
-  unabhaengig vom Licht).
+- Floor: top face full and solid (full blocks, top/double slabs, upside-down
+    stairs), not glass/leaves/ice/bedrock, not light-emitting itself (glowstone ...).
+- Space: the block above and the one above that are free (air, grass, flowers ...),
+    without water, rails, carpet, pressure plates or redstone.
+- Light: block light 0 (in the Nether at most 7, but many mobs spawn there
+    regardless of light).
 
-Ergebnis je Stelle: 2 = jederzeit (auch tagsueber dunkel), 1 = nur nachts
-(Himmelslicht > 7, also unter freiem Himmel).
+Result per spot: 2 = any time (dark even during the day), 1 = only at night
+(sky light > 7, i.e. under open sky).
 """
 
 from __future__ import annotations
@@ -22,11 +22,11 @@ import numpy as np
 from .core.chunk import AIR_NAMES, BLOCKS, base_name, state_props
 from .core.models import MODELS
 
-# Boden: zaehlt trotz vollem Modell nicht
+# Floor: doesn't count despite a full model
 _NO_FLOOR = re.compile(r"(^|_)(glass|leaves|ice)$|^bedrock$|^barrier$|^magma_block$|^glowstone$|^sea_lantern$|"
                        r"^shroomlight$|^jack_o_lantern$|froglight$|^beacon$|^spawner$|^light$|^redstone_lamp$|"
                        r"^redstone_block$|^observer$|^target$|^tnt$|stained_glass$|^mangrove_roots$")
-# Platz: frei begehbar (kein Kollisionskasten), verhindert das Spawnen nicht
+# Space: walkable (no collision box), doesn't prevent spawning
 _PASSABLE = re.compile(r"^(short_grass|tall_grass|fern|large_fern|dead_bush|bush|firefly_bush|short_dry_grass|tall_dry_grass|"
                        r"dandelion|poppy|blue_orchid|allium|azure_bluet|.*_tulip|oxeye_daisy|cornflower|lily_of_the_valley|"
                        r"torchflower|sunflower|lilac|rose_bush|peony|pitcher_plant|pink_petals|wildflowers|leaf_litter|"
@@ -38,7 +38,7 @@ _PASSABLE = re.compile(r"^(short_grass|tall_grass|fern|large_fern|dead_bush|bush
 
 
 class _Lut:
-    """Je Block-State: 1 = gueltiger Boden, 2 = frei (Platz), 4 = Fluessigkeit."""
+    """Per block state: 1 = valid floor, 2 = free (space), 4 = fluid."""
 
     def __init__(self):
         self.v = np.zeros(0, np.uint8)
@@ -79,10 +79,10 @@ def _classify(state: str, sid: int) -> int:
 
 
 def _top_full(m) -> bool:
-    """Hat das Blockmodell oben eine volle Flaeche (ganze 16 × 16 auf Hoehe 1)?
+    """Does the block model have a full face on top (whole 16 × 16 at height 1)?
 
-    Nicht ``full_opaque``: Grasbloecke haben ausgeschnittene Seitenflaechen und
-    zaehlen dort nicht als voll, sind aber normaler Boden.
+    Not ``full_opaque``: grass blocks have cutout side faces and
+    don't count as full there, but are normal floor.
     """
     for q in range(len(m.cull)):
         if m.cull[q] != 1:
@@ -98,10 +98,10 @@ LUT = _Lut()
 
 
 def points(ch, dim_key: str = "overworld") -> dict:
-    """Spawn-Stellen eines Chunks: {"light": bool, "pts": [x, y, z, art, ...]} in Weltkoordinaten.
+    """Spawn spots of a chunk: {"light": bool, "pts": [x, y, z, kind, ...]} in world coordinates.
 
-    ``y`` ist der Block, in dem das Monster steht (eins ueber dem Boden).
-    Ohne Lichtdaten (alte Aufnahme) ist ``light`` False und die Liste leer.
+    ``y`` is the block the mob stands in (one above the floor).
+    Without light data (old recording) ``light`` is False and the list empty.
     """
     lit = ch.light()
     if lit is None:
@@ -115,7 +115,7 @@ def points(ch, dim_key: str = "overworld") -> dict:
     ok = floor & free1 & free2 & (bl[1:-1] <= limit)
     ys, zs, xs = np.nonzero(ok)
     sky = sl[1:-1][ys, zs, xs]
-    # ohne Himmel (Nether, End) gibt es kein "nur nachts"
+    # without sky (Nether, End) there is no "only at night"
     kind = np.where((sky <= 7) | (dim_key in ("the_nether", "the_end")), 2, 1).astype(np.int32)
     out = np.stack([xs + ch.cx * 16, ys + 1 + ch.min_y, zs + ch.cz * 16, kind], 1).astype(np.int32)
     return {"light": True, "pts": out.reshape(-1).tolist()}

@@ -23,16 +23,16 @@ import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Meldet die Live-Spielerposition (und Blickrichtung) an das lokale
- * Mapper-Backend (http://127.0.0.1:8770/api/position).
+ * Reports the live player position (and view direction) to the local
+ * mapper backend (http://127.0.0.1:8770/api/position).
  *
- * Absichtlich konservativ:
- *  - daemon-Thread, blockiert nie den Render-/Netzwerktakt des Clients
- *  - nur POST, keine Antwort erwartet (Verbindung wird gleich wieder geschlossen)
- *  - Fehler werden geschluckt (Server aus -> einfach weiterlaufen)
+ * Deliberately conservative:
+ *  - daemon thread, never blocks the client's render/network tick
+ *  - POST only, no response expected (connection is closed right away)
+ *  - errors are swallowed (server off -> just keep running)
  *
- * Reine Selbst-Daten (Position/Rotation/UUID/Skin). Kein Send, kein
- * Movement, kein Anticheat-Eingriff — dieselbe Linie wie der Recorder.
+ * Pure self data (position/rotation/UUID/skin). No send, no
+ * movement, no anticheat interference — same line as the recorder.
  */
 public final class PositionReporter {
 
@@ -42,14 +42,14 @@ public final class PositionReporter {
 
     private final Thread thread;
     private volatile boolean running = true;
-    private volatile long intervalMs = 50L;    // 20 Hz = jeder Client-Tick; der Viewer interpoliert dazwischen
+    private volatile long intervalMs = 50L;    // 20 Hz = every client tick; the viewer interpolates in between
     private final AtomicReference<String> payload = new AtomicReference<>(null);
     private volatile boolean enabled = true;
 
-    // Skin-Gesicht (8x8 px, Kopf-Vorderseite) als base64-PNG. Wird im
-    // Render-Thread einmalig extrahiert und dann wiederverwendet.
+    // Skin face (8x8 px, front of head) as base64 PNG. Extracted once on
+    // the render thread and then reused.
     private volatile String skinFaceB64 = null;
-    // Voller 64x64-Skin als base64-PNG (fuer die echte Skin-Figur im Viewer).
+    // Full 64x64 skin as base64 PNG (for the real skin figure in the viewer).
     private volatile String skinFullB64 = null;
     private volatile long skinStamp = 0L;
     private static final long SKIN_RETRY_MS = 2000L;
@@ -91,8 +91,8 @@ public final class PositionReporter {
     }
 
     /**
-     * Wird jeden Client-Tick aufgerufen. Baut das JSON nur, wenn sich etwas
-     * geaendert hat, und legt es fuer den Sender-Thread bereit.
+     * Called every client tick. Only builds the JSON when something
+     * has changed, and hands it to the sender thread.
      */
     public void tick(MinecraftClient mc) {
         if (!enabled || mc == null) {
@@ -120,17 +120,17 @@ public final class PositionReporter {
             } catch (Throwable ignored) {
             }
 
-            // Skin-URL aus dem Tab-Listeneintrag (enthält die signierte
-            // textur-Property). Fallback: keine URL -> Server nutzt Username-API.
+            // Skin URL from the tab list entry (contains the signed
+            // textures property). Fallback: no URL -> server uses the username API.
             try {
                 if (mc.getNetworkHandler() != null) {
                     PlayerListEntry entry = mc.getNetworkHandler().getPlayerListEntry(p.getUuid());
                     if (entry != null) {
                         SkinTextures skin = entry.getSkinTextures();
                         if (skin != null) {
-                            // Yarn 1.21.11: SkinTextures ist ein Record mit
+                            // Yarn 1.21.11: SkinTextures is a record with
                             // body/cape/elytra/model. body() -> AssetInfo.TextureAsset,
-                            // texturePath() liefert den Identifier.
+                            // texturePath() returns the Identifier.
                             if (skin.body() != null && skin.body().texturePath() != null) {
                                 o.addProperty("skin", skin.body().texturePath().toString());
                             }
@@ -143,11 +143,11 @@ public final class PositionReporter {
             } catch (Throwable ignored) {
             }
 
-            // Skin-Gesicht aus der Client-Textur ziehen (unabhaengig von externen
-            // Skin-APIs). Das Bild liegt bereits auf der GPU und ist auch ohne
-            // Multiplayer-Skin-Fetch im TabListEntry verfuegbar.
-            // Der Skin aendert sich nicht; nur alle paar Sekunden mitschicken,
-            // der Viewer merkt ihn sich.
+            // Pull the skin face from the client texture (independent of external
+            // skin APIs). The image is already on the GPU and available even without
+            // the multiplayer skin fetch in the TabListEntry.
+            // The skin doesn't change; only send it every few seconds,
+            // the viewer remembers it.
             String face = ensureSkinFace(mc, p);
             long nowMs = System.currentTimeMillis();
             if (face != null && nowMs - lastSkinSent > SKIN_RESEND_MS) {
@@ -157,7 +157,7 @@ public final class PositionReporter {
                     o.addProperty("skinFull", skinFullB64);
                 }
             }
-            // Inventar: nur bei Aenderung oder alle 5 s mitschicken (Packliste zieht es ab)
+            // Inventory: only send on change or every 5 s (the pack list subtracts it)
             try {
                 JsonArray inv = new JsonArray();
                 net.minecraft.entity.player.PlayerInventory pi = p.getInventory();
@@ -177,7 +177,7 @@ public final class PositionReporter {
                 }
             } catch (Throwable ignored) {
             }
-            // Radar: andere Spieler, die der Client gerade sieht (nur was der Server ohnehin schickt)
+            // Radar: other players the client currently sees (only what the server sends anyway)
             try {
                 JsonArray others = new JsonArray();
                 for (net.minecraft.client.network.AbstractClientPlayerEntity e : mc.world.getPlayers()) {
@@ -217,22 +217,22 @@ public final class PositionReporter {
             } catch (InterruptedException ie) {
                 return;
             } catch (Throwable t) {
-                // Server aus / Port zu -> still weiterlaufen.
+                // Server off / port closed -> keep running silently.
                 try { Thread.sleep(500L); } catch (InterruptedException ie) { return; }
             }
         }
     }
 
     /**
-     * Extrahiert das 8x8-Gesicht (Kopf-Vorderseite bei 8,8 im 64x64-Skin) aus
-     * der Skin-Textur des Clients und gibt es als base64-PNG zurueck.
+     * Extracts the 8x8 face (front of head at 8,8 in the 64x64 skin) from
+     * the client's skin texture and returns it as a base64 PNG.
      *
-     * Laeuft im Render-/Tick-Thread (Aufruf aus tick()), daher kein GPU-Zugriff
-     * noetig: die NativeImage haengt an der NativeImageBackedTexture und
-     * writeTo(...) encodiert PNG auf der CPU.
+     * Runs on the render/tick thread (called from tick()), so no GPU access
+     * needed: the NativeImage belongs to the NativeImageBackedTexture and
+     * writeTo(...) encodes PNG on the CPU.
      *
-     * Wird alle SKIN_RETRY_MS erneut versucht, solange noch kein Gesicht da ist
-     * (die Skin-Textur kann erst kurz nach dem Welt-Join registriert sein).
+     * Retried every SKIN_RETRY_MS as long as there is no face yet
+     * (the skin texture may only be registered shortly after joining the world).
      */
     private String ensureSkinFace(MinecraftClient mc, ClientPlayerEntity p) {
         if (skinFaceB64 != null) {
@@ -246,7 +246,7 @@ public final class PositionReporter {
         try {
             Identifier tex = null;
 
-            // 1) Direkt aus dem Tab-Listen-Eintrag des eigenen Spielers.
+            // 1) Directly from the own player's tab list entry.
             try {
                 if (mc.getNetworkHandler() != null) {
                     PlayerListEntry entry = mc.getNetworkHandler().getPlayerListEntry(p.getUuid());
@@ -260,8 +260,8 @@ public final class PositionReporter {
             } catch (Throwable ignored) {
             }
 
-            // 2) Fallback: Skin-Provider des Clients (eigener Spieler). Das
-            //    GameProfile wird aus der Session gebaut (kein getGameProfile
+            // 2) Fallback: the client's skin provider (own player). The
+            //    GameProfile is built from the session (no getGameProfile
             //    in Yarn 1.21.11).
             if (tex == null) {
                 try {
@@ -291,7 +291,7 @@ public final class PositionReporter {
                 return null;
             }
 
-            // 1) Vollen 64x64-Skin als PNG mitschicken (fuer die echte Figur).
+            // 1) Send the full 64x64 skin as PNG (for the real figure).
             if (skinFullB64 == null) {
                 try {
                     Path tmpFull = Files.createTempFile("mapper-skinfull", ".png");
@@ -308,7 +308,7 @@ public final class PositionReporter {
                 }
             }
 
-            // 2) Gesichts-Kachel (8,8)-(16,16) in ein 8x8-Bild kopieren.
+            // 2) Copy the face tile (8,8)-(16,16) into an 8x8 image.
             NativeImage face = new NativeImage(8, 8, false);
             try {
                 for (int y = 0; y < 8; y++) {
@@ -316,7 +316,7 @@ public final class PositionReporter {
                         face.setColorArgb(x, y, img.getColorArgb(8 + x, 8 + y));
                     }
                 }
-                // NativeImage.writeTo(Path) schreibt PNG; ueber Temp-Datei holen.
+                // NativeImage.writeTo(Path) writes PNG; read it back via a temp file.
                 Path tmp = Files.createTempFile("mapper-skin", ".png");
                 try {
                     face.writeTo(tmp);
@@ -350,9 +350,9 @@ public final class PositionReporter {
             try (OutputStream os = con.getOutputStream()) {
                 os.write(bytes);
             }
-            con.getResponseCode(); // erzwingt das Senden
+            con.getResponseCode(); // forces the send
         } catch (Throwable t) {
-            // bewusst still
+            // deliberately silent
         } finally {
             if (con != null) {
                 try { con.disconnect(); } catch (Throwable ignored) {}

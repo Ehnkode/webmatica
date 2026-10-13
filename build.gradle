@@ -10,7 +10,7 @@ base {
 }
 
 repositories {
-    // Minecraft, Fabric und Yarn holt Loom selbst
+    // Loom fetches Minecraft, Fabric and Yarn itself
 }
 
 dependencies {
@@ -23,7 +23,7 @@ dependencies {
 
 processResources {
     inputs.property "version", project.version
-    // Uebersetzungstabelle des Viewers auch fuer die Meldungen im Spiel
+    // Reuse the viewer's translation table for in-game messages
     from("viewer/static/i18n") {
         into "assets/webmatica/i18n"
     }

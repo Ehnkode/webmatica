@@ -32,13 +32,13 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Bruecke Viewer -> Litematica: Schematics, die im Viewer auf "Ins Spiel" stehen,
- * werden als echte Litematica-Platzierungen angelegt (Geisterbloecke, Materialliste,
- * Printer, Baritone #litematica). Verschieben/Drehen im Viewer wandert mit.
+ * Bridge viewer -> Litematica: schematics set to "In game" in the viewer are
+ * created as real Litematica placements (ghost blocks, material list,
+ * Printer, Baritone #litematica). Moving/rotating in the viewer follows along.
  *
- * Litematica wird nur per Reflection angesprochen: keine harte Abhaengigkeit, ohne
- * Litematica laeuft die Mod wie bisher. Abgleich im Client-Thread, HTTP im eigenen
- * daemon-Thread.
+ * Litematica is only accessed via reflection: no hard dependency, without
+ * Litematica the mod runs as before. Syncing on the client thread, HTTP on its own
+ * daemon thread.
  */
 public final class LitematicaBridge {
 
@@ -49,7 +49,7 @@ public final class LitematicaBridge {
         return INSTANCE;
     }
 
-    // ------------------------------------------------------------ HTTP-Thread
+    // ------------------------------------------------------------ HTTP thread
 
     private final AtomicReference<List<Want>> wanted = new AtomicReference<>(null);
     private volatile String serverId = null;
@@ -86,7 +86,7 @@ public final class LitematicaBridge {
             } catch (InterruptedException ie) {
                 return;
             } catch (Throwable t) {
-                // Viewer aus -> still weiter versuchen, Platzierungen bleiben wie sie sind
+                // viewer off -> keep retrying silently, placements stay as they are
                 try { Thread.sleep(3000L); } catch (InterruptedException ie) { return; }
             }
         }
@@ -138,9 +138,9 @@ public final class LitematicaBridge {
         }
     }
 
-    // ------------------------------------------------------------ Client-Thread
+    // ------------------------------------------------------------ Client thread
 
-    private final Map<String, Object> managed = new HashMap<>();     // Viewer-ID -> SchematicPlacement
+    private final Map<String, Object> managed = new HashMap<>();     // viewer ID -> SchematicPlacement
     private final Map<String, String> managedFile = new HashMap<>();
     private final Map<String, String> errors = new HashMap<>();
     private ClientWorld lastWorld;
@@ -160,7 +160,7 @@ public final class LitematicaBridge {
             return;
         }
         if (mc.world != lastWorld) {
-            // Litematica laedt bei Welt-/Dimensionswechsel seine eigene Liste neu
+            // Litematica reloads its own list on world/dimension change
             lastWorld = mc.world;
             managed.clear();
             managedFile.clear();
@@ -195,7 +195,7 @@ public final class LitematicaBridge {
         statusJson = st.toString();
     }
 
-    /** Position der Platzierung in Litematicas Liste (fuer Baritone #litematica), sonst -1. Client-Thread. */
+    /** Index of the placement in Litematica's list (for Baritone #litematica), else -1. Client thread. */
     public int placementIndex(String viewerId) {
         Object pl = managed.get(viewerId);
         if (pl == null || !available()) {
@@ -226,8 +226,8 @@ public final class LitematicaBridge {
         }
 
         if (!adopted) {
-            // Aus der letzten Sitzung von Litematica gespeichert: wieder uebernehmen,
-            // und eigene, die es im Viewer nicht mehr gibt, wegraeumen.
+            // Saved by Litematica from the last session: take them over again,
+            // and remove our own ones that no longer exist in the viewer.
             adopted = true;
             for (Object pl : existing) {
                 Want w = byUuid.get((UUID) call(pl, "getHashId"));
@@ -243,7 +243,7 @@ public final class LitematicaBridge {
             existing = new ArrayList<>((List<Object>) call(mgr, "getAllSchematicsPlacements"));
         }
 
-        // Im Viewer entfernt oder "Ins Spiel" aus
+        // Removed in the viewer or "In game" turned off
         for (String id : new ArrayList<>(managed.keySet())) {
             if (!byId.containsKey(id)) {
                 Object pl = managed.remove(id);
@@ -259,7 +259,7 @@ public final class LitematicaBridge {
             Object pl = managed.get(w.id());
             boolean fileChanged = pl != null && !w.fileKey().equals(managedFile.get(w.id()));
             if (pl != null && (fileChanged || !existing.contains(pl))) {
-                // Datei geaendert oder in Litematica geloescht: neu anlegen (Viewer ist die Quelle)
+                // file changed or deleted in Litematica: recreate (the viewer is the source)
                 if (existing.contains(pl)) {
                     call(mgr, "removeSchematicPlacement", pl);
                 }
@@ -290,7 +290,7 @@ public final class LitematicaBridge {
         Class<?> holderC = Class.forName("fi.dy.masa.litematica.data.SchematicHolder");
         Object holder = holderC.getMethod("getInstance").invoke(null);
         if (reload) {
-            // Datei im Editor geaendert: Litematica hat die alte Fassung noch im Speicher
+            // file changed in the editor: Litematica still has the old version in memory
             for (Object s : new ArrayList<>((java.util.Collection<?>) call(holder, "getAllSchematics"))) {
                 Object f = call(s, "getFile");
                 if (f != null && samePath(f.toString(), w.path())) {
@@ -334,7 +334,7 @@ public final class LitematicaBridge {
         }
     }
 
-    // Konstanten direkt referenzieren: Enum-Namen sind zur Laufzeit intermediary (valueOf geht nicht)
+    // reference constants directly: enum names are intermediary at runtime (valueOf doesn't work)
     private static BlockRotation rotation(String s) {
         return switch (s) {
             case "CLOCKWISE_90" -> BlockRotation.CLOCKWISE_90;
