@@ -54,8 +54,10 @@ import base64
 import gzip
 import json
 import mimetypes
+import multiprocessing
 import os
 import re
+import sys
 import threading
 import time
 
@@ -1052,6 +1054,16 @@ def _bundle_version() -> str:
 VERSION = _bundle_version()
 
 
+def _exit_with_stdin(srv) -> None:
+    """The game holds our stdin open; when it closes, even after a crash, the game is gone."""
+    try:
+        while sys.stdin.buffer.read(4096):
+            pass
+    except (OSError, ValueError):
+        pass
+    srv.shutdown()
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m viewer", description="Webmatica Viewer")
     ap.add_argument("--recording", "-r", default=os.environ.get("MAPPER_RECORDING", ""),
@@ -1059,6 +1071,8 @@ def main(argv=None):
     ap.add_argument("--cache", default="", help="tile cache (default: <recording>/.viewer-cache)")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8770)
+    ap.add_argument("--exit-with-stdin", action="store_true",
+                    help="quit when stdin closes (the mod keeps it open while Minecraft runs)")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1),
                     help="processes for pre-rendering the map (0 = off)")
     args = ap.parse_args(argv)
@@ -1077,6 +1091,8 @@ def main(argv=None):
                          daemon=True, name="prerender").start()
     srv = ThreadingHTTPServer((args.host, args.port), make_handler(app))
     srv.daemon_threads = True
+    if args.exit_with_stdin:
+        threading.Thread(target=_exit_with_stdin, args=(srv,), daemon=True, name="parent-watch").start()
     dims = app.rec.dimensions()
     print(f"Webmatica: http://{args.host}:{args.port}")
     print(f"Recording: {app.rec.root}  ({len(dims)} dimension(s))")
@@ -1085,10 +1101,12 @@ def main(argv=None):
     except KeyboardInterrupt:
         print("\nstopped")
         return
-    # Ended through /api/quit: stop the worker processes and leave right away.
+    # Ended through /api/quit or with the game: stop the worker processes and leave right away.
     print("stopped for an update")
     if app.mesh_pool is not None:
         app.mesh_pool.shutdown(wait=False, cancel_futures=True)
+    for child in multiprocessing.active_children():
+        child.terminate()
     os._exit(0)
 
 
