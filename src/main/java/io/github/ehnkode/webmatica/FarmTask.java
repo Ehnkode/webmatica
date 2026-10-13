@@ -36,6 +36,7 @@ import java.util.Set;
  *
  * Abbauen: jede Box wird eine Baritone-Auswahl, "#sel cleararea" baut genau
  * diese Bloecke ab. Danach laeuft die Mod zu den liegengebliebenen Items.
+ * Mit "fill" setzt "#sel fill" stattdessen den Block in die Boxen (Loecher fuellen).
  * Kiste: eine Kiste aus dem Inventar neben dich stellen, die genannten Items
  * hineinlegen und stehen lassen (der Viewer merkt sie sich wie jede Kiste).
  */
@@ -57,6 +58,7 @@ public final class FarmTask {
     private final Set<Integer> slots = new HashSet<>();    // Kiste: nur diese Inventar-Plaetze
     private Box area;
     private boolean pickup;
+    private String fill;
     private long phaseStart;
     private long breakLimit;
     private long frozenAt;
@@ -115,7 +117,8 @@ public final class FarmTask {
             return;
         }
         label = cmd.has("label") ? cmd.get("label").getAsString() : "Abbauen";
-        pickup = !cmd.has("pickup") || cmd.get("pickup").getAsBoolean();
+        fill = cmd.has("fill") ? cmd.get("fill").getAsString() : null;
+        pickup = fill == null && (!cmd.has("pickup") || cmd.get("pickup").getAsBoolean());
         breakLimit = cmd.has("timeout") ? cmd.get("timeout").getAsLong() * 1000L : 300_000L;
         JsonArray boxes = cmd.getAsJsonArray("boxes");
         List<String> lines = new ArrayList<>();
@@ -131,10 +134,10 @@ public final class FarmTask {
             area = area == null ? bb : area.union(bb);
         }
         if (area == null) {
-            finish(true, "nichts abzubauen");
+            finish(true, "nichts zu tun");
             return;
         }
-        lines.add("sel cleararea");
+        lines.add(fill != null ? "sel fill " + fill : "sel cleararea");
         BaritoneSafety.restore();
         for (String l : lines) {
             if (!BaritoneBridge.exec(l)) {
@@ -144,7 +147,7 @@ public final class FarmTask {
         }
         before = countIds(mc.player);
         setPhase(Phase.BREAK);
-        actionbar(mc, label + ": baut " + boxes.size() + " Bereiche ab", Formatting.AQUA);
+        actionbar(mc, label + (fill != null ? ": füllt " : ": baut ") + boxes.size() + " Bereiche" + (fill != null ? " auf" : " ab"), Formatting.AQUA);
     }
 
     public void cancel() {
@@ -429,6 +432,8 @@ public final class FarmTask {
         String msg;
         if (label != null && label.equals("Kiste")) {
             msg = "Kiste: " + count + " Items eingelagert" + (placed != null ? " bei " + placed.getX() + " " + placed.getY() + " " + placed.getZ() : "");
+        } else if (fill != null) {
+            msg = label + ": fertig";
         } else {
             int got = mc.player != null ? Math.max(0, countIds(mc.player) - before) : 0;
             msg = label + ": fertig, " + got + " Items eingesammelt";

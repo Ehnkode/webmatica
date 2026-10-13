@@ -140,6 +140,7 @@ export function create(container, ctx) {
     const c = st.chunks.get(key);
     if (!c) return;
     if (c.group) { scene.remove(c.group); disposeGroup(c.group); const [x, z] = key.split(',').map(Number); setMask(x, z, false); }
+    dropSpawn(c);
     st.chunks.delete(key);
   }
 
@@ -184,6 +185,7 @@ export function create(container, ctx) {
           if (query === clip.query) c.stale = false;
           scene.add(group);
           setMask(cx, cz, true);
+          if (st.spawn) loadSpawn(cx, cz, c);
         }
         resolve();
       }));
@@ -193,6 +195,71 @@ export function create(container, ctx) {
     } finally {
       c.loading = false;
       st.queue--;
+    }
+  }
+
+  // ------------------------------------------------------------ Mob-Spawns (Schalter)
+
+  // 1 = nur nachts (unter freiem Himmel), 2 = jederzeit dunkel genug
+  const SPAWN_COLORS = { 1: 0xf5a524, 2: 0xe5484d };
+  const spawnGeo = new THREE.PlaneGeometry(0.86, 0.86).rotateX(-Math.PI / 2);
+  const spawnMats = {};
+  for (const [k, color] of Object.entries(SPAWN_COLORS)) {
+    spawnMats[k] = track(new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }));
+  }
+  const spawnInfo = { noLight: new Set(), warned: false };
+
+  function dropSpawn(c) {
+    if (!c.spawn) return;
+    scene.remove(c.spawn);
+    c.spawn.children.forEach((m) => m.dispose && m.dispose());
+    c.spawn = null;
+  }
+
+  async function loadSpawn(cx, cz, c) {
+    const key = `${cx},${cz}`;
+    const tag = c.etag || '';
+    try {
+      const r = await fetch(`/api/spawn/${encodeURIComponent(st.srv)}/${encodeURIComponent(st.dim)}/${cx}/${cz}`);
+      if (!r.ok) return;
+      const d = await r.json();
+      if (!st.spawn || st.chunks.get(key) !== c || (c.etag || '') !== tag) return;
+      dropSpawn(c);
+      if (!d.light) {
+        spawnInfo.noLight.add(key);
+        if (!spawnInfo.warned && ctx.toast) {
+          spawnInfo.warned = true;
+          ctx.toast('Mob-Spawns: Für manche Chunks fehlen Lichtdaten. Mit der neuen Mod-Version dort noch einmal hinlaufen.');
+        }
+        return;
+      }
+      spawnInfo.noLight.delete(key);
+      const by = { 1: [], 2: [] };
+      for (let i = 0; i < d.pts.length; i += 4) by[d.pts[i + 3]].push(i);
+      const g = new THREE.Group();
+      const m4 = new THREE.Matrix4();
+      for (const k of [1, 2]) {
+        const idx = by[k];
+        if (!idx.length) continue;
+        const mesh = new THREE.InstancedMesh(spawnGeo, spawnMats[k], idx.length);
+        idx.forEach((i, n) => { m4.makeTranslation(d.pts[i] + 0.5, d.pts[i + 1] + 0.03, d.pts[i + 2] + 0.5); mesh.setMatrixAt(n, m4); });
+        mesh.instanceMatrix.needsUpdate = true;
+        g.add(mesh);
+      }
+      c.spawn = g;
+      scene.add(g);
+    } catch (e) {
+      console.warn('Spawn', key, e);
+    }
+  }
+
+  function setSpawn(on) {
+    st.spawn = !!on;
+    spawnInfo.warned = false;
+    spawnInfo.noLight.clear();
+    for (const [key, c] of st.chunks) {
+      if (!st.spawn) { dropSpawn(c); continue; }
+      if (c.group) { const [x, z] = key.split(',').map(Number); loadSpawn(x, z, c); }
     }
   }
 
@@ -1083,6 +1150,7 @@ export function create(container, ctx) {
     setSchematics,
     setVerify,
     setDiff,
+    setSpawn,
     setOthers,
     setWaypoints,
     setTrail,

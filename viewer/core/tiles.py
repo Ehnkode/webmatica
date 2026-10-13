@@ -123,6 +123,18 @@ def shade(rgb: np.ndarray, height: np.ndarray, has: np.ndarray, water: np.ndarra
     return np.dstack([out, alpha])
 
 
+def _paint(ch: Chunk, layer: Layer, sl, rgb, height, has, water):
+    """Einen Chunk in die Arrays einer Region-Kachel malen."""
+    c_rgb, c_h, c_has = render_chunk(ch, layer)
+    rgb[sl], height[sl], has[sl] = c_rgb, c_h, c_has
+    water[sl] = False  # Wasser flach halten: unten ueber Farbe erkannt
+    top_rel = min(ch.height - 1, layer.y_max - ch.min_y)
+    if top_rel >= 0:
+        yi = np.clip(c_h - ch.min_y, 0, ch.height - 1)
+        zz, xx = np.meshgrid(np.arange(16), np.arange(16), indexing="ij")
+        water[sl] = PALETTE.block_water[ch.blocks[yi, zz, xx].astype(np.intp)] & c_has
+
+
 class TileStore:
     def __init__(self, rec: Recording, cache_dir: str):
         self.rec = rec
@@ -205,14 +217,7 @@ class TileStore:
                 m = chunk_markers(ch)
                 if m["signs"] or m["containers"]:
                     markers[str(int(idx))] = m
-                c_rgb, c_h, c_has = render_chunk(ch, layer)
-                rgb[sl], height[sl], has[sl] = c_rgb, c_h, c_has
-                water[sl] = False  # Wasser flach halten: unten ueber Farbe erkannt
-                top_rel = min(ch.height - 1, layer.y_max - ch.min_y)
-                if top_rel >= 0:
-                    yi = np.clip(c_h - ch.min_y, 0, ch.height - 1)
-                    zz, xx = np.meshgrid(np.arange(16), np.arange(16), indexing="ij")
-                    water[sl] = PALETTE.block_water[ch.blocks[yi, zz, xx].astype(np.intp)] & c_has
+                _paint(ch, layer, sl, rgb, height, has, water)
 
             with open(mpath + ".tmp", "w") as f:
                 json.dump(markers, f)
@@ -287,3 +292,65 @@ class TileStore:
         buf = io.BytesIO()
         Image.new("RGBA", (1, 1), (0, 0, 0, 0)).save(buf, "PNG")
         return buf.getvalue()
+
+
+class PastTiles(TileStore):
+    """Kacheln "so sah es an Tag X aus" fuer den Zeitraffer.
+
+    Enthalten nur Chunks, von denen es einen gesicherten Stand ab Tag X gibt (die
+    sich also seitdem geaendert haben), in diesem alten Stand. Alles andere ist
+    durchsichtig, die Karte darunter zeigt dort den heutigen Stand, der dann ja
+    auch damals galt.
+
+    ``index()`` liefert {(cx, cz): (Pfad der Region-Datei, Chunk-Index)}.
+    """
+
+    def __init__(self, rec: Recording, cache_dir: str, index):
+        super().__init__(rec, cache_dir)
+        self.index = index
+
+    def _by_region(self) -> dict:
+        out: dict = {}
+        for (cx, cz), src in self.index().items():
+            out.setdefault((cx >> 5, cz >> 5), {})[(cx, cz)] = src
+        return out
+
+    def region_tile(self, dim: Dimension, layer: Layer, rx: int, rz: int) -> str | None:
+        from .chunk import from_nbt
+        from .world import Region
+        chunks = self._by_region().get((rx, rz))
+        if not chunks:
+            return None
+        d = self._dir(dim, layer, 0)
+        png = os.path.join(d, f"{rx}_{rz}.png")
+        newest = max(os.path.getmtime(p) for p, _i in chunks.values())
+        with self._lock(png):
+            if os.path.exists(png) and os.path.getmtime(png) >= newest:
+                return png
+            rgb = np.zeros((TILE, TILE, 3), np.float32)
+            height = np.full((TILE, TILE), -64, np.int32)
+            has = np.zeros((TILE, TILE), bool)
+            water = np.zeros((TILE, TILE), bool)
+            regions: dict = {}
+            for (cx, cz), (path, idx) in chunks.items():
+                reg = regions.get(path) or regions.setdefault(path, Region(path, rx, rz))
+                try:
+                    root = reg.read_nbt(idx)
+                    ch = from_nbt(root, cx, cz) if root else None
+                except Exception:
+                    ch = None
+                if ch is None:
+                    continue
+                lx, lz = cx & 31, cz & 31
+                _paint(ch, layer, (slice(lz * 16, lz * 16 + 16), slice(lx * 16, lx * 16 + 16)), rgb, height, has, water)
+            img = shade(rgb, height, has, water)
+            tmp = png + ".tmp"
+            Image.fromarray(img, "RGBA").save(tmp, "PNG", compress_level=3)
+            os.replace(tmp, png)
+            return png
+
+    def tile(self, dim: Dimension, layer: Layer, zoom: int, tx: int, tz: int,
+             regions: set | None = None) -> str | None:
+        if regions is None:
+            regions = set(self._by_region())
+        return super().tile(dim, layer, zoom, tx, tz, regions)

@@ -7,6 +7,8 @@ Mod die Chunks zuletzt gesehen hat.
 
 from __future__ import annotations
 
+import re
+
 import numpy as np
 
 from .core.chunk import AIR_NAMES, BLOCKS, base_name
@@ -29,17 +31,28 @@ def norm_area(a: dict) -> dict:
     return out
 
 
+#: Platzhalter fuer "alle abbaubaren Bloecke" (Ebnen)
+ANY = "*"
+
+
+def solid(name: str) -> bool:
+    return name not in AIR_NAMES and name not in UNFARMABLE
+
+
 class _Mask:
-    """Block-State-ID -> True, wenn der Blockname passt. Waechst mit, wenn neue States auftauchen."""
+    """Block-State-ID -> True, wenn der Blockname passt. Waechst mit, wenn neue States auftauchen.
+
+    ``names`` ist eine Menge von Blocknamen; enthaelt sie :data:`ANY`, passt jeder abbaubare Block.
+    """
 
     def __init__(self, names):
-        self.names = names
+        self.test = solid if ANY in names else names.__contains__
         self.m = np.zeros(0, bool)
 
     def __call__(self, part: np.ndarray) -> np.ndarray:
         top = int(part.max()) + 1 if part.size else 0
         if top > len(self.m):
-            self.m = np.array([base_name(s) in self.names for s in BLOCKS.names], bool)
+            self.m = np.array([self.test(base_name(s)) for s in BLOCKS.names], bool)
             if top > len(self.m):
                 self.m = np.pad(self.m, (0, top - len(self.m)))
         return self.m[part]
@@ -89,9 +102,45 @@ def count(rec, dim, area: dict, names: set[str]) -> dict[str, int]:
     for part, _o in _chunks(rec, dim, a):
         flat = part.reshape(-1)
         hit = flat[want(flat)]
+        if ANY in names:
+            out[ANY] += int(hit.size)
+            continue
         for sid, c in zip(*np.unique(hit, return_counts=True)):
             out[base_name(BLOCKS.names[int(sid)])] += int(c)
     return out
+
+
+# zaehlen beim Auffuellen als Loch (werden ersetzt)
+_FILLABLE = re.compile(r"^minecraft:(water|lava|bubble_column|short_grass|tall_grass|fern|large_fern|dead_bush|snow|"
+                       r"seagrass|tall_seagrass|kelp|kelp_plant|vine|glow_lichen)$")
+
+
+def holes(rec, dim, area: dict, level: int, near: tuple | None = None, limit: int | None = None) -> list[tuple[int, int, int]]:
+    """Leere Stellen unter ``level``, die zum Ebnen aufgefuellt werden muessen.
+
+    Je Spalte vom obersten festen Block (oder vom Boden des Bereichs, ``y0``) bis
+    ``level`` hinauf. Unten zuerst, damit Baritone immer auf etwas Festes setzt.
+    """
+    a = norm_area(area)
+    a["y1"] = min(a["y1"], level)
+    if a["y0"] > a["y1"]:
+        return []
+    empty = _Mask(set())
+    empty.test = lambda n: n in AIR_NAMES or bool(_FILLABLE.match(n))
+    pts = []
+    for part, (ox, oy, oz) in _chunks(rec, dim, a):
+        e = empty(part)
+        # Zelle ist ein Loch, wenn sie leer ist und darueber bis level nichts Festes kommt
+        above_solid = np.cumsum(~e[::-1], 0)[::-1] > 0
+        hole = e & ~above_solid
+        ys, zs, xs = np.nonzero(hole)
+        pts.extend(zip((xs + ox).tolist(), (ys + oy).tolist(), (zs + oz).tolist()))
+    # Spalten ohne aufgezeichneten Chunk bleiben aussen vor (nicht gesehen)
+    if near is not None:
+        pts.sort(key=lambda p: (p[1], (p[0] - near[0]) ** 2 + (p[2] - near[2]) ** 2))
+    else:
+        pts.sort(key=lambda p: p[1])
+    return pts[:limit] if limit else pts
 
 
 def positions(rec, dim, area: dict, names: set[str], near: tuple, limit: int = 48,

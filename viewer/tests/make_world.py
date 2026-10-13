@@ -46,6 +46,7 @@ def section_nbt(y: int, states: list[str], idx: np.ndarray, biome: str) -> dict:
 def chunk_nbt(cx: int, cz: int, column, biome: str, min_sy=-4, max_sy=19, extra=None) -> dict:
     """column(x, y, z) -> state; wird pro Block aufgerufen (klein halten)."""
     sections = []
+    solid = np.zeros(((max_sy - min_sy + 1) * 16, 16, 16), bool)
     for sy in range(min_sy, max_sy + 1):
         states = ["minecraft:air"]
         lookup = {"minecraft:air": 0}
@@ -56,12 +57,19 @@ def chunk_nbt(cx: int, cz: int, column, biome: str, min_sy=-4, max_sy=19, extra=
                 for x in range(16):
                     s = column(cx * 16 + x, y, cz * 16 + z)
                     if s != "minecraft:air":
+                        solid[(sy - min_sy) * 16 + ly, z, x] = True
                         i = lookup.get(s)
                         if i is None:
                             i = lookup[s] = len(states)
                             states.append(s)
                         idx[ly, z, x] = i
         sections.append(section_nbt(sy, states, idx, biome))
+    # Licht wie von der Mod: Himmelslicht 15 ueber dem obersten Block, darunter 0; kein Blocklicht
+    sky = np.where(np.cumsum(solid[::-1], 0)[::-1] > 0, 0, 15).astype(np.uint8)
+    for i, sec in enumerate(sections):
+        v = sky[i * 16:(i + 1) * 16].reshape(-1)
+        sec["SkyLight"] = nbt.ByteArray((v[0::2] | (v[1::2] << 4)).astype(np.uint8).tobytes())
+        sec["BlockLight"] = nbt.ByteArray(bytes(2048))
     root = {
         "DataVersion": nbt.Int(4671), "xPos": nbt.Int(cx), "yPos": nbt.Int(min_sy), "zPos": nbt.Int(cz),
         "Status": "minecraft:full", "sections": sections,
