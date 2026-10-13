@@ -850,6 +850,41 @@ export function create(container, ctx) {
     return hit ? hit.object.userData.pick : null;
   }
 
+  // Block unter dem Mauszeiger (fuer "Bereich in 3D waehlen")
+  function pickBlock(ndcX, ndcY) {
+    ray.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+    const groups = [];
+    for (const c of st.chunks.values()) if (c.group) groups.push(c.group);
+    const hits = ray.intersectObjects(groups, true);
+    for (const hit of hits) {
+      if (!hit.face) continue;
+      if (clip.planes.some((pl) => pl.distanceToPoint(hit.point) < -0.05)) continue;   // weggeschnittener Teil
+      const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+      const p = hit.point.clone().addScaledVector(n, -0.02);
+      return { x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) };
+    }
+    return null;
+  }
+  let blockPick = null;
+  function setBlockPick(cb) {
+    blockPick = cb;
+    container.classList.toggle('picking', !!cb);
+  }
+
+  // Bereich (Automationen) als Rahmen; ``first`` = erster gewaehlter Block
+  const areaMat = new THREE.LineBasicMaterial({ color: 0xf5a524, depthTest: false, transparent: true });
+  let areaBox = null;
+  function setArea(a) {
+    if (areaBox) { scene.remove(areaBox); areaBox.geometry.dispose(); areaBox = null; }
+    if (!a) return;
+    const w = a.x1 - a.x0 + 1, h = a.y1 - a.y0 + 1, d = a.z1 - a.z0 + 1;
+    const g = new THREE.EdgesGeometry(new THREE.BoxGeometry(w + 0.04, h + 0.04, d + 0.04));
+    areaBox = new THREE.LineSegments(g, areaMat);
+    areaBox.position.set(a.x0 + w / 2, a.y0 + h / 2, a.z0 + d / 2);
+    areaBox.renderOrder = 10;
+    scene.add(areaBox);
+  }
+
   function select(sel, quiet) {
     st.selected = sel;
     for (const s of schems.values()) applySchem(s);
@@ -868,6 +903,11 @@ export function create(container, ctx) {
     const rect = canvas.getBoundingClientRect();
     const nx = locked ? 0 : ((e.clientX - rect.left) / rect.width) * 2 - 1;
     const ny = locked ? 0 : -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    if (blockPick) {
+      const b = pickBlock(nx, ny);
+      if (b) blockPick(b);
+      return;
+    }
     const hit = pick(nx, ny);
     if (hit) { select(hit); return; }
     if (!locked) canvas.requestPointerLock();
@@ -1151,6 +1191,8 @@ export function create(container, ctx) {
     setVerify,
     setDiff,
     setSpawn,
+    setBlockPick,
+    setArea,
     setOthers,
     setWaypoints,
     setTrail,

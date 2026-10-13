@@ -907,3 +907,41 @@ Zurück zu heute	Back to today
 Stand {} · zurück zu heute ✕	State {} · back to today ✕
 Der Zeitraffer läuft auf der 2D-Karte	The time-lapse runs on the 2D map
 Datum: JJJJ-MM-TT	Date: YYYY-MM-DD
+# Automationen
+Automationen	Automations
+Automationen (7)	Automations (7)
+Abbauen	Break
+Füllen	Fill
+Baritone baut alles im Bereich ab und sammelt es ein.	Baritone breaks everything in the area and picks it up.
+Baritone füllt jede leere Stelle im Bereich mit einem Block aus deinem Inventar.	Baritone fills every empty spot in the area with a block from your inventory.
+Füllen mit	Fill with
+2 · Übersicht	2 · Overview
+2 · Füllblock	2 · Fill block
+▶ Farmen starten	▶ Start farming
+■ Farmen stoppen	■ Stop farming
+▶ Abbauen starten	▶ Start breaking
+■ Abbauen stoppen	■ Stop breaking
+▶ Füllen starten	▶ Start filling
+■ Füllen stoppen	■ Stop filling
+Erst einen Bereich wählen	Pick an area first
+Erst Bereich wählen und einen Füllblock angeben	Pick an area and choose a fill block first
+{} Blöcke abbauen (Y {} bis {})	{} blocks to break (Y {} to {})
+{} leere Stellen füllen (Y {} bis {})	{} empty spots to fill (Y {} to {})
+Abbauen starten?	Start breaking?
+Füllen starten?	Start filling?
+Baritone wird alles im Bereich abbauen (Y {} bis {}).	Baritone will break everything in the area (Y {} to {}).
+Baritone wird jede leere Stelle im Bereich mit {} füllen (Y {} bis {}).	Baritone will fill every empty spot in the area with {} (Y {} to {}).
+Abbrechen jederzeit mit „■ Abbauen stoppen“.	Cancel any time with "■ Stop breaking".
+Abbrechen jederzeit mit „■ Füllen stoppen“.	Cancel any time with "■ Stop filling".
+Abbauen gestartet: Y {} bis {}	Breaking started: Y {} to {}
+Füllen gestartet: mit {}, Y {} bis {}	Filling started: with {}, Y {} to {}
+fertig: Bereich abgebaut	done: area broken
+fertig: Bereich gefüllt	done: area filled
+unbekannte Automation	unknown automation
+Abbauen: baut {} Bereiche ab	Breaking: mining {} areas
+Abbauen: fertig, {} Items eingesammelt	Breaking: done, {} items picked up
+Füllen: füllt {} Bereiche auf	Filling: filling {} areas
+Füllen: fertig	Filling: done
+In 3D wählen	Pick in 3D
+Klick in 3D auf den ersten Eckblock.	Click the first corner block in 3D.
+Erste Ecke {} {} {}. Jetzt auf die gegenüberliegende Ecke klicken.	First corner {} {} {}. Now click the opposite corner.
