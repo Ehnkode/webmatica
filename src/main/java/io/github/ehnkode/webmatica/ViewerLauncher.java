@@ -6,7 +6,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Util;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,6 +36,9 @@ final class ViewerLauncher {
     private static final String PYTHON_URL = "https://www.python.org/downloads/";
     private static final String BUNDLE = "webmatica-viewer";
     private static final String STAMP = ".webmatica-version";
+
+    private static final String OS = System.getProperty("os.name", "").toLowerCase();
+    private static final boolean WINDOWS = OS.startsWith("windows");
 
     private static volatile boolean busy;
     private static Process process;
@@ -167,7 +169,7 @@ final class ViewerLauncher {
 
     /** The first Python 3.10+ found, as a command line. The Windows Store stub fails the check. */
     private static List<String> findPython() {
-        boolean win = Util.getPlatform() == Util.OS.WINDOWS;
+        boolean win = WINDOWS;
         List<List<String>> cands = win
                 ? List.of(List.of("py", "-3"), List.of("python"), List.of("python3"))
                 : List.of(List.of("python3"), List.of("python"));
@@ -212,8 +214,20 @@ final class ViewerLauncher {
     }
 
     private static void browse(Minecraft mc) {
-        Util.getPlatform().openUri(URI.create(URL));
+        openBrowser(URL);
         say(mc, "Viewer offen: " + URL, ChatFormatting.GREEN, URL);
+    }
+
+    /** Same commands the game uses for links; works on every Minecraft version. */
+    private static void openBrowser(String url) {
+        String[] cmd = WINDOWS ? new String[] {"rundll32", "url.dll,FileProtocolHandler", url}
+                : OS.contains("mac") ? new String[] {"open", url}
+                : new String[] {"xdg-open", url};
+        try {
+            new ProcessBuilder(cmd).start();
+        } catch (IOException e) {
+            MapperClient.LOGGER.warn("[webmatica] Browser nicht geöffnet: {}", e.toString());
+        }
     }
 
     private static void say(Minecraft mc, String msg, ChatFormatting f, String link) {
