@@ -115,11 +115,14 @@ _FILLABLE = re.compile(r"^minecraft:(water|lava|bubble_column|short_grass|tall_g
                        r"seagrass|tall_seagrass|kelp|kelp_plant|vine|glow_lichen)$")
 
 
-def holes(rec, dim, area: dict, level: int, near: tuple | None = None, limit: int | None = None) -> list[tuple[int, int, int]]:
+def holes(rec, dim, area: dict, level: int, near: tuple | None = None, limit: int | None = None,
+          every: bool = False) -> list[tuple[int, int, int]]:
     """Leere Stellen unter ``level``, die zum Ebnen aufgefuellt werden muessen.
 
     Je Spalte vom obersten festen Block (oder vom Boden des Bereichs, ``y0``) bis
-    ``level`` hinauf. Unten zuerst, damit Baritone immer auf etwas Festes setzt.
+    ``level`` hinauf. Mit ``every`` jede leere Stelle im Bereich (Bereich fuellen),
+    auch Hoehlen unter festen Bloecken. Unten zuerst, damit Baritone immer auf
+    etwas Festes setzt.
     """
     a = norm_area(area)
     a["y1"] = min(a["y1"], level)
@@ -132,7 +135,7 @@ def holes(rec, dim, area: dict, level: int, near: tuple | None = None, limit: in
         e = empty(part)
         # Zelle ist ein Loch, wenn sie leer ist und darueber bis level nichts Festes kommt
         above_solid = np.cumsum(~e[::-1], 0)[::-1] > 0
-        hole = e & ~above_solid
+        hole = e if every else e & ~above_solid
         ys, zs, xs = np.nonzero(hole)
         pts.extend(zip((xs + ox).tolist(), (ys + oy).tolist(), (zs + oz).tolist()))
     # Spalten ohne aufgezeichneten Chunk bleiben aussen vor (nicht gesehen)

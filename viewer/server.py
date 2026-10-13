@@ -35,9 +35,9 @@ Endpunkte (alle JSON, ausser Bildern):
     GET/POST /api/auto/settings              Autobau-Schutz: radar, radarDist, friends, eat, tools, leftovers, fix
     POST /api/auto {srv, queue: [pid]}       Warteschlange setzen
     POST /api/auto {srv, farm: {area, dim, targets, chest, placeChest}}   Farmen starten
-    POST /api/auto {srv, farm: {area, dim, flatten: {level, clear, fill, block}, chest, placeChest}}   Ebnen
+    POST /api/auto {srv, farm: {area, dim, flatten: {kind: flat|clear|fill, level, clear, fill, block}, chest, placeChest}}   Ebnen
     GET  /api/farm/scan?srv=&dim=&x0=..      welche Bloecke im Bereich stehen
-    GET  /api/farm/flatscan?..&level=        Ebnen: wie viele Bloecke ab, wie viele Loecher
+    GET  /api/farm/flatscan?..&kind=&level=  Automationen: wie viele Bloecke ab, wie viele Loecher
     GET  /api/spawn/<srv>/<dim>/<cx>/<cz>    wo Monster spawnen koennen (braucht Licht in der Aufnahme)
     POST /api/fix {srv, pid, extra}          falsche/verdrehte (und ueberfluessige) Bloecke abbauen lassen
     GET  /api/radar?srv=                     Logbuch: wer war wann in Sichtweite
@@ -565,11 +565,12 @@ def make_handler(app: App):
                     if dim is None:
                         return self.fail(404, "keine Aufnahme")
                     try:
-                        a = {k: q[k][0] for k in ("x0", "z0", "x1", "z1", "y0", "y1")}
-                        level = int(q["level"][0])
-                        above = dict(farm.norm_area(a), y0=level + 1)
+                        a = farm.norm_area({k: q[k][0] for k in ("x0", "z0", "x1", "z1", "y0", "y1")})
+                        kind = q.get("kind", ["flat"])[0]
+                        level = a["y0"] - 1 if kind == "clear" else a["y1"] if kind == "fill" else int(q["level"][0])
+                        above = dict(a, y0=level + 1)
                         clear = farm.count(app.rec, dim, above, {farm.ANY})[farm.ANY] if above["y0"] <= above["y1"] else 0
-                        return self.json({"clear": clear, "fill": len(farm.holes(app.rec, dim, a, level))})
+                        return self.json({"clear": clear, "fill": len(farm.holes(app.rec, dim, a, level, every=kind == "fill"))})
                     except (KeyError, ValueError) as e:
                         return self.fail(400, str(e))
                 if p == "/api/farm/scan":

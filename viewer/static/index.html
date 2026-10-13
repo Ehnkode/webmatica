@@ -89,7 +89,7 @@
   <button data-tab="schematics" title="Schematics (4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><span>Schematics</span></button>
   <button data-tab="editor" title="Editor (5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>Editor</span></button>
   <button data-tab="chests" title="Kisten (6)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="M3 11h18M11 11v3h2v-3"/></svg><span>Kisten</span></button>
-  <button data-tab="farm" title="Farmen (7)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4c3 0 6 1.5 6 3-2.5-.8-5-.8-7.5 0z"/><path d="M13 5.5L4 19.5l1.5 1L14.5 7"/></svg><span>Farmen</span></button>
+  <button data-tab="farm" title="Automationen (7)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4c3 0 6 1.5 6 3-2.5-.8-5-.8-7.5 0z"/><path d="M13 5.5L4 19.5l1.5 1L14.5 7"/></svg><span>Automationen</span></button>
   <button data-tab="history" title="Zeitleiste (8)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>Zeitleiste</span></button>
   <button data-tab="radar" title="Radar (9)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/></svg><span>Radar</span><i id="radar-badge" class="badge" hidden></i></button>
   <span class="rail-sep"></span>
@@ -155,21 +155,27 @@
     <ul id="ct-list" class="list"></ul>
   </section>
   <section data-pane="farm" class="pane">
-    <div class="seg fm-mode"><button data-fmmode="farm" class="on">Blöcke farmen</button><button data-fmmode="flat">Ebnen</button></div>
-    <p class="hint" id="fm-hint-farm">Baritone baut in einem Bereich bestimmte Blöcke ab, bis die Menge erreicht ist, und sammelt alles ein.</p>
-    <p class="hint" id="fm-hint-flat" hidden>Baritone trägt im Bereich alles über einer Höhe ab und füllt Löcher bis zu dieser Höhe auf. So entsteht eine ebene Baufläche.</p>
+    <div class="seg fm-mode"><button data-fmmode="farm" class="on">Farmen</button><button data-fmmode="clear">Abbauen</button><button data-fmmode="fill">Füllen</button><button data-fmmode="flat">Ebnen</button></div>
+    <p class="hint fm-hint" data-for="farm">Baritone baut in einem Bereich bestimmte Blöcke ab, bis die Menge erreicht ist, und sammelt alles ein.</p>
+    <p class="hint fm-hint" data-for="clear" hidden>Baritone baut alles im Bereich ab und sammelt es ein.</p>
+    <p class="hint fm-hint" data-for="fill" hidden>Baritone füllt jede leere Stelle im Bereich mit einem Block aus deinem Inventar.</p>
+    <p class="hint fm-hint" data-for="flat" hidden>Baritone trägt im Bereich alles über einer Höhe ab und füllt Löcher bis zu dieser Höhe auf. So entsteht eine ebene Baufläche.</p>
     <div class="card">
       <div class="card-title">1 · Bereich</div>
       <div class="sp-row"><button id="fm-pick" class="primary">Auf der Karte wählen</button></div>
+      <p id="fm-pick-hint" class="hint" hidden></p>
       <div id="fm-area" class="muted mono"></div>
       <div class="sp-row fm-y"><label>Y von <input type="number" id="fm-y0"></label><label>bis <input type="number" id="fm-y1"></label>
         <label class="check" title="Bereich auf ganze Chunks (16 × 16) erweitern"><input type="checkbox" id="fm-snap" checked> ganze Chunks</label></div>
     </div>
     <div class="card" id="fl-card" hidden>
-      <div class="card-title">2 · Höhe und Füllblock</div>
-      <div class="sp-row"><label>Eben auf Y <input type="number" id="fl-level"></label><button id="fl-here" title="Höhe unter deinen Füßen">Meine Höhe</button></div>
-      <label class="check"><input type="checkbox" id="fl-clear" checked> Alles darüber abtragen</label>
-      <div class="sp-row"><label class="check"><input type="checkbox" id="fl-fill" checked> Löcher auffüllen mit</label>
+      <div class="card-title" id="fl-title">2 · Höhe und Füllblock</div>
+      <div class="fl-flat">
+        <div class="sp-row"><label>Eben auf Y <input type="number" id="fl-level"></label><button id="fl-here" title="Höhe unter deinen Füßen">Meine Höhe</button></div>
+        <label class="check"><input type="checkbox" id="fl-clear" checked> Alles darüber abtragen</label>
+      </div>
+      <div class="sp-row fl-blockrow"><label class="check fl-flat"><input type="checkbox" id="fl-fill" checked> Löcher auffüllen mit</label>
+        <label class="fl-fillonly">Füllen mit</label>
         <input id="fl-block" list="fl-blocks" placeholder="z. B. dirt"><datalist id="fl-blocks"></datalist></div>
       <p id="fl-sum" class="hint"></p>
     </div>

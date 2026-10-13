@@ -433,6 +433,7 @@ b.warn { color: #ffcf6b; }
 .set3d input[type=range] { flex: 1; padding: 0; }
 .set3d .mono { min-width: 70px; text-align: right; color: var(--muted); }
 .set3d-checks { display: flex; gap: 14px; }
+.spawn-legend[hidden] { display: none; }
 .spawn-legend { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
 .spawn-legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
 .spawn-legend .sw + .sw, .spawn-legend .sw:not(:first-child) { margin-left: 8px; }
@@ -499,3 +500,11 @@ b.warn { color: #ffcf6b; }
 .tl-badge { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 500; padding: 6px 12px;
   border-radius: 999px; font-weight: 600; color: var(--warn); border: 1px solid var(--warn); }
 body.mode3d .tl-badge { display: none; }
+
+/* Automationen: Modus blendet Teile der Karte ein/aus */
+#fl-card[data-mode="clear"] .fl-blockrow, #fl-card:not([data-mode="flat"]) .fl-flat, #fl-card[data-mode="flat"] .fl-fillonly { display: none; }
+.fm-mode { flex-wrap: wrap; }
+#view3d.picking canvas { cursor: crosshair; }
+/* lange Beschriftung ("Automationen") passt sonst nicht in die 64 px */
+.rail button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.rail button[data-tab="farm"] span { font-size: 9px; letter-spacing: -0.2px; }
