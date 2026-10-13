@@ -88,7 +88,7 @@ def model_chain(jar: Jar, name: str) -> tuple[dict, list]:
         if m is None:
             break
         for k, v in (m.get("textures") or {}).items():
-            textures.setdefault(k, v)
+            textures.setdefault(k, v.get("sprite") if isinstance(v, dict) else v)
         par = m.get("parent")
         if not par:
             break

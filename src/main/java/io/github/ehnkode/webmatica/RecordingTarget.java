@@ -1,13 +1,12 @@
 package io.github.ehnkode.webmatica;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.World;
-
 import java.nio.file.Path;
 import java.util.Locale;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 
 /**
  * Where a chunk is written: a separate world folder per server, containing
@@ -26,20 +25,20 @@ public final class RecordingTarget {
 
     private RecordingTarget() {}
 
-    public static Path root(MinecraftClient mc) {
-        return mc.runDirectory.toPath().resolve("webmatica_recording");
+    public static Path root(Minecraft mc) {
+        return mc.gameDirectory.toPath().resolve("webmatica_recording");
     }
 
     /** Folder name for the current server (address without port, safe characters only). */
-    public static String serverId(MinecraftClient mc) {
-        if (mc.isInSingleplayer()) {
+    public static String serverId(Minecraft mc) {
+        if (mc.isLocalServer()) {
             return "singleplayer";
         }
-        ServerInfo info = mc.getCurrentServerEntry();
-        if (info == null || info.address == null || info.address.isBlank()) {
+        ServerData info = mc.getCurrentServer();
+        if (info == null || info.ip == null || info.ip.isBlank()) {
             return "unknown";
         }
-        String addr = info.address.trim().toLowerCase(Locale.ROOT);
+        String addr = info.ip.trim().toLowerCase(Locale.ROOT);
         int colon = addr.lastIndexOf(':');
         if (colon > 0 && addr.indexOf(':') == colon) {
             addr = addr.substring(0, colon);
@@ -48,21 +47,21 @@ public final class RecordingTarget {
     }
 
     /** Path relative to the server folder that contains the dimension's region/ folder. */
-    public static String dimensionDir(RegistryKey<World> dim) {
-        if (World.OVERWORLD.equals(dim)) {
+    public static String dimensionDir(ResourceKey<Level> dim) {
+        if (Level.OVERWORLD.equals(dim)) {
             return "";
         }
-        if (World.NETHER.equals(dim)) {
+        if (Level.NETHER.equals(dim)) {
             return "DIM-1";
         }
-        if (World.END.equals(dim)) {
+        if (Level.END.equals(dim)) {
             return "DIM1";
         }
-        Identifier id = dim.getValue();
+        Identifier id = dim.identifier();
         return "dimensions/" + sanitize(id.getNamespace()) + "/" + sanitize(id.getPath());
     }
 
-    public static Path regionDir(MinecraftClient mc, RegistryKey<World> dim) {
+    public static Path regionDir(Minecraft mc, ResourceKey<Level> dim) {
         Path serverDir = root(mc).resolve(serverId(mc));
         String sub = dimensionDir(dim);
         return (sub.isEmpty() ? serverDir : serverDir.resolve(sub)).resolve("region");
