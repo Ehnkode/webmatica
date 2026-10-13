@@ -29,6 +29,8 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'f' || e.key === 'F') setFollow(!state.follow);
   else if (e.key === 's' || e.key === 'S') toggleSide();
+  else if (e.key === 'x' || e.key === 'X') xrayToggle();
+  else if ((e.key === 'n' || e.key === 'N') && xray.on) xrayNext();
   else if (e.key === 'e' || e.key === 'E') setSelect(!sel.on);
   else if (e.key === 'Escape' && sel.on) setSelect(false);
   else if (e.key === '/') { e.preventDefault(); searchOpen(true); }

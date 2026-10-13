@@ -34,7 +34,7 @@
 
 <header class="bar top-left panel">
   <div class="brand"><svg viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" rx="3.5"/><path d="M3 11l3-4 2 3 2-2 3 3z"/></svg>Webmatica</div>
-  <select id="server" title="Server"></select>
+  <select id="server" title="Welt bzw. Server"></select>
   <div id="dims" class="seg" role="tablist" aria-label="Dimension"></div>
   <div id="layers" class="seg small" aria-label="Schicht"></div>
 </header>
@@ -375,7 +375,7 @@
     <button type="button" id="goto-btn" class="icon-btn" title="Suchen: Koordinaten oder Wegpunkt (/)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
     <input id="goto-input" placeholder="Koordinaten oder Wegpunkt …" aria-label="Suchen oder zu Koordinaten springen" list="goto-list" tabindex="-1"><datalist id="goto-list"></datalist>
   </form>
-  <button id="btn-xray" class="toggle icon-btn only3d" data-pop="pop-xray" title="X-Ray: nur gesuchte Blöcke zeigen (X)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><path d="M12 8.5l3 1.75v3.5L12 15.5l-3-1.75v-3.5z"/></svg></button>
+  <button id="btn-xray" class="toggle icon-btn" data-pop="pop-xray" title="X-Ray: nur gesuchte Blöcke zeigen (X)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><path d="M12 8.5l3 1.75v3.5L12 15.5l-3-1.75v-3.5z"/></svg></button>
   <button id="shot3d" class="icon-btn only3d" title="Bildschirmfoto speichern"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
 </div>
 
@@ -403,7 +403,7 @@
   </form>
   <div id="xray-sel" class="xray-sel"></div>
   <div class="sp-row"><button id="xray-next" disabled>Zum nächsten Fund</button></div>
-  <p class="hint" id="xray-hint">Zeigt, was die Mod aufgezeichnet hat, im Umkreis der Sichtweite. Leuchtende Kästen markieren jeden Fund.</p>
+  <p class="hint" id="xray-hint">Zeigt, was die Mod aufgezeichnet hat: in 3D im Umkreis der Sichtweite mit leuchtenden Kästen, auf der Karte als Punkte rund um die Mitte.</p>
 </div>
 
 <div id="pop-view" class="panel pop" hidden>

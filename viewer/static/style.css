@@ -579,3 +579,4 @@ body:not(.mode3d) .only3d { display: none !important; }
 .xray-chip b { font-weight: 600; }
 .xray-chip button { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0 0 0 2px; font-size: 12px; }
 .xray-chip button:hover { color: var(--fg); }
+body.xray-on:not(.mode3d) #map .leaflet-tile-pane { filter: brightness(0.38) saturate(0.5); }

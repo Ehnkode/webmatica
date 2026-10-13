@@ -168,6 +168,7 @@ function select(server, dim, layer, keepView) {
   loadTrail();
   saveHash();
   if (mode3d) { mode3d = false; set3d(true); }
+  else if (typeof xray2dSoon === 'function') xray2dSoon(0);
 }
 
 /* Initial view: everything recorded if it is small, otherwise the most recently
