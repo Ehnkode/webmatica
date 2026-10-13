@@ -1454,6 +1454,8 @@ function drawSchems2D() {
     } else {
       r.setBounds(b);
       r.setStyle(style);
+      // Beschriftung wandert sonst beim Verschieben nicht mit
+      if (r.getTooltip()) r.getTooltip().setLatLng(b.getCenter());
     }
     r.setTooltipContent(esc(pl.name));
   }
