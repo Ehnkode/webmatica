@@ -100,7 +100,7 @@ export function create(container, ctx) {
   // ------------------------------------------------------------ Zustand
 
   const st = {
-    srv: null, dim: null, radius: 10, lod: 8, fog: false, full: false, fancy: false, hour: 10,
+    srv: null, dim: null, radius: 10, lod: 4096, fog: false, full: false, fancy: false, hour: 10,
     chunks: new Map(),      // "cx,cz" -> { group, etag, empty, loading }
     regions: new Map(),     // "rx,rz" -> { mesh, etag, empty, loading }
     queue: 0, lodQueue: 0,
@@ -292,26 +292,27 @@ export function create(container, ctx) {
   /* Fernsicht: je Region ein Hoehenfeld. Eine 32x32-Maske (ein Texel pro Chunk)
    * blendet es genau dort aus, wo der echte Chunk schon geladen ist. So gibt es
    * nie Loecher: was noch laedt oder ausserhalb der Sichtweite liegt, zeigt die Fernsicht. */
-  function lodMaterial(tex, mask) {
+  function lodMaterial(tex, mask, size = 512) {
     const Mat = st.fancy ? THREE.MeshLambertMaterial : THREE.MeshBasicMaterial;
     const m = track(new Mat({ map: tex, alphaTest: 0.5, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4,
       ...(st.fancy ? { flatShading: true } : {}) }));
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uMask = { value: mask };
+      sh.uniforms.uSize = { value: size };
       sh.vertexShader = 'attribute float valid;\nvarying vec2 vLocal;\nvarying float vValid;\n' +
         sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvLocal = position.xz;\nvValid = valid;');
       // Dreiecke, die in eine Datenluecke reichen, nicht als schraege Wand zeichnen
       sh.uniforms.uDay = lightUniforms.uDay;
-      sh.fragmentShader = 'uniform sampler2D uMask;\nuniform float uDay;\nvarying vec2 vLocal;\nvarying float vValid;\n' +
-        sh.fragmentShader.replace('void main() {', 'void main() {\n  if (vValid < 0.99 || texture2D(uMask, vLocal / 512.0).r > 0.5) discard;')
+      sh.fragmentShader = 'uniform sampler2D uMask;\nuniform float uSize;\nuniform float uDay;\nvarying vec2 vLocal;\nvarying float vValid;\n' +
+        sh.fragmentShader.replace('void main() {', 'void main() {\n  if (vValid < 0.99 || texture2D(uMask, vLocal / uSize).r > 0.5) discard;')
           // nachts so dunkel wie die nahen Chunks (dort im Licht-Shader)
           .replace('#include <opaque_fragment>', (st.fancy ? 'outgoingLight *= mix(0.55, 1.0, uDay);\n' : '') + '#include <opaque_fragment>');
     };
     return m;
   }
 
-  function newMask() {
-    const t = new THREE.DataTexture(new Uint8Array(32 * 32), 32, 32, THREE.RedFormat, THREE.UnsignedByteType);
+  function newMask(n = 32) {
+    const t = new THREE.DataTexture(new Uint8Array(n * n), n, n, THREE.RedFormat, THREE.UnsignedByteType);
     t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.flipY = false;
     t.needsUpdate = true;
     return t;
@@ -324,7 +325,7 @@ export function create(container, ctx) {
     r.mask.needsUpdate = true;
   }
 
-  function lodGeometry(h) {
+  function lodGeometry(h, step = 4) {
     const N = 129;
     let fill = 62;
     for (let i = 0; i < h.length; i++) if (h[i] !== -32768) { fill = h[i]; break; }
@@ -333,7 +334,7 @@ export function create(container, ctx) {
       for (let i = 0; i < N; i++) {
         const k = j * N + i;
         const v = h[k];
-        pos[k * 3] = i * 4; pos[k * 3 + 1] = (v === -32768 ? fill : v) + 1; pos[k * 3 + 2] = j * 4;
+        pos[k * 3] = i * step; pos[k * 3 + 1] = (v === -32768 ? fill : v) + 1; pos[k * 3 + 2] = j * step;
         valid[k] = v === -32768 ? 0 : 255;
         uv[k * 2] = i / 128; uv[k * 2 + 1] = 1 - j / 128;
       }
@@ -365,6 +366,8 @@ export function create(container, ctx) {
     if (r.mesh) disposeRegionMesh(r.mesh);
     if (r.mask) r.mask.dispose();
     st.regions.delete(key);
+    const [x, z] = key.split(',').map(Number);
+    setFarMask(1, x, z, false);
   }
 
   async function loadRegion(rx, rz, force) {
@@ -403,12 +406,122 @@ export function create(container, ctx) {
       r.mesh = mesh; r.etag = etag; r.empty = false;
       mesh.visible = st.lod > 0;
       scene.add(mesh);
+      setFarMask(1, rx, rz, true);
     } catch (e) {
       r.empty = true;
       console.warn('LOD', key, e);
     } finally {
       r.loading = false;
       st.lodQueue--;
+    }
+  }
+
+  // ------------------------------------------------------------ Weite Fernsicht (Stufen 1, 2)
+
+  /* Wie BlueMap: je weiter weg, desto groebere Kacheln. Stufe 1 = 2048 Bloecke (ein Punkt
+   * alle 16), Stufe 2 = 8192 Bloecke (alle 64). Jede Kachel blendet per 4x4-Maske die
+   * Teile aus, die schon eine feinere Stufe zeigt. Gezeichnet werden sie in einem eigenen
+   * Durchgang (Ebene 1) vor allem anderen, mit eigenem Tiefenbereich, sonst reicht die
+   * Genauigkeit des Tiefenpuffers ueber 60k Bloecke nicht. */
+  const FAR = 1;   // three.js-Ebene fuer Himmel und weite Fernsicht
+  const FAR_SIZE = [512, 2048, 8192];
+  const farTiles = new Map();   // "level,x,z" -> { mesh, mask, etag, empty, loading }
+  const farQueue = [0, 0, 0];   // laufende Anfragen je Stufe
+
+  // Reichweite je Stufe in Kacheln: Stufe 0 bis 2560, Stufe 1 bis 10240 Bloecke, Stufe 2 den Rest
+  function lodRanges() {
+    const d = st.lod;
+    const r0 = d > 0 ? Math.min(Math.ceil(d / 512), 5) : 0;
+    const r1 = d > r0 * 512 ? Math.min(Math.ceil(d / 2048), 5) : 0;
+    const r2 = d > r1 * 2048 && r1 ? Math.min(Math.ceil(d / 8192), 8) : 0;
+    return [r0, r1, r2];
+  }
+
+  // Kachel der Stufe `level` (1 oder 2) an Unterkachel (x, z) der Stufe darunter
+  function setFarMask(level, x, z, on) {
+    if (level > 2) return;
+    const t = farTiles.get(`${level},${x >> 2},${z >> 2}`);
+    if (t && t.mask) {
+      t.mask.image.data[(z & 3) * 4 + (x & 3)] = on ? 255 : 0;
+      t.mask.needsUpdate = true;
+    }
+  }
+
+  function dropFar(key) {
+    const t = farTiles.get(key);
+    if (!t) return;
+    if (t.mesh) disposeRegionMesh(t.mesh);
+    if (t.mask) t.mask.dispose();
+    farTiles.delete(key);
+    const [level, x, z] = key.split(',').map(Number);
+    setFarMask(level + 1, x, z, false);
+  }
+
+  async function loadFar(level, x, z) {
+    const key = `${level},${x},${z}`;
+    if (farTiles.has(key)) return;
+    const t = { loading: true };
+    farTiles.set(key, t);
+    farQueue[level]++;
+    try {
+      const base = `${encodeURIComponent(st.srv)}/${encodeURIComponent(st.dim)}`;
+      const res = await fetch(`/api/lod/${base}/${x}/${z}?level=${level}`);
+      if (farTiles.get(key) !== t) return;
+      if (res.status === 204 || !res.ok) { t.empty = true; return; }
+      const etag = res.headers.get('ETag');
+      const h = new Int16Array(await res.arrayBuffer());
+      const layer = st.dim === 'the_nether' ? 'cave127' : 'surface320';
+      const tex = await new THREE.TextureLoader().loadAsync(`/api/tile/${base}/${layer}/${-2 * level}/${x}/${z}.png?v=${encodeURIComponent(etag || Date.now())}`);
+      if (farTiles.get(key) !== t) { tex.dispose(); return; }
+      tex.colorSpace = THREE.NoColorSpace;
+      t.mask = newMask(4);
+      // schon geladene feinere Kacheln ausblenden
+      for (let j = 0; j < 4; j++) {
+        for (let i = 0; i < 4; i++) {
+          const fx = x * 4 + i, fz = z * 4 + j;
+          const finer = level === 1 ? st.regions.get(`${fx},${fz}`) : farTiles.get(`1,${fx},${fz}`);
+          if (finer && finer.mesh) t.mask.image.data[j * 4 + i] = 255;
+        }
+      }
+      t.mask.needsUpdate = true;
+      const mesh = new THREE.Mesh(lodGeometry(h, FAR_SIZE[level] / 128), lodMaterial(tex, t.mask, FAR_SIZE[level]));
+      mesh.position.set(x * FAR_SIZE[level], 0, z * FAR_SIZE[level]);
+      mesh.layers.set(FAR);
+      mesh.visible = st.lod > 0;
+      t.mesh = mesh; t.etag = etag;
+      scene.add(mesh);
+      if (level === 1) setFarMask(2, x, z, true);
+    } catch (e) {
+      t.empty = true;
+      console.warn('LOD', key, e);
+    } finally {
+      t.loading = false;
+      farQueue[level]--;
+    }
+  }
+
+  function streamFar(w) {
+    const ranges = lodRanges();
+    for (const level of [1, 2]) {
+      const R = ranges[level], size = FAR_SIZE[level];
+      const cx = Math.floor(w.x / size), cz = Math.floor(w.z / size);
+      for (const key of Array.from(farTiles.keys())) {
+        const [l, x, z] = key.split(',').map(Number);
+        if (l === level && (!R || Math.abs(x - cx) > R + 1 || Math.abs(z - cz) > R + 1)) dropFar(key);
+      }
+      if (!R) continue;
+      const want = [];
+      for (let dz = -R; dz <= R; dz++) {
+        for (let dx = -R; dx <= R; dx++) {
+          if (dx * dx + dz * dz > R * R + 1) continue;
+          if (!farTiles.has(`${level},${cx + dx},${cz + dz}`)) want.push([dx * dx + dz * dz, cx + dx, cz + dz]);
+        }
+      }
+      want.sort((a, b) => a[0] - b[0]);
+      for (const [, x, z] of want) {
+        if (farQueue[level] >= 2) break;
+        loadFar(level, x, z);
+      }
     }
   }
 
@@ -442,7 +555,8 @@ export function create(container, ctx) {
       loadChunk(x, z, force);
     }
 
-    const LR = st.lod;
+    streamFar(w);
+    const LR = lodRanges()[0];
     const crx = Math.floor(w.x / 512), crz = Math.floor(w.z / 512);
     for (const [key] of st.regions) {
       const [x, z] = key.split(',').map(Number);
@@ -1020,13 +1134,49 @@ export function create(container, ctx) {
    * nur in float32, Schatten flackern dann. Darum fuer das Zeichnen die ganze Szene
    * samt Kamera in 4096er-Schritten Richtung 0,0 schieben (Idee aus BlueMap). */
   const ORIGIN_STEP = 4096;
+
+  // Mit weiter Fernsicht zwei Durchgaenge: erst Himmel und grobe Kacheln (Ebene 1) mit
+  // eigenem Nah-/Fernbereich, dann Tiefe loeschen und alles Nahe genau zeichnen.
+  function renderPasses() {
+    const far = lodRanges()[1] > 0 && st.lod > 0;
+    if (!far) {
+      camera.layers.enable(FAR);
+      renderer.render(scene, camera);
+      return;
+    }
+    const near = camera.near, f = camera.far;
+    renderer.autoClear = false;
+    renderer.clear();
+    camera.layers.set(FAR);
+    camera.near = 16; camera.far = st.lod * 1.3 + 2000;
+    camera.updateProjectionMatrix();
+    renderer.shadowMap.autoUpdate = false;
+    renderer.render(scene, camera);
+    renderer.clearDepth();
+    camera.layers.set(0);
+    // zweiter Durchgang muss Stufe 0 auch von weit oben noch erreichen
+    camera.near = near;
+    camera.far = Math.max(f, Math.hypot(lodRanges()[0] * 512 + 512, camera.position.y - 64) * 1.2 + 200);
+    camera.updateProjectionMatrix();
+    renderer.shadowMap.autoUpdate = true;
+    // eine Hintergrundfarbe wuerde den ersten Durchgang wieder uebermalen
+    const bg = scene.background;
+    scene.background = null;
+    renderer.render(scene, camera);
+    scene.background = bg;
+    renderer.autoClear = true;
+    camera.far = f;
+    camera.updateProjectionMatrix();
+  }
   function render() {
     const ox = Math.round(camera.position.x / ORIGIN_STEP) * ORIGIN_STEP;
     const oz = Math.round(camera.position.z / ORIGIN_STEP) * ORIGIN_STEP;
-    if (!ox && !oz) { renderer.render(scene, camera); return; }
-    scene.position.set(-ox, 0, -oz);
-    camera.position.x -= ox; camera.position.z -= oz;
-    renderer.render(scene, camera);
+    if (ox || oz) {
+      scene.position.set(-ox, 0, -oz);
+      camera.position.x -= ox; camera.position.z -= oz;
+    }
+    renderPasses();
+    if (!ox && !oz) return;
     camera.position.x += ox; camera.position.z += oz;
     // Zurueck, damit Klicks (Raycaster) wieder in Weltkoordinaten rechnen
     scene.position.set(0, 0, 0);
@@ -1052,6 +1202,7 @@ export function create(container, ctx) {
   sun.shadow.normalBias = 0.04;
   const hemi = new THREE.HemisphereLight(0xbfd8ff, 0x5a4a38, 1.0);
   scene.add(sun, sun.target, hemi);
+  sun.layers.enable(FAR); hemi.layers.enable(FAR);
   sun.visible = hemi.visible = false;
 
   // Himmel als Kuppel um die Kamera: Verlauf Horizont -> Zenit, Sonnenscheibe, Abendrot
@@ -1075,6 +1226,7 @@ export function create(container, ctx) {
       }`,
   }));
   skyDome.frustumCulled = false;
+  skyDome.layers.set(FAR);
   skyDome.renderOrder = -1;
   skyDome.visible = false;
   scene.add(skyDome);
@@ -1128,6 +1280,7 @@ export function create(container, ctx) {
     }
     // Fernsicht mit passendem Material neu aufbauen
     for (const k of Array.from(st.regions.keys())) dropRegion(k);
+    for (const k of Array.from(farTiles.keys())) dropFar(k);
     for (const m of clipped) m.needsUpdate = true;
     setSky();
   }
@@ -1154,7 +1307,9 @@ export function create(container, ctx) {
   function setSky() {
     const c = SKY[st.dim] ?? SKY.overworld;
     const near = st.radius * 16;
-    const far = st.lod > 0 ? Math.max(near, st.lod * 512) : near;
+    const far = st.lod > 0 ? Math.max(near, st.lod) : near;
+    // ohne weite Stufen reicht ein Durchgang bis zur Sichtweite, sonst nur bis Stufe 0
+    const nearFar = lodRanges()[1] > 0 ? Math.max(near, lodRanges()[0] * 512 + 512) : far;
     const fancySky = st.fancy && st.dim !== 'the_nether' && st.dim !== 'the_end';
     scene.background = fancySky ? null : new THREE.Color(c);
     skyDome.visible = fancySky;
@@ -1162,9 +1317,10 @@ export function create(container, ctx) {
     // "Schoen": leichter Dunst in der Ferne statt harter Kante
     scene.fog = st.fog ? new THREE.Fog(fogCol, near * 0.55, near * 0.98)
       : fancySky ? new THREE.Fog(fogCol, far * 0.35, far * 1.05) : new THREE.Fog(fogCol, far * 0.8, far * 1.05);
-    camera.far = far * 1.2 + 200;
+    camera.far = nearFar * 1.2 + 200;
     camera.updateProjectionMatrix();
     for (const r of st.regions.values()) if (r.mesh) r.mesh.visible = st.lod > 0;
+    for (const t of farTiles.values()) if (t.mesh) t.mesh.visible = st.lod > 0;
     updateLighting();
   }
 
@@ -1175,6 +1331,7 @@ export function create(container, ctx) {
       if (srv !== st.srv || dim !== st.dim) {
         for (const k of Array.from(st.chunks.keys())) dropChunk(k);
         for (const k of Array.from(st.regions.keys())) dropRegion(k);
+        for (const k of Array.from(farTiles.keys())) dropFar(k);
         st.srv = srv; st.dim = dim;
         setSchematics([]);
       }
@@ -1202,7 +1359,7 @@ export function create(container, ctx) {
     setFancy,
     setHour(h) { st.hour = h; updateLighting(); },
     setClip,
-    setLod(r) { st.lod = r; setSky(); },
+    setLod(blocks) { st.lod = blocks; setSky(); },
     setFog(f) { st.fog = f; setSky(); },
     setFull(f) { if (st.full !== f) { st.full = f; for (const c of st.chunks.values()) if (c.group || c.empty) { c.stale = true; c.empty = false; } } },
     updatePlayer,
