@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 
 /**
@@ -38,7 +39,8 @@ final class ClientInfo {
             } catch (Throwable ignored) {
                 // without a jar path the viewer asks for it on first start
             }
-            o.addProperty("minecraft", "1.21.11");
+            o.addProperty("minecraft", FabricLoader.getInstance().getModContainer("minecraft")
+                    .map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse(""));
             o.addProperty("updated", System.currentTimeMillis());
             Path dir = Path.of(System.getProperty("user.home"), ".webmatica");
             Files.createDirectories(dir);
