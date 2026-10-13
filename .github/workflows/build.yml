@@ -23,7 +23,13 @@ jobs:
             25
           distribution: 'temurin'
       - run: chmod +x ./gradlew
-      - run: ./gradlew buildAll
+      - name: Build all Minecraft versions
+        run: |
+          set -o pipefail
+          ./gradlew buildAll --continue 2>&1 | tee build.log || {
+            echo "::group::Compile errors (summary)"; echo
+            grep -E "error:|symbol:|What went wrong" build.log | sed -E 's#^.*/versions/([^/]+)/.*/webmatica/#[\1] #' | head -200
+            echo "::endgroup::"; exit 1; }
       - uses: actions/upload-artifact@v7
         with:
           name: webmatica-mod
