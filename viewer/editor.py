@@ -23,7 +23,7 @@ import numpy as np
 from .core import nbt
 from .core import schematic as sch
 from .core.chunk import AIR_NAMES, BLOCKS, base_name, state_props
-from .core.mesher import mesh_volume
+from .core.mesher import MAGIC, mesh_volume
 from .core.models import MODELS
 from .core.schem import export as schem_export
 from .core.schem import write as schem_write
@@ -300,7 +300,7 @@ class Editor:
                 return s["mesh"], s["mesh_etag"]
             blocks = s["blocks"].copy()
         data = gzip.compress(mesh_volume(blocks), 5)
-        etag = f'"{MODELS.version}-ed-{abs(hash(key))}"'
+        etag = f'"{MODELS.version}-{MAGIC.decode()}-ed-{abs(hash(key))}"'
         with self.lock:
             s["mesh_key"], s["mesh"], s["mesh_etag"] = key, data, etag
         return data, etag

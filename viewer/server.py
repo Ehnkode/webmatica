@@ -65,7 +65,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
 from .core.chunk import BIOMES
-from .core.mesher import mesh_chunk
+from .core.mesher import MAGIC, mesh_chunk
 from .core.models import MODELS
 from .core.schem import export as schem_export
 from .core.tiles import Layer, PastTiles, TileStore, render_chunk
@@ -712,7 +712,7 @@ def make_handler(app: App):
                 return self.send(204, b"", "application/octet-stream")
             data, stamp = res
             # Atlas-Version gehoert dazu: neue Assets = neue UVs, alte Netze im Browser-Cache passen nicht mehr
-            etag = f'"{MODELS.version}-{stamp}"'
+            etag = f'"{MODELS.version}-{MAGIC.decode()}-{stamp}"'
             if self.headers.get("If-None-Match") == etag:
                 return self.send(304, b"", "application/octet-stream", "no-cache", {"ETag": etag})
             self.send(200, data, "application/octet-stream", "no-cache",
@@ -937,7 +937,7 @@ def _mesh_compute(rec, dim, cx, cz, full, ylo=None, yhi=None):
         _, h, has = render_chunk(ch, Layer())
         if has.any():
             y_min = int(h[has].min()) - 12
-    return gzip.compress(mesh_chunk(ch, nb, y_min), 3)
+    return gzip.compress(mesh_chunk(ch, nb, y_min, caves=full and dim.key == "overworld"), 3)
 
 
 _WORKER: dict = {}
