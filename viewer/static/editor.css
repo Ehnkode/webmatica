@@ -1,4 +1,4 @@
-/* Schematic-Editor */
+/* Schematic editor */
 body.ed { overflow: hidden; }
 #ed-view { position: fixed; inset: 0; }
 #ed-view canvas { display: block; outline: none; }
