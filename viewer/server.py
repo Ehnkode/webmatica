@@ -54,8 +54,10 @@ import base64
 import gzip
 import json
 import mimetypes
+import multiprocessing
 import os
 import re
+import shutil
 import threading
 import time
 
@@ -97,6 +99,7 @@ class App:
         self.skin_full: bytes | None = None
         self.wp_lock = threading.Lock()
         self.meshes = ChunkCache(max_items=8192)
+        self.streams = 0        # open /api/player/stream connections = visible viewer tabs
         self.mesh_pool = None   # ProcessPoolExecutor, see main(); without a pool it is computed in the thread
         self.skin_version = 0
         self.skin_fetch_name = None
@@ -423,7 +426,7 @@ def make_handler(app: App):
                 self.end_headers()
                 if self.command != "HEAD":
                     self.wfile.write(body)
-            except (BrokenPipeError, ConnectionResetError):
+            except ConnectionError:   # also Windows "ConnectionAbortedError" when the browser cancels
                 pass
 
         def json(self, obj, code: int = 200):
@@ -454,6 +457,8 @@ def make_handler(app: App):
                     return self.static("index.html" if p == "/" else p[len("/static/"):])
                 if p == "/editor":
                     return self.static("editor.html")
+                if p == "/api/version":
+                    return self.json({"version": VERSION, "tabs": app.streams})
                 if p == "/api/worlds":
                     return self.json({"worlds": app.worlds(), "now": time.time()})
                 if p.startswith("/api/tile/"):
@@ -661,6 +666,8 @@ def make_handler(app: App):
             self.end_headers()
             self.close_connection = True
             seq = -1
+            with app.player_cond:
+                app.streams += 1
             try:
                 while True:
                     with app.player_cond:
@@ -670,6 +677,9 @@ def make_handler(app: App):
                     self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
                 return
+            finally:
+                with app.player_cond:
+                    app.streams -= 1
 
         def skin_by_name(self):
             """No skin from the mod: fetch once by player name (mc-heads.net)."""
@@ -845,6 +855,11 @@ def make_handler(app: App):
                     return self.fail(404, f"unbekannt: {e}")
                 except ValueError as e:
                     return self.fail(400, str(e))
+            if u.path == "/api/quit":
+                # The mod asks an outdated viewer to make room for the new one.
+                self.json({"ok": True})
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                return
             if u.path == "/api/position":
                 return self.position(req)
             if u.path == "/api/containers":
@@ -1032,6 +1047,64 @@ def prerender_loop(app: App, recording: str, workers: int, interval: float = 10.
             time.sleep(interval)
 
 
+def _bundle_version() -> str:
+    """Stamp the mod wrote when it unpacked this copy; empty when started by hand."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".webmatica-version"),
+                  encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+VERSION = _bundle_version()
+
+
+def _reset_cache_on_update(cache: str) -> None:
+    """Tiles rendered by another viewer build may be wrong (e.g. chunks it could not read): start over."""
+    os.makedirs(cache, exist_ok=True)
+    stamp = os.path.join(cache, ".viewer-version")
+    if not VERSION:
+        return   # started by hand, not unpacked by the mod
+    try:
+        with open(stamp, encoding="utf-8") as f:
+            if f.read().strip() == VERSION:
+                return
+    except OSError:
+        pass
+    # Only the default cache folder or one we stamped earlier is ours to empty.
+    if os.path.basename(os.path.normpath(cache)) == ".viewer-cache" or os.path.isfile(stamp):
+        shutil.rmtree(cache, ignore_errors=True)
+    os.makedirs(cache, exist_ok=True)
+    with open(stamp, "w", encoding="utf-8") as f:
+        f.write(VERSION)
+
+
+def _exit_with_parent(srv, pid: int) -> None:
+    """Quit once the game process is gone, even after a crash.
+
+    Watches the process itself instead of a pipe: on Windows a thread blocked reading
+    stdin stalls the start of the worker processes, and with them every 3D request.
+    """
+    if os.name == "nt":
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x00100000, False, pid)   # SYNCHRONIZE
+        if h:
+            k32.WaitForSingleObject(h, 0xFFFFFFFF)
+            k32.CloseHandle(h)
+    else:
+        while True:
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                break
+            except PermissionError:
+                pass
+            time.sleep(2)
+    srv.shutdown()
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m viewer", description="Webmatica Viewer")
     ap.add_argument("--recording", "-r", default=os.environ.get("MAPPER_RECORDING", ""),
@@ -1039,6 +1112,8 @@ def main(argv=None):
     ap.add_argument("--cache", default="", help="tile cache (default: <recording>/.viewer-cache)")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8770)
+    ap.add_argument("--parent-pid", type=int, default=0,
+                    help="quit when this process ends (the mod passes the game's)")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1),
                     help="processes for pre-rendering the map (0 = off)")
     args = ap.parse_args(argv)
@@ -1046,7 +1121,7 @@ def main(argv=None):
         ap.error("Recording not found. Start Minecraft with the mod once (then the viewer finds it by itself) "
                  "or pass --recording <.minecraft/webmatica_recording>")
     cache = args.cache or os.path.join(args.recording, ".viewer-cache")
-    os.makedirs(cache, exist_ok=True)
+    _reset_cache_on_update(cache)
 
     app = App(args.recording, cache)
     if args.workers > 0:
@@ -1057,6 +1132,8 @@ def main(argv=None):
                          daemon=True, name="prerender").start()
     srv = ThreadingHTTPServer((args.host, args.port), make_handler(app))
     srv.daemon_threads = True
+    if args.parent_pid > 0:
+        threading.Thread(target=_exit_with_parent, args=(srv, args.parent_pid), daemon=True, name="parent-watch").start()
     dims = app.rec.dimensions()
     print(f"Webmatica: http://{args.host}:{args.port}")
     print(f"Recording: {app.rec.root}  ({len(dims)} dimension(s))")
@@ -1064,6 +1141,14 @@ def main(argv=None):
         srv.serve_forever()
     except KeyboardInterrupt:
         print("\nstopped")
+        return
+    # Ended through /api/quit or with the game: stop the worker processes and leave right away.
+    print("stopped for an update")
+    if app.mesh_pool is not None:
+        app.mesh_pool.shutdown(wait=False, cancel_futures=True)
+    for child in multiprocessing.active_children():
+        child.terminate()
+    os._exit(0)
 
 
 if __name__ == "__main__":

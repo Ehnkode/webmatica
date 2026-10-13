@@ -4,16 +4,15 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 
 /**
  * Baritone from the web page: fetches commands from the viewer (goal by clicking
@@ -42,8 +41,8 @@ public final class BaritoneBridge {
         thread.start();
     }
 
-    public void tick(MinecraftClient mc) {
-        serverId = mc.world != null && mc.player != null ? RecordingTarget.serverId(mc) : null;
+    public void tick(Minecraft mc) {
+        serverId = mc.level != null && mc.player != null ? RecordingTarget.serverId(mc) : null;
     }
 
     private static String base() {
@@ -59,7 +58,7 @@ public final class BaritoneBridge {
                 if (srv != null) {
                     for (JsonElement e : fetch(srv)) {
                         JsonObject cmd = e.getAsJsonObject();
-                        MinecraftClient.getInstance().execute(() -> run(cmd));
+                        Minecraft.getInstance().execute(() -> run(cmd));
                     }
                 }
                 Thread.sleep(500L);
@@ -85,7 +84,7 @@ public final class BaritoneBridge {
 
     /** Client thread. */
     private void run(JsonObject cmd) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         String id = cmd.has("id") ? cmd.get("id").getAsString() : "";
         String kind = cmd.has("kind") ? cmd.get("kind").getAsString() : "";
         java.util.List<String> lines = new java.util.ArrayList<>();
@@ -117,8 +116,8 @@ public final class BaritoneBridge {
             // highlight chests in game: no Baritone, just particles
             int n = Highlighter.getInstance().set(cmd.getAsJsonArray("pts"), cmd.has("label") ? cmd.get("label").getAsString() : "");
             if (mc.player != null) {
-                mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(n + " Kiste" + (n == 1 ? "" : "n") + " markiert"))
-                        .formatted(Formatting.GOLD), true);
+                Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(n + " Kiste" + (n == 1 ? "" : "n") + " markiert"))
+                        .withStyle(ChatFormatting.GOLD));
             }
             report(id, true, n + " markiert");
             return;
@@ -170,8 +169,8 @@ public final class BaritoneBridge {
             err = c.getClass().getSimpleName() + ": " + c.getMessage();
         }
         if (mc.player != null) {
-            mc.player.sendMessage(Text.literal("[Webmatica] Baritone #" + line + (err == null ? "" : " – " + Lang.tr(err)))
-                    .formatted(err == null ? Formatting.AQUA : Formatting.RED), true);
+            Mc.actionbar(mc, Component.literal("[Webmatica] Baritone #" + line + (err == null ? "" : " – " + Lang.tr(err)))
+                    .withStyle(err == null ? ChatFormatting.AQUA : ChatFormatting.RED));
         }
         report(id, err == null, err == null ? "#" + line : err);
     }

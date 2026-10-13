@@ -7,7 +7,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
 ![Ein Haus im Schematic-Editor bauen](docs/build.gif)
 
-- **Mod** (Fabric 1.21.11, nur Client): speichert jeden Chunk, den du siehst, als normale
+- **Mod** (Fabric, Minecraft 1.21.11 bis 26.3, nur Client): speichert jeden Chunk, den du siehst, als normale
   Regiondateien und merkt sich Kisteninhalte. Schickt nichts an den Server oder in den Chat.
 - **Viewer** (Python, läuft lokal unter <http://127.0.0.1:8770>): alles Folgende im Browser.
   Auf Deutsch und Englisch (Umschalter unter Optionen).
@@ -39,13 +39,13 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
 ## Voraussetzungen
 
-- Minecraft 1.21.11 mit Fabric Loader und Fabric API
+- Minecraft 1.21.11, 26.1, 26.2 oder 26.3 mit Fabric Loader und Fabric API
 - Python 3.10+ (Windows: „Add python.exe to PATH“ anhaken)
 - Optional: [Baritone](https://github.com/cabaletta/baritone), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib), Litematica Printer
 
 ## Installation
 
-1. `webmatica-<version>.jar` von Modrinth oder den
+1. Die Jar für deine Minecraft-Version (`webmatica-<version>+mc<minecraft>.jar`) von Modrinth oder den
    [Releases](https://github.com/Ehnkode/webmatica/releases) in den `mods`-Ordner legen.
 2. Minecraft starten und **F10** drücken. Der Viewer startet und öffnet sich im Browser. Der erste
    Start dauert etwa eine Minute (er installiert numpy und Pillow und erzeugt die Blockbilder).
@@ -59,7 +59,7 @@ du das Spiel schließt. Ohne Spiel startest du ihn mit `start-viewer.bat` in die
 ## Mod bauen
 
 ```bash
-./gradlew build    # Jar in build/libs/
+./gradlew buildAll    # eine Jar pro Minecraft-Version in build/libs/
 ```
 
 ## Hinweise
