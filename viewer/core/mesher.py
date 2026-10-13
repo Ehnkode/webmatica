@@ -39,8 +39,12 @@ CAVE_Y = 55
 AO_LEVEL = np.array([0.5, 0.65, 0.82, 1.0], np.float32)
 
 
+# Stehen immer im Wasser (ohne "waterlogged"-Eigenschaft)
+_ALWAYS_WET = {"kelp", "kelp_plant", "seagrass", "tall_seagrass", "bubble_column"}
+
+
 class _Lut:
-    """Pro Block-ID: deckt voll ab? / Fluessigkeit? (waechst mit der Registry)."""
+    """Pro Block-ID: deckt voll ab? / enthaelt Wasser? / Lava? (waechst mit der Registry)."""
 
     def __init__(self):
         self.full = np.zeros(0, bool)
@@ -51,12 +55,16 @@ class _Lut:
         k = self.full.shape[0]
         if k >= n:
             return
+        from .chunk import BLOCKS, base_name, state_props
         full, water, lava = np.zeros(n, bool), np.zeros(n, bool), np.zeros(n, bool)
         full[:k], water[:k], lava[:k] = self.full, self.water, self.lava
         for i in range(k, n):
             m = MODELS.get(i)
             full[i] = m.full_opaque
-            water[i] = m.fluid == "water"
+            state = BLOCKS.names[i]
+            # Wasser auch in Kelp, Seegras und Bloecken mit waterlogged=true
+            water[i] = m.fluid == "water" or base_name(state).split(":")[-1] in _ALWAYS_WET \
+                or state_props(state).get("waterlogged") == "true"
             lava[i] = m.fluid == "lava"
         self.full, self.water, self.lava = full, water, lava
 
@@ -191,6 +199,8 @@ def mesh_parts(ch: Chunk, neighbors: dict, y_min: int | None = None, y_max: int 
         if m.fluid:
             _fluid(m.fluid, sid, ch, P, ys, zs, xs, y0, passes, L)
             continue
+        if LUT.water[sid]:
+            _fluid("water", sid, ch, P, ys, zs, xs, y0, passes, L)
         if not len(m.verts):
             continue
         for q in range(len(m.verts)):
