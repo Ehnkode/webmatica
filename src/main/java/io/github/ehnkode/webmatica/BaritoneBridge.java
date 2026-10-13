@@ -116,8 +116,8 @@ public final class BaritoneBridge {
             // highlight chests in game: no Baritone, just particles
             int n = Highlighter.getInstance().set(cmd.getAsJsonArray("pts"), cmd.has("label") ? cmd.get("label").getAsString() : "");
             if (mc.player != null) {
-                mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr(n + " Kiste" + (n == 1 ? "" : "n") + " markiert"))
-                        .withStyle(ChatFormatting.GOLD), true);
+                Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(n + " Kiste" + (n == 1 ? "" : "n") + " markiert"))
+                        .withStyle(ChatFormatting.GOLD));
             }
             report(id, true, n + " markiert");
             return;
@@ -169,8 +169,8 @@ public final class BaritoneBridge {
             err = c.getClass().getSimpleName() + ": " + c.getMessage();
         }
         if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("[Webmatica] Baritone #" + line + (err == null ? "" : " – " + Lang.tr(err)))
-                    .withStyle(err == null ? ChatFormatting.AQUA : ChatFormatting.RED), true);
+            Mc.actionbar(mc, Component.literal("[Webmatica] Baritone #" + line + (err == null ? "" : " – " + Lang.tr(err)))
+                    .withStyle(err == null ? ChatFormatting.AQUA : ChatFormatting.RED));
         }
         report(id, err == null, err == null ? "#" + line : err);
     }

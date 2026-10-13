@@ -225,7 +225,7 @@ final class ViewerLauncher {
             if (link != null) {
                 t = t.copy().withStyle(s -> s.withClickEvent(new ClickEvent.OpenUrl(URI.create(link))).withUnderlined(true));
             }
-            mc.player.displayClientMessage(t, false);
+            Mc.chat(mc, t);
         });
     }
 }

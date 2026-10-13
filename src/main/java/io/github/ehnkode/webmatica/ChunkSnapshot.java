@@ -100,9 +100,9 @@ public final class ChunkSnapshot {
     public CompoundTag toNbt() {
         CompoundTag root = new CompoundTag();
         root.putInt("DataVersion", SharedConstants.getCurrentVersion().dataVersion().version());
-        root.putInt("xPos", pos.x);
+        root.putInt("xPos", Mc.x(pos));
         root.putInt("yPos", bottomSectionY);
-        root.putInt("zPos", pos.z);
+        root.putInt("zPos", Mc.z(pos));
         root.putString("Status", "minecraft:full");
         root.putLong("LastUpdate", 0L);
         root.putLong("InhabitedTime", 0L);
