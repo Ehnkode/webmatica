@@ -116,7 +116,8 @@ def _tag_of(v) -> int:
     if isinstance(v, bool):
         return TAG_BYTE
     if isinstance(v, int):
-        return TAG_INT
+        # ungetypte Zahlen (z. B. LootTableSeed aus Kisten) passen nicht immer in 32 Bit
+        return TAG_INT if -2**31 <= v < 2**31 else TAG_LONG
     if isinstance(v, float):
         return TAG_DOUBLE
     if isinstance(v, str):
