@@ -45,6 +45,7 @@ Endpoints (all JSON, except images):
         GET  /api/editor/blocks|voxels|mesh|info editor data   POST /api/editor/open|new|cut|edit|undo|redo|save|discard
         GET  /api/mesh/<srv>/<dim>/<cx>/<cz>     3D chunk [?full=1 caves, ylo/yhi layer cut, xray=a,b only those blocks, at=YYYY-MM-DD state on that day]
         GET  /api/xray/names                     block names for the X-ray search
+        GET  /api/xray/find?srv=&dim=&x=&z=&r=&b=a,b   searched blocks around x/z (r chunks) for the 2D map
         GET  /api/history/dates?srv=&dim=        timeline: days with a backed-up state
         GET  /api/history/diff?srv=&dim=&date=   changes since that day
 """
@@ -297,6 +298,37 @@ class App:
         self.meshes.put(key, data)
         return data, stamp
 
+    def xray_find(self, dim, cx: int, cz: int, r: int, names: tuple) -> dict:
+        """Searched blocks in the chunks around (cx, cz) for the 2D map, per chunk cached."""
+        todo, out = [], {}
+        for z in range(cz - r, cz + r + 1):
+            for x in range(cx - r, cx + r + 1):
+                key = ("xray", dim.id, x, z, self.chunk_stamp(dim, x, z), names)
+                hit = self.meshes.get(key)
+                if hit is None:
+                    todo.append(((x, z), key))
+                else:
+                    out[(x, z)] = hit
+        if todo:
+            if self.mesh_pool is not None:
+                # in batches, so all worker processes take part
+                n = max(1, len(todo) // (4 * (self.mesh_pool._max_workers or 1)) + 1)
+                batches = [todo[i:i + n] for i in range(0, len(todo), n)]
+                futs = [self.mesh_pool.submit(_xray_job, dim.server, dim.key, [c for c, _ in b], names) for b in batches]
+                res = [r for f in futs for r in f.result()]
+            else:
+                res = [_xray_compute(self.rec, dim, x, z, names) for (x, z), _ in todo]
+            for ((x, z), key), hit in zip(todo, res):
+                hit = hit or ([0] * len(names), [])
+                self.meshes.put(key, hit)
+                out[(x, z)] = hit
+        counts = [0] * len(names)
+        pts: list = []
+        for c, p in out.values():
+            counts = [a + b for a, b in zip(counts, c)]
+            pts.extend(p)
+        return {"names": list(names), "counts": counts, "pts": pts[:4 * 20000], "chunks": len(out)}
+
     # -------------------------------------------------------------- Data
 
     def worlds(self) -> list:
@@ -332,8 +364,7 @@ class App:
         out = []
         for s, dims in sorted(servers.items(), key=lambda kv: (kv[0] == LEGACY_SERVER, kv[0])):
             dims.sort(key=lambda d: order.get(d["key"], 9))
-            label = "Alte Aufnahme (gemischt)" if s == LEGACY_SERVER else s
-            out.append({"id": s, "label": label, "dims": dims})
+            out.append({"id": s, "label": world_label(s), "dims": dims})
         return out
 
     @staticmethod
@@ -410,6 +441,18 @@ class App:
                 json.dump(clean, f, ensure_ascii=False, indent=1)
             os.replace(tmp, self._wp_path())
         return clean
+
+
+def world_label(server: str) -> str:
+    """Name in the world picker: the server address, or the singleplayer save."""
+    if server == LEGACY_SERVER:
+        return "Alte Aufnahme (gemischt)"
+    if server == "singleplayer":
+        # before 0.6.1 every singleplayer world landed in this one folder
+        return "Einzelspieler (alle alten Welten gemischt)"
+    if server.startswith("singleplayer-"):
+        return "Einzelspieler: " + server[len("singleplayer-"):].replace("_", " ")
+    return server
 
 
 def make_handler(app: App):
@@ -508,6 +551,19 @@ def make_handler(app: App):
                     with open(path, "rb") as f:
                         return self.send(200, f.read(), "image/png" if p.endswith(".png") else "application/json",
                                          "no-cache", {"ETag": f'"{int(os.path.getmtime(path))}"'})
+                if p == "/api/xray/find":
+                    dim = app.rec.dimension(q["srv"][0], q["dim"][0])
+                    if dim is None:
+                        return self.fail(404, "keine Aufnahme")
+                    try:
+                        names = xray.parse_names(q.get("b", [""])[0])
+                        r = max(0, min(24, int(q.get("r", ["12"])[0])))
+                        cx, cz = int(float(q["x"][0])) >> 4, int(float(q["z"][0])) >> 4
+                    except (KeyError, ValueError) as e:
+                        return self.fail(400, str(e))
+                    if not names:
+                        return self.json({"names": [], "counts": [], "pts": [], "chunks": 0})
+                    return self.json(app.xray_find(dim, cx, cz, r, names))
                 if p == "/api/xray/names":
                     # Every block the assets know (for the search suggestions), otherwise what the recording has seen so far
                     names = MODELS.blockstates if MODELS.available else {base_name(n) for n in BLOCKS.names}
@@ -1032,6 +1088,19 @@ _WORKER: dict = {}
 def _mesh_init(recording):
     _WORKER["rec"] = Recording(recording)
     _WORKER["hist"] = History(recording)
+
+
+def _xray_compute(rec, dim, cx, cz, names):
+    look = _LOOKUPS.get(names)
+    if look is None:
+        look = _LOOKUPS[names] = xray.Lookup(names)
+    return xray.finds(rec.chunk(dim, cx, cz), look, len(names))
+
+
+def _xray_job(server, dim_key, chunks, names):
+    rec = _WORKER["rec"]
+    dim = rec.dimension(server, dim_key)
+    return [None if dim is None else _xray_compute(rec, dim, cx, cz, names) for cx, cz in chunks]
 
 
 def _mesh_job(server, dim_key, cx, cz, full, ylo=None, yhi=None, names=(), at=None):

@@ -59,6 +59,26 @@ function onPlayer(p) {
   if (state.trail && state.player && state.player.active) extendTrail(state.player);
   radarUpdate(state.player);
   statusText();
+  followWorld(p);
+}
+
+/* When you join another world or server in game, the viewer switches to it once
+ * (map, history, chests, waypoints all belong to that world). Picking another world
+ * by hand afterwards is respected until the game changes world again. */
+let lastGameWorld = null, worldPoll = 0;
+function followWorld(p) {
+  if (!p || !p.active || !p.server || p.server === lastGameWorld) return;
+  const w = state.worlds.find((x) => x.id === p.server);
+  if (!w) {
+    // new world without a saved region yet: ask again in a moment
+    if (Date.now() - worldPoll > 4000) { worldPoll = Date.now(); pollWorlds(); }
+    return;
+  }
+  const first = lastGameWorld === null;
+  lastGameWorld = p.server;
+  if (p.server === state.server) return;
+  select(p.server, w.dims.some((d) => d.key === p.dim) ? p.dim : null, null);
+  if (!first || state.worlds.length > 1) toast('Welt gewechselt: ' + w.label);
 }
 
 function animatePlayer2d() {
@@ -279,6 +299,7 @@ async function set3d(on) {
     $('#cam-panel').hidden = true;
     $('#view3d').hidden = true;
     document.body.classList.remove('mode3d');
+    xray2dSoon(0);
     map.setView(toLatLng(p.x, p.z), Math.max(map.getZoom(), 0));
   }
   mode3d = on;

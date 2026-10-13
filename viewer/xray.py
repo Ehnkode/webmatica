@@ -71,3 +71,15 @@ def trailer(ch: Chunk, look: Lookup, m: int) -> bytes:
     counts = np.bincount(kk, minlength=m)[:m].astype("<u4")
     pts = np.stack([xs, ys + ch.min_y, zs, kk], -1)[:MAX_POINTS].astype("<i2")
     return TRAILER + struct.pack("<I", m) + counts.tobytes() + struct.pack("<I", len(pts)) + pts.tobytes()
+
+
+def finds(ch: Chunk | None, look: Lookup, m: int) -> tuple[list, list]:
+    """(counts per name, [x, y, z, k, ...] in world coordinates, at most MAX_POINTS) for the 2D map."""
+    if ch is None:
+        return [0] * m, []
+    k = look(ch.blocks)
+    ys, zs, xs = np.nonzero(k)
+    kk = k[ys, zs, xs] - 1
+    counts = np.bincount(kk, minlength=m)[:m].tolist()
+    pts = np.stack([xs + ch.cx * 16, ys + ch.min_y, zs + ch.cz * 16, kk], -1)[:MAX_POINTS]
+    return counts, pts.reshape(-1).tolist()

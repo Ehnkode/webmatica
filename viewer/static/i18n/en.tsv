@@ -1006,7 +1006,7 @@ Block suchen, z. B. Diamanterz …	Search a block, e.g. diamond ore …
 Block suchen	Search a block
 Hinzufügen	Add
 Zum nächsten Fund	Go to next find
-Zeigt, was die Mod aufgezeichnet hat, im Umkreis der Sichtweite. Leuchtende Kästen markieren jeden Fund.	Shows what the mod recorded, within view distance. Glowing boxes mark every find.
+
 Noch nichts gesucht. Wähle oben einen Block oder tippe einen Namen.	Nothing searched yet. Pick a block above or type a name.
 Entfernen	Remove
 Diamanterz	Diamond ore
@@ -1048,3 +1048,11 @@ Video wird aufgenommen …	Recording video …
 Gespeichert: {} ({} MB)	Saved: {} ({} MB)
 Export fehlgeschlagen: {}	Export failed: {}
 Dein Browser kann keine Videos aufnehmen, nimm GIF	Your browser cannot record videos, use GIF
+Welt bzw. Server	World or server
+Welt gewechselt: {}	Switched world: {}
+Einzelspieler: {}	Singleplayer: {}
+Einzelspieler (alle alten Welten gemischt)	Singleplayer (all old worlds mixed)
+Zeigt, was die Mod aufgezeichnet hat: in 3D im Umkreis der Sichtweite mit leuchtenden Kästen, auf der Karte als Punkte rund um die Mitte.	Shows what the mod recorded: in 3D within view distance with glowing boxes, on the map as dots around the centre.
+X-Ray zeigt auf der Karte die Funde im Umkreis von 384 Blöcken um die Mitte	On the map, X-ray shows finds within 384 blocks of the centre
+X-Ray: hier nichts gefunden	X-ray: nothing found here
+X-Ray: {}	X-ray: {}

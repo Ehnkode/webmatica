@@ -25,6 +25,10 @@ const xray = {
   groups: Array.isArray(prefs.xray) ? prefs.xray : [],    // [{ label, names, color }]
   all: null,                                                // all block ids for the suggestions
   counts: null,
+  // 2D map: dots for the finds around the map centre
+  layer: L.layerGroup().addTo(map),
+  renderer: L.canvas({ padding: 0.3 }),
+  pts: [], names: [], visited: new Set(), timer: null, seq: 0,
 };
 
 const xrayId = (n) => (n.includes(':') ? n : 'minecraft:' + n);
@@ -39,7 +43,6 @@ function xraySave() {
 function xrayApply() {
   $('#btn-xray').classList.toggle('on', xray.on && xray.groups.length > 0);
   $('#xray-on').checked = xray.on;
-  if (!view3d) return;
   const names = [], colors = [];
   if (xray.on) {
     for (const g of xray.groups) {
@@ -49,6 +52,9 @@ function xrayApply() {
       }
     }
   }
+  document.body.classList.toggle('xray-on', xray.on && names.length > 0);
+  xray2dSoon(0);
+  if (!view3d) return;
   view3d.setXray(names.slice(0, XRAY_MAX_NAMES), colors.slice(0, XRAY_MAX_NAMES));
   if (names.length > XRAY_MAX_NAMES) toast(`X-Ray: höchstens ${XRAY_MAX_NAMES} Blöcke gleichzeitig, der Rest wird ignoriert.`);
 }
@@ -111,7 +117,9 @@ async function xrayLoadNames() {
 // Stats from the 3D view: finds per block id in the loaded chunks
 function xrayStats(s) {
   xray.counts = new Map();
-  if (s && s.on && view3d) {
+  if (s && s.on && s.names) {
+    s.names.forEach((id, k) => xray.counts.set(id, s.counts[k] || 0));
+  } else if (s && s.on && view3d) {
     const names = [];
     for (const g of xray.groups) for (const n of g.names) { const id = xrayId(n); if (!names.includes(id)) names.push(id); }
     const sorted = names.slice(0, XRAY_MAX_NAMES).sort();
@@ -130,7 +138,9 @@ function xrayToggle(on = !xray.on) {
 }
 
 function xrayNext() {
-  if (!view3d || !xray.on) return;
+  if (!xray.on) return;
+  if (!mode3d) { xray2dNext(); return; }
+  if (!view3d) return;
   const f = view3d.xrayNext();
   if (!f) { toast('X-Ray: in Sichtweite nichts gefunden'); return; }
   toast(`${xrayPretty(f.name)} bei ${f.x} ${f.y} ${f.z}`);
@@ -166,3 +176,67 @@ $('#xray-form').addEventListener('submit', async (e) => {
 $('#xray-next').addEventListener('click', xrayNext);
 xrayRender();
 xrayApply();
+
+// ------------------------------------------------------------------ 2D map
+
+function xrayWanted() {
+  const names = [], colors = [];
+  for (const g of xray.groups) {
+    for (const n of g.names) { const id = xrayId(n); if (!names.includes(id)) { names.push(id); colors.push(g.color); } }
+  }
+  return { names: names.slice(0, XRAY_MAX_NAMES), colors: colors.slice(0, XRAY_MAX_NAMES) };
+}
+
+function xray2dSoon(ms = 300) {
+  clearTimeout(xray.timer);
+  xray.timer = setTimeout(xray2dLoad, ms);
+}
+
+/* Finds in the visible area (at most 24 chunks around the centre) as coloured dots;
+ * the map underneath is dimmed so they stand out. */
+async function xray2dLoad() {
+  const seq = ++xray.seq;
+  const { names, colors } = xrayWanted();
+  if (mode3d || !xray.on || !names.length || !state.server) { xray.layer.clearLayers(); xray.pts = []; return; }
+  const c = fromLatLng(map.getCenter());
+  const b = map.getBounds();
+  const half = Math.max(Math.abs(b.getEast() - b.getWest()), Math.abs(b.getNorth() - b.getSouth())) / 2;
+  const r = Math.max(2, Math.min(24, Math.ceil(half / 16)));
+  try {
+    const d = await api('/api/xray/find?' + new URLSearchParams({ srv: state.server, dim: state.dim, x: c.x, z: c.z, r, b: names.join(',') }));
+    if (seq !== xray.seq) return;
+    const color = {};
+    names.forEach((n, i) => { color[n] = colors[i]; });
+    xray.layer.clearLayers();
+    xray.names = d.names;
+    xray.pts = [];
+    for (let i = 0; i < d.pts.length; i += 4) xray.pts.push([d.pts[i], d.pts[i + 1], d.pts[i + 2], d.pts[i + 3]]);
+    for (const [x, y, z, k] of xray.pts) {
+      const id = d.names[k];
+      L.circleMarker(toLatLng(x + 0.5, z + 0.5), { renderer: xray.renderer, radius: 4, weight: 1.5, color: '#fff', opacity: 0.85,
+        fillColor: color[id] || '#fff', fillOpacity: 1 })
+        .bindTooltip(`${xrayPretty(id)} · ${x} ${y} ${z}`).addTo(xray.layer);
+    }
+    xrayStats({ on: true, counts: d.counts, names: d.names });
+    if (half / 16 > 24 && !xray.zoomHint) { xray.zoomHint = true; toast('X-Ray zeigt auf der Karte die Funde im Umkreis von 384 Blöcken um die Mitte'); }
+  } catch (e) {
+    if (seq === xray.seq) toast('X-Ray: ' + e.message);
+  }
+}
+
+function xray2dNext() {
+  if (!xray.pts.length) { toast('X-Ray: hier nichts gefunden'); return; }
+  const c = fromLatLng(map.getCenter());
+  const d2 = (a) => (a[0] - c.x) ** 2 + (a[2] - c.z) ** 2;
+  let left = xray.pts.filter((a) => !xray.visited.has(a.join(',')));
+  if (!left.length) { xray.visited.clear(); left = xray.pts; }
+  let best = left[0];
+  for (const a of left) if (d2(a) < d2(best)) best = a;
+  xray.visited.add(best.join(','));
+  setFollow(false);
+  map.setView(toLatLng(best[0] + 0.5, best[2] + 0.5), Math.max(map.getZoom(), 2));
+  flash(best[0], best[2]);
+  toast(`${xrayPretty(xray.names[best[3]])} bei ${best[0]} ${best[1]} ${best[2]}`);
+}
+
+map.on('moveend', () => { if (xray.on && !mode3d) xray2dSoon(); });
