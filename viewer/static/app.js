@@ -245,10 +245,29 @@ $('#goto').addEventListener('submit', (e) => {
   }
   setFollow(false);
   $('#goto-input').blur();
+  searchOpen(false);
   if (mode3d && view3d) view3d.flyTo(x + 0.5, Math.max((y ?? view3d.position().y) + 12, 70), z + 0.5);
   else map.setView(toLatLng(x, z), Math.max(map.getZoom(), 0));
   flash(x, z);
 });
+/* Suche ist nur eine Lupe in der Leiste; Klick klappt das Feld auf */
+function searchOpen(on) {
+  const f = $('#goto');
+  f.classList.toggle('open', on);
+  $('#goto-btn').classList.toggle('open', on);
+  $('#goto-input').tabIndex = on ? 0 : -1;
+  if (on) setTimeout(() => $('#goto-input').focus(), 30);
+  else { $('#goto-input').value = ''; $('#goto-input').blur(); }
+}
+$('#goto-btn').addEventListener('click', () => {
+  if (!$('#goto').classList.contains('open')) searchOpen(true);
+  else if ($('#goto-input').value.trim()) $('#goto').requestSubmit();
+  else searchOpen(false);
+});
+$('#goto-input').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); searchOpen(false); } });
+$('#goto-input').addEventListener('blur', () => setTimeout(() => {
+  if (document.activeElement !== $('#goto-input') && !$('#goto-input').value.trim()) searchOpen(false);
+}, 150));
 /* Wegpunkt per Name: erst genau, dann Anfang, dann irgendwo im Namen */
 function findWaypoint(q) {
   const n = q.toLowerCase();
@@ -273,7 +292,7 @@ function flash(x, z) {
  * die Unterseite (= data-pane), der Bereich ergibt sich daraus.
  * Neuer Bereich: Knopf in #rail, <section data-pane> in #side, hier eintragen. */
 const AREAS = {
-  build: { title: 'Bauen', pages: [['schematics', 'Schematics'], ['editor', 'Editor']] },
+  build: { title: 'Bauen', pages: [['editor', 'Editor'], ['schematics', 'Schematics']] },
   farm: { title: 'Automationen', pages: [['farm', '']] },
   chests: { title: 'Lager', pages: [['chests', 'Kisten und Items'], ['stashes', 'Stashes']] },
   places: { title: 'Orte', pages: [['waypoints', 'Wegpunkte'], ['signs', 'Schilder']] },
@@ -285,8 +304,8 @@ const AREA_ORDER = ['build', 'farm', 'chests', 'places', 'history', 'radar', 'se
 const areaOf = (page) => Object.keys(AREAS).find((a) => AREAS[a].pages.some(([p]) => p === page)) || 'places';
 const lastPage = {};
 try { Object.assign(lastPage, JSON.parse(localStorage.getItem('areaPages') || '{}')); } catch (_) { /* egal */ }
-let sideTab = (() => { try { return localStorage.getItem('sideTab') || 'schematics'; } catch (_) { return 'schematics'; } })();
-if (!$(`#side [data-pane="${sideTab}"]`)) sideTab = 'schematics';
+let sideTab = (() => { try { return localStorage.getItem('sideTab') || 'editor'; } catch (_) { return 'editor'; } })();
+if (!$(`#side [data-pane="${sideTab}"]`)) sideTab = 'editor';
 function showTab(tab) {
   // Bereich angegeben: dessen zuletzt offene Unterseite
   if (AREAS[tab] && !AREAS[tab].pages.some(([p]) => p === tab)) tab = lastPage[tab] || AREAS[tab].pages[0][0];
@@ -1133,7 +1152,7 @@ async function downloadSel() {
   } catch (e) {
     toast('Export fehlgeschlagen: ' + e.message);
   } finally {
-    btn.textContent = '.schem herunterladen';
+    btn.textContent = 'Herunterladen';
     btn.disabled = !sel.box;
   }
 }
@@ -2394,7 +2413,7 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 's' || e.key === 'S') toggleSide();
   else if (e.key === 'e' || e.key === 'E') setSelect(!sel.on);
   else if (e.key === 'Escape' && sel.on) setSelect(false);
-  else if (e.key === '/') { e.preventDefault(); $('#goto-input').focus(); }
+  else if (e.key === '/') { e.preventDefault(); searchOpen(true); }
 });
 
 
