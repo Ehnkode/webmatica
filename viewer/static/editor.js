@@ -1,12 +1,12 @@
-/* Webmatica – Schematic-Editor.
+/* Webmatica – schematic editor.
  *
- * Eigene Seite mit nur der Schematic: drehen/zoomen wie in einem 3D-Programm,
- * Bloecke setzen und abbauen wie im Spiel, Bereiche fuellen/ersetzen. Jede
- * Aenderung geht sofort an den Server (viewer/editor.py), der die .schem-Datei
- * speichert; danach werden Blockdaten und Mesh neu geladen.
+ * A separate page with just the schematic: rotate/zoom like in a 3D program,
+ * place and break blocks like in game, fill/replace areas. Every
+ * change goes straight to the server (viewer/editor.py), which saves the .schem
+ * file; then block data and mesh are reloaded.
  *
- * Treffer per Voxel-Strahl (DDA) ueber die Blockdaten, nicht ueber das Mesh:
- * genau, schnell und unabhaengig von Blockformen.
+ * Hits via a voxel ray (DDA) over the block data, not over the mesh:
+ * precise, fast and independent of block shapes.
  */
 import * as THREE from '/static/vendor/three/three.module.min.js';
 
@@ -54,7 +54,7 @@ const ed = {
   version: 0,
 };
 
-// ------------------------------------------------------------------ Szene
+// ------------------------------------------------------------------ Scene
 
 const view = $('#ed-view');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -109,7 +109,7 @@ function parseMesh(buf) {
     const pos16 = new Int16Array(buf.slice(o, o + n * 24)); o += n * 24;
     const uv16 = new Uint16Array(buf.slice(o, o + n * 16)); o += n * 16;
     const rgb = new Uint8Array(buf.slice(o, o + n * 12)); o += n * 12;
-    o += n * 8;   // Licht (MSH3), im Editor ungenutzt
+    o += n * 8;   // Light (MSH3), unused in the editor
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos16, 3));
     g.setAttribute('uv', new THREE.BufferAttribute(uv16, 2));
@@ -155,14 +155,14 @@ function rebuildHelpers() {
     new THREE.LineBasicMaterial({ color: 0x7fd1ff, transparent: true, opacity: 0.5 }));
   box.position.set(W / 2, H / 2, L / 2);
   helpers.add(box);
-  // Raster auf der Bauebene (Boden oder gewaehlte Hoehe)
+  // Grid on the build plane (ground or chosen height)
   const n = Math.max(W, L) + 16;
   const grid = new THREE.GridHelper(n, n, 0x3a4250, 0x2a303b);
   grid.position.set(W / 2 + (n % 2 ? 0.5 : 0), planeY(), L / 2 + (n % 2 ? 0.5 : 0));
   helpers.add(grid);
 }
 
-// ------------------------------------------------------------------ Kamera (Orbit)
+// ------------------------------------------------------------------ Camera (orbit)
 
 const orbit = { target: new THREE.Vector3(), dist: 30, yaw: Math.PI * 0.75, pitch: 0.6 };
 function updateCamera() {
@@ -189,7 +189,7 @@ window.addEventListener('resize', resize);
 resize();
 renderer.setAnimationLoop(() => renderer.render(scene, camera));
 
-// ------------------------------------------------------------------ Blockdaten
+// ------------------------------------------------------------------ Block data
 
 const idxOf = (x, y, z) => (y * ed.size[2] + z) * ed.size[0] + x;
 function inside(x, y, z) { return x >= 0 && y >= 0 && z >= 0 && x < ed.size[0] && y < ed.size[1] && z < ed.size[2]; }
@@ -259,14 +259,14 @@ function renderCounts() {
   if (keep && Array.from(from.options).some((o) => o.value === keep)) from.value = keep;
 }
 
-// ------------------------------------------------------------------ Strahl
+// ------------------------------------------------------------------ Ray
 
 const ray = new THREE.Raycaster();
 function castRay(cx, cy) {
   const rect = renderer.domElement.getBoundingClientRect();
   ray.setFromCamera(new THREE.Vector2(((cx - rect.left) / rect.width) * 2 - 1, -((cy - rect.top) / rect.height) * 2 + 1), camera);
   const o = ray.ray.origin, d = ray.ray.direction;
-  // Voxel-DDA
+  // Voxel DDA
   let x = Math.floor(o.x), y = Math.floor(o.y), z = Math.floor(o.z);
   const sx = Math.sign(d.x), sy = Math.sign(d.y), sz = Math.sign(d.z);
   const tdx = Math.abs(1 / d.x), tdy = Math.abs(1 / d.y), tdz = Math.abs(1 / d.z);
@@ -281,7 +281,7 @@ function castRay(cx, cy) {
     else if (ty < tz) { y += sy; t = ty; ty += tdy; normal = [0, -sy, 0]; }
     else { z += sz; t = tz; tz += tdz; normal = [0, 0, -sz]; }
   }
-  // Bauebene (Boden oder gewaehlte Hoehe), nur von oben
+  // Build plane (ground or chosen height), only from above
   const py = planeY();
   if (d.y < 0 && o.y > py) {
     const tp = (py - o.y) / d.y;
@@ -296,17 +296,17 @@ function castRay(cx, cy) {
   return hit;
 }
 
-// ------------------------------------------------------------------ Bloecke waehlen
+// ------------------------------------------------------------------ Picking blocks
 
 let BLOCKS = [];          // [{ id, props, default }]
 const META = new Map();
 let itemsMeta = null;
 const hotbar = { slots: load('ed.hotbar', ['minecraft:stone', 'minecraft:oak_planks', 'minecraft:glass', 'minecraft:obsidian',
   'minecraft:oak_log', 'minecraft:stone_bricks', 'minecraft:oak_stairs', 'minecraft:smooth_stone_slab', 'minecraft:torch']), sel: 0 };
-let picked = null;        // genauer Zustand von der Pipette
+let picked = null;        // exact state from the pick-block tool
 
 function load(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v || d; } catch (_) { return d; } }
-function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) { /* egal */ } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) { /* ignore */ } }
 
 function icon(id, size = 32) {
   const i = itemsMeta && itemsMeta.index[baseOf(id)];
@@ -346,7 +346,7 @@ $('#ed-counts').addEventListener('click', (e) => {
   if (r) setCurrent(r.dataset.state, r.dataset.state);
 });
 
-/* Alle Bloecke einer Sorte in der ganzen Schematic durch den gewaehlten ersetzen */
+/* Replace all blocks of one kind in the whole schematic with the selected one */
 function renderReplace() {
   const id = current();
   const from = $('#ed-rfrom').value;
@@ -358,7 +358,7 @@ function renderReplace() {
   $('#ed-rdel').disabled = !from || !n || from === 'minecraft:air';
   $('#ed-rdel').textContent = n ? `${fmt(n)} löschen` : 'Alle löschen';
 }
-/* Alle Bloecke einer Sorte entfernen (= durch Luft ersetzen) */
+/* Remove all blocks of one kind (= replace with air) */
 function deleteAll(from) {
   if (!from || from === 'minecraft:air') return;
   const [W, H, L] = ed.size;
@@ -377,7 +377,7 @@ $('#ed-rgo').addEventListener('click', () => {
   edit([{ op: 'replace', box: [0, 0, 0, W - 1, H - 1, L - 1], from, block, keep: $('#ed-rkeep').checked }]);
 });
 
-// ------------------------------------------------------------------ Ausrichtung beim Setzen
+// ------------------------------------------------------------------ Orientation when placing
 
 const DIRS = { north: [0, 0, -1], south: [0, 0, 1], east: [1, 0, 0], west: [-1, 0, 0], up: [0, 1, 0], down: [0, -1, 0] };
 const OPP = { north: 'south', south: 'north', east: 'west', west: 'east', up: 'down', down: 'up' };
@@ -390,7 +390,7 @@ function lookDir() {
   camera.getWorldDirection(f);
   return Math.abs(f.x) > Math.abs(f.z) ? (f.x > 0 ? 'east' : 'west') : (f.z > 0 ? 'south' : 'north');
 }
-// Bloecke, deren "facing" in Blickrichtung zeigt (wie im Spiel); sonst schauen sie dich an
+// Blocks whose "facing" points in the view direction (like in game); others face you
 const FACES_AWAY = /stairs|_door|trapdoor|fence_gate|_bed|repeater|comparator|anvil|lectern|bell|campfire|stonecutter|loom|beehive|bee_nest/;
 
 function stateFor(hit) {
@@ -426,7 +426,7 @@ function stateFor(hit) {
     else if (n[1] < 0) props.face = 'ceiling';
     else { props.face = 'wall'; if (dsel === 'auto' && has('facing')) props.facing = dirOfNormal(n); }
   }
-  // Fackeln/Schilder an der Wand
+  // Torches/signs on the wall
   if (n[1] === 0 && /(^|_)torch$|_sign$|_banner$|^minecraft:ladder$/.test(id) && dsel === 'auto') {
     const wall = id.replace(/torch$/, 'wall_torch').replace(/_sign$/, '_wall_sign').replace(/_banner$/, '_wall_banner');
     if (wall !== id || id === 'minecraft:ladder') {
@@ -437,7 +437,7 @@ function stateFor(hit) {
   return keys.length ? `${id}[${keys.map((k) => `${k}=${props[k]}`).join(',')}]` : id;
 }
 
-// ------------------------------------------------------------------ Bearbeiten
+// ------------------------------------------------------------------ Editing
 
 async function edit(ops, ghostPts) {
   if (ed.busy) return;
@@ -464,7 +464,7 @@ async function edit(ops, ghostPts) {
 function applyResult(r) {
   const s = r.shift || [0, 0, 0];
   if (s.some(Boolean)) {
-    // Schematic ist nach -x/-y/-z gewachsen: Kamera und Auswahl mitschieben, damit nichts springt
+    // The schematic grew towards -x/-y/-z: shift camera and selection along so nothing jumps
     orbit.target.x += s[0]; orbit.target.y += s[1]; orbit.target.z += s[2];
     updateCamera();
     for (const c of [ed.boxA, ed.boxB]) if (c) { c[0] += s[0]; c[1] += s[1]; c[2] += s[2]; }
@@ -535,7 +535,7 @@ $('#ed-boxpanel').addEventListener('click', (e) => {
 });
 $('#ed-boxreset').addEventListener('click', () => { ed.boxA = ed.boxB = null; drawSel(); });
 
-// Kopieren / Verschieben: Kasten haengt am Mauszeiger, Klick setzt ihn ab
+// Copy / move: the box sticks to the mouse pointer, a click drops it
 function startPaste(move) {
   const c = boxCoords();
   if (!c || !ed.boxB) { toast('Erst einen Bereich mit zwei Ecken wählen'); return; }
@@ -560,7 +560,7 @@ function pasteAt(p) {
   const wasMove = ed.clip.move;
   edit([op]).then(() => {
     if (wasMove) {
-      // Auswahl wandert mit
+      // The selection moves along
       const s = clipSize();
       ed.boxA = p.slice(); ed.boxB = [p[0] + s[0] - 1, p[1] + s[1] - 1, p[2] + s[2] - 1];
       drawSel();
@@ -581,7 +581,7 @@ function setTool(t) {
 }
 $$('[data-tool]').forEach((b) => b.addEventListener('click', () => setTool(b.dataset.tool)));
 
-// ------------------------------------------------------------------ Maus und Tasten
+// ------------------------------------------------------------------ Mouse and keys
 
 const canvas = renderer.domElement;
 let drag = null;
@@ -597,7 +597,7 @@ canvas.addEventListener('pointermove', (e) => {
     drag.x = e.clientX; drag.y = e.clientY;
     if (drag.moved > 4 && (drag.button === 2 || drag.button === 1 || (drag.button === 0 && e.altKey))) {
       if (drag.shift || drag.button === 1) {
-        // verschieben in der Bildebene
+        // pan in the image plane
         const k = orbit.dist * 0.0015;
         const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
         const up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
@@ -675,8 +675,8 @@ document.addEventListener('keydown', (e) => {
   else if (k === 'escape') { ed.boxA = ed.boxB = null; drawSel(); }
 });
 
-/* Speichern / Verwerfen: Bearbeitungen bleiben im Editor, bis gespeichert wird.
-   Karte, Litematica und Download sehen nur den gespeicherten Stand. */
+/* Save / discard: edits stay in the editor until saved.
+   Map, Litematica and download only see the saved state. */
 function setDirty(d) {
   ed.dirty = d;
   $('#ed-save').disabled = !d;
@@ -708,7 +708,7 @@ async function discard(ask = true) {
 $('#ed-save').addEventListener('click', saveFile);
 $('#ed-discard').addEventListener('click', () => discard(true));
 
-/* Schliessen mit ungespeicherten Aenderungen: fragen */
+/* Closing with unsaved changes: ask */
 function askClose(go) {
   if (!ed.dirty) { go(); return; }
   const m = $('#ed-close');
@@ -739,11 +739,11 @@ window.addEventListener('beforeunload', (e) => {
   e.preventDefault();
   e.returnValue = '';
 });
-// Tab trotz Warnung geschlossen: Aenderungen verwerfen, damit sie nicht beim naechsten Oeffnen wieder auftauchen
+// Tab closed despite the warning: discard changes so they don't reappear the next time it is opened
 window.addEventListener('pagehide', () => {
   if (ed.dirty && ed.file) navigator.sendBeacon('/api/editor/discard', new Blob([JSON.stringify({ file: ed.file })], { type: 'application/json' }));
 });
-// Download und "In die Welt setzen" brauchen den gespeicherten Stand
+// Download and "In die Welt setzen" (place in world) need the saved state
 $('#ed-download').addEventListener('click', async (e) => {
   if (!ed.dirty) return;
   e.preventDefault();
@@ -759,7 +759,7 @@ async function redo() {
 $('#ed-undo').addEventListener('click', undo);
 $('#ed-redo').addEventListener('click', redo);
 
-// ------------------------------------------------------------------ Schnitt und Bauebene
+// ------------------------------------------------------------------ Cut and build plane
 
 function updateCut() {
   const on = $('#ed-cut').checked;
@@ -778,7 +778,7 @@ $('#ed-plane').addEventListener('change', (e) => {
   rebuildHelpers();
 });
 
-// ------------------------------------------------------------------ Datei
+// ------------------------------------------------------------------ File
 
 $('#ed-new').addEventListener('click', async () => {
   if (ed.dirty && !confirm('Es gibt ungespeicherte Änderungen. Trotzdem neue Schematic anlegen? (Vorher 💾 Speichern, sonst gehen sie verloren)')) return;
@@ -802,7 +802,7 @@ $('#ed-place').addEventListener('click', async () => {
     try {
       const p = await api('/api/player');
       if (p && p.active && p.server === ed.srv) at = [Math.floor(p.x) + 2, Math.floor(p.y), Math.floor(p.z) + 2];
-    } catch (_) { /* egal */ }
+    } catch (_) { /* ignore */ }
   }
   if (!at) { toast('Spieler nicht online: die Schematic landet bei 0 0 0, verschieben kannst du sie auf der Karte'); at = [0, 64, 0]; }
   try {
@@ -813,7 +813,7 @@ $('#ed-place').addEventListener('click', async () => {
   } catch (e) { toast(e.message); }
 });
 
-/* Name oben direkt aendern: Enter oder Klick daneben speichert, Esc verwirft */
+/* Rename directly at the top: Enter or clicking elsewhere saves, Esc discards */
 function showName() {
   const n = ed.file.split('/').pop().replace(/\.[^.]+$/, '');
   $('#ed-name').value = n;
@@ -842,7 +842,7 @@ $('#ed-name').addEventListener('keydown', (e) => {
 $('#ed-name').addEventListener('input', (e) => { e.target.style.width = Math.max(6, e.target.value.length + 1) + 'ch'; });
 $('#ed-name').addEventListener('blur', rename);
 
-/* WASD: durch die Szene fliegen (Blickrichtung waagerecht), Leertaste/C hoch/runter, Shift schneller */
+/* WASD: fly through the scene (horizontal view direction), Space/C up/down, Shift faster */
 const fly = new Set();
 const FLY_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyC']);
 document.addEventListener('keydown', (e) => {
@@ -859,7 +859,7 @@ let flyT = performance.now();
   flyT = now;
   if (!fly.size) return;
   const v = Math.max(8, orbit.dist * 0.9) * dt * (fly.shift ? 3 : 1);
-  const fx = -Math.sin(orbit.yaw), fz = -Math.cos(orbit.yaw);   // von der Kamera zum Ziel
+  const fx = -Math.sin(orbit.yaw), fz = -Math.cos(orbit.yaw);   // from the camera to the target
   const d = new THREE.Vector3();
   if (fly.has('KeyW')) d.x += fx, d.z += fz;
   if (fly.has('KeyS')) d.x -= fx, d.z -= fz;
