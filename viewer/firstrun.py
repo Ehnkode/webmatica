@@ -17,7 +17,6 @@ import zipfile
 ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 NEEDED = ("blocks.json", "blocks.png", "items.json", "items.png")
 INFO = os.path.join(os.path.expanduser("~"), ".webmatica", "client.json")
-MC_VERSION = "1.21.11"
 
 
 def client_info() -> dict:
@@ -26,6 +25,11 @@ def client_info() -> dict:
             return json.load(f)
     except (OSError, ValueError):
         return {}
+
+
+def mc_version() -> str:
+    """Minecraft version the mod last ran with (written to client.json)."""
+    return client_info().get("minecraft") or "1.21.11"
 
 
 def _has_assets(jar: str) -> bool:
@@ -43,7 +47,8 @@ def find_jar() -> str | None:
     if info.get("gameJar"):
         cands.append(info["gameJar"])
     home = os.path.expanduser("~")
-    rel = os.path.join("versions", MC_VERSION, MC_VERSION + ".jar")
+    ver = mc_version()
+    rel = os.path.join("versions", ver, ver + ".jar")
     if os.environ.get("APPDATA"):
         cands.append(os.path.join(os.environ["APPDATA"], ".minecraft", rel))
     cands += [os.path.join(home, ".minecraft", rel),
@@ -87,7 +92,7 @@ def prepare(argv: list[str]) -> list[str]:
         if not jar:
             sys.exit("Block textures are missing and the Minecraft jar was not found.\n"
                      "Start Minecraft with the mod once (then the viewer finds everything by itself)\n"
-                     f"or pass it: python -m viewer --jar \"<.minecraft>/versions/{MC_VERSION}/{MC_VERSION}.jar\"")
+                     f"or pass it: python -m viewer --jar \"<.minecraft>/versions/{mc_version()}/{mc_version()}.jar\"")
         build_assets(jar)
     if "--recording" not in args and "-r" not in args and not os.environ.get("MAPPER_RECORDING"):
         rec = find_recording()
