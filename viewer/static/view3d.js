@@ -87,15 +87,24 @@ export function create(container, ctx) {
   }
 
   let atlasW = 0, atlasH = 0;
-  fetch('/api/blocks-info').then((r) => r.json()).then((j) => {
-    if (!j.available) { ctx.toast && ctx.toast('3D braucht die Blockmodelle: python -m viewer.tools.build_assets --jar <client.jar>'); return; }
-    const img = new Image();
-    img.onload = () => {
-      atlas.image = img; atlas.repeat.set(1 / (16 * j.width), 1 / (16 * j.height)); atlas.needsUpdate = true;
-      atlasW = j.width; atlasH = j.height;
+  // Without the atlas nothing streams, so a failed load is retried and reported instead of leaving 3D empty.
+  function loadAtlas(attempt = 0) {
+    const retry = (why) => {
+      if (attempt === 2) ctx.toast && ctx.toast('3D: Blocktexturen nicht geladen (' + why + '), versuche es weiter …');
+      setTimeout(() => loadAtlas(attempt + 1), Math.min(10000, 1000 * (attempt + 1)));
     };
-    img.src = `/api/blocks.png?v=${encodeURIComponent(j.version || '')}`;
-  });
+    fetch('/api/blocks-info').then((r) => r.json()).then((j) => {
+      if (!j.available) { ctx.toast && ctx.toast('3D braucht die Blockmodelle: python -m viewer.tools.build_assets --jar <client.jar>'); return; }
+      const img = new Image();
+      img.onload = () => {
+        atlas.image = img; atlas.repeat.set(1 / (16 * j.width), 1 / (16 * j.height)); atlas.needsUpdate = true;
+        atlasW = j.width; atlasH = j.height;
+      };
+      img.onerror = () => retry('blocks.png');
+      img.src = `/api/blocks.png?v=${encodeURIComponent(j.version || '')}`;
+    }).catch((e) => retry(String(e && e.message || e)));
+  }
+  loadAtlas();
 
   // ------------------------------------------------------------ State
 
@@ -1400,7 +1409,9 @@ export function create(container, ctx) {
     screenshot() { return renderer.domElement.toDataURL('image/png'); },
     stats() {
       return { chunks: Array.from(st.chunks.values()).filter((c) => c.group).length,
-        regions: Array.from(st.regions.values()).filter((r) => r.mesh).length, loading: st.queue };
+        regions: Array.from(st.regions.values()).filter((r) => r.mesh).length, loading: st.queue,
+        active: st.active, srv: st.srv, dim: st.dim, atlas: atlasW, pending: pending.length,
+        cam: [Math.round(camera.position.x), Math.round(camera.position.y), Math.round(camera.position.z)] };
     },
     debugMasks() {
       return Array.from(st.regions.entries()).map(([k, r]) => [k, r.mask ? r.mask.image.data.reduce((a, b) => a + (b ? 1 : 0), 0) : -1]);
