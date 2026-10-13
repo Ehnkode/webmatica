@@ -45,52 +45,209 @@ $('#hist-list').addEventListener('click', (e) => {
 });
 $('#hist-show').addEventListener('change', drawHistory);
 
-/* Timelapse: overlay tiles "state on the morning of day X" (changed chunks only) on the map */
-var tl = { layer: null, idx: 0, timer: null };
+/* Timelapse: "state on the morning of day X". On the map as overlay tiles (changed chunks only),
+ * in 3D as chunk meshes of that day. Frames = the backed-up days in the chosen range (every day
+ * or one per week), "heute" as the last frame. */
+var tl = { layer: null, idx: 0, frames: [], run: 0, date: null };
 const dayLabel = (d) => d.split('-').reverse().join('.');
+const tlDay = (d) => Date.parse(d + 'T00:00:00Z') / 86400000;
+
+function tlFrames() {
+  const from = $('#tl-from').value, to = $('#tl-to').value;
+  const step = Number($('#tl-step').value) || 1;
+  const out = [];
+  for (const d of hist.dates) {
+    if ((from && d < from) || (to && d > to)) continue;
+    if (out.length && tlDay(d) - tlDay(out[out.length - 1]) < step) continue;
+    out.push(d);
+  }
+  if (!to) out.push(null);   // today
+  return out;
+}
+
 function tlReset() {
   tlStop();
   const n = hist.dates.length;
-  $('#tl-range').max = n; $('#tl-range').value = n;
-  $('#tl-range').disabled = $('#tl-play').disabled = !n;
-  $('#tl-hint').textContent = n ? 'Schieb nach links, um die Karte zu sehen, wie sie am Morgen dieses Tages aussah. Nur auf der 2D-Karte.'
+  const opts = (sel) => hist.dates.map((d) => `<option value="${d}"${d === sel ? ' selected' : ''}>${dayLabel(d)}</option>`).join('');
+  $('#tl-from').innerHTML = opts(hist.dates[0]);
+  $('#tl-to').innerHTML = opts(null) + '<option value="" selected>heute</option>';
+  for (const id of ['#tl-from', '#tl-to', '#tl-step', '#tl-speed', '#tl-play', '#tl-range', '#tl-gif', '#tl-video']) $(id).disabled = !n;
+  $('#tl-hint').textContent = n ? 'Schieb nach links, um zu sehen, wie es am Morgen dieses Tages aussah. Läuft auf der Karte und in 3D.'
     : 'Noch keine früheren Stände. Die Mod sichert sie, sobald sich ein Chunk an einem neuen Tag ändert.';
-  tlShow(n);
+  tlRange(true);
 }
+
+// Range or step changed: new frame list, slider back to the end (today or the last day)
+function tlRange(toEnd) {
+  tl.frames = tlFrames();
+  const r = $('#tl-range');
+  r.max = Math.max(0, tl.frames.length - 1);
+  tlShow(toEnd ? tl.frames.length - 1 : Math.min(tl.idx, tl.frames.length - 1));
+}
+
 function tlShow(i) {
-  const n = hist.dates.length;
-  tl.idx = Math.max(0, Math.min(n, i));
+  const n = tl.frames.length;
+  tl.idx = Math.max(0, Math.min(n - 1, i));
   $('#tl-range').value = tl.idx;
-  const date = tl.idx < n ? hist.dates[tl.idx] : null;
+  const date = n ? tl.frames[tl.idx] : null;
+  tl.date = date;
   $('#tl-label').textContent = date ? dayLabel(date) : 'heute';
   $('#tl-badge').hidden = !date;
   $('#tl-badge').textContent = date ? `Stand ${dayLabel(date)} · zurück zu heute ✕` : '';
+  if (view3d) view3d.setAt(date);
   const old = tl.layer;
   tl.layer = null;
   if (!date) { if (old) map.removeLayer(old); return; }
   const url = `/api/tile/${encodeURIComponent(state.server)}/${encodeURIComponent(state.dim)}/${state.layer}/{z}/{x}/{y}.png?at=${date}`;
   const layer = L.tileLayer(url, { tileSize: 512, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, maxNativeZoom: 0, minNativeZoom: MIN_ZOOM, keepBuffer: 1 });
   // remove the old state only once the new one has loaded (no flicker during playback)
-  if (old) layer.once('load', () => map.removeLayer(old));
+  layer.once('load', () => { layer._tlLoaded = true; if (old) map.removeLayer(old); });
   layer.addTo(map);
   tl.layer = layer;
 }
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Wait until the shown frame is complete: map tiles loaded or, in 3D, the chunks near the camera
+async function tlSettled(run, maxMs = 20000) {
+  const t0 = performance.now();
+  await sleep(60);
+  while (tl.run === run && performance.now() - t0 < maxMs) {
+    const busy = mode3d ? view3d && view3d.busy() : tl.layer && !tl.layer._tlLoaded;
+    if (!busy) return;
+    await sleep(100);
+  }
+}
+
 function tlStop() {
-  clearInterval(tl.timer); tl.timer = null;
+  tl.run++;
   $('#tl-play').textContent = '▶'; $('#tl-play').title = 'Abspielen';
 }
-$('#tl-range').addEventListener('input', (e) => { tlStop(); tlShow(Number(e.target.value)); });
-$('#tl-play').addEventListener('click', () => {
-  if (tl.timer) { tlStop(); return; }
-  if (mode3d) toast('Der Zeitraffer läuft auf der 2D-Karte');
-  if (tl.idx >= hist.dates.length) tlShow(0);
+
+async function tlPlay() {
+  const run = ++tl.run;
   $('#tl-play').textContent = '❚❚'; $('#tl-play').title = 'Anhalten';
-  tl.timer = setInterval(() => {
-    if (tl.idx >= hist.dates.length) { tlStop(); return; }
-    tlShow(tl.idx + 1);
-  }, 1500);
-});
-$('#tl-badge').addEventListener('click', () => { tlStop(); tlShow(hist.dates.length); });
+  if (tl.idx >= tl.frames.length - 1) tlShow(0);
+  while (tl.run === run) {
+    const t0 = performance.now();
+    await tlSettled(run);
+    await sleep(Math.max(0, Number($('#tl-speed').value) - (performance.now() - t0)));
+    if (tl.run !== run) return;
+    if (tl.idx >= tl.frames.length - 1) {
+      if (!$('#tl-loop').checked) { tlStop(); return; }
+      tlShow(0);
+    } else tlShow(tl.idx + 1);
+  }
+}
+
+$('#tl-range').addEventListener('input', (e) => { tlStop(); tlShow(Number(e.target.value)); });
+for (const id of ['#tl-from', '#tl-to', '#tl-step']) $(id).addEventListener('change', () => { tlStop(); tlRange(true); });
+$('#tl-play').addEventListener('click', () => { if ($('#tl-play').title === 'Anhalten') tlStop(); else tlPlay(); });
+$('#tl-badge').addEventListener('click', () => { tlStop(); tlShow(tl.frames.length - 1); if (tl.date) { $('#tl-to').value = ''; tlRange(true); } });
+
+/* Export: plays the range once and records every frame (map: the visible tiles, 3D: the picture). */
+const TL_MAX_W = 960;
+function tlCapture() {
+  let src, w, h;
+  if (mode3d) { src = view3d.canvas(); w = src.width; h = src.height; } else { const r = $('#map').getBoundingClientRect(); w = r.width; h = r.height; }
+  const k = Math.min(1, TL_MAX_W / w);
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(w * k) & ~1; cv.height = Math.round(h * k) & ~1;
+  const g = cv.getContext('2d');
+  g.imageSmoothingEnabled = mode3d;
+  if (mode3d) g.drawImage(src, 0, 0, cv.width, cv.height);
+  else {
+    g.fillStyle = getComputedStyle($('#map')).backgroundColor || '#0e1014';
+    g.fillRect(0, 0, cv.width, cv.height);
+    const base = $('#map').getBoundingClientRect();
+    for (const img of $$('#map .leaflet-tile-pane img.leaflet-tile-loaded')) {
+      const r = img.getBoundingClientRect();
+      const op = Number(getComputedStyle(img.closest('.leaflet-layer') || img).opacity || 1);
+      g.globalAlpha = op;
+      try { g.drawImage(img, (r.left - base.left) * k, (r.top - base.top) * k, r.width * k, r.height * k); } catch (_) { /* not loaded */ }
+    }
+    g.globalAlpha = 1;
+  }
+  // date in the corner
+  const label = tl.date ? dayLabel(tl.date) : 'heute';
+  const fs = Math.max(14, Math.round(cv.height / 24));
+  g.font = `600 ${fs}px system-ui, sans-serif`;
+  const tw = g.measureText(label).width;
+  g.fillStyle = 'rgba(14,16,20,0.75)';
+  g.fillRect(fs * 0.6, cv.height - fs * 2.3, tw + fs * 1.2, fs * 1.7);
+  g.fillStyle = '#f5a524';
+  g.fillText(label, fs * 1.2, cv.height - fs * 1.05);
+  return cv;
+}
+
+async function tlExport(kind) {
+  if (!tl.frames.length) return;
+  tlStop();
+  const run = ++tl.run;
+  const btn = $(kind === 'gif' ? '#tl-gif' : '#tl-video');
+  const label = btn.textContent;
+  $('#tl-gif').disabled = $('#tl-video').disabled = true;
+  const delay = Number($('#tl-speed').value);
+  try {
+    const shots = [];
+    for (let i = 0; i < tl.frames.length; i++) {
+      btn.textContent = `Bild ${i + 1} von ${tl.frames.length} …`;
+      tlShow(i);
+      await tlSettled(run, 30000);
+      if (tl.run !== run) return;
+      await sleep(mode3d ? 300 : 150);   // one more frame drawn
+      shots.push(tlCapture());
+    }
+    const name = `webmatica-zeitraffer-${tl.frames[0] || 'heute'}-${tl.frames[tl.frames.length - 1] || 'heute'}`;
+    let blob, ext;
+    if (kind === 'gif') {
+      btn.textContent = 'GIF wird erstellt …';
+      await sleep(30);
+      const frames = shots.map((c) => c.getContext('2d').getImageData(0, 0, c.width, c.height));
+      const delays = frames.map((_, i) => (i === frames.length - 1 ? delay * 2 : delay));
+      blob = encodeGif(frames, delays); ext = 'gif';
+    } else {
+      btn.textContent = 'Video wird aufgenommen …';
+      ({ blob, ext } = await tlRecord(shots, delay));
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `${name}.${ext}`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+    toast(`Gespeichert: ${name}.${ext} (${(blob.size / 1048576).toFixed(1)} MB)`);
+  } catch (e) {
+    toast('Export fehlgeschlagen: ' + e.message);
+  } finally {
+    btn.textContent = label;
+    $('#tl-gif').disabled = $('#tl-video').disabled = !hist.dates.length;
+  }
+}
+
+// Video: draws the frames onto a canvas in real time and records it (MP4 where the browser can, otherwise WebM)
+async function tlRecord(shots, delay) {
+  if (!window.MediaRecorder) throw new Error('Dein Browser kann keine Videos aufnehmen, nimm GIF');
+  const type = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find((t) => MediaRecorder.isTypeSupported(t));
+  const cv = document.createElement('canvas');
+  cv.width = shots[0].width; cv.height = shots[0].height;
+  const g = cv.getContext('2d');
+  g.drawImage(shots[0], 0, 0);
+  const stream = cv.captureStream(30);
+  const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 6e6 });
+  const parts = [];
+  rec.ondataavailable = (e) => e.data.size && parts.push(e.data);
+  const done = new Promise((r) => { rec.onstop = r; });
+  rec.start();
+  for (let i = 0; i < shots.length; i++) {
+    g.drawImage(shots[i], 0, 0);
+    await sleep(i === shots.length - 1 ? delay * 2 : delay);
+  }
+  rec.stop();
+  await done;
+  stream.getTracks().forEach((t) => t.stop());
+  return { blob: new Blob(parts, { type: type.split(';')[0] }), ext: type.startsWith('video/mp4') ? 'mp4' : 'webm' };
+}
+$('#tl-gif').addEventListener('click', () => tlExport('gif'));
+$('#tl-video').addEventListener('click', () => tlExport('video'));
 
 function drawHistory() {
   hist.layer.clearLayers();

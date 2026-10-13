@@ -174,7 +174,15 @@
     <div class="card">
       <div class="card-title">Zeitraffer</div>
       <div class="sp-row tl-row"><button id="tl-play" title="Abspielen">▶</button><input type="range" id="tl-range" min="0" max="0" value="0" step="1"><span id="tl-label" class="mono">heute</span></div>
-      <p id="tl-hint" class="hint">Schieb nach links, um die Karte zu sehen, wie sie am Morgen dieses Tages aussah. Nur auf der 2D-Karte.</p>
+      <div class="tl-grid">
+        <label>Von <select id="tl-from"></select></label>
+        <label>Bis <select id="tl-to"></select></label>
+        <label>Schritt <select id="tl-step"><option value="1">jeder Tag</option><option value="7">jede Woche</option></select></label>
+        <label>Tempo <select id="tl-speed"><option value="500">0,5 s pro Bild</option><option value="1000" selected>1 s pro Bild</option><option value="2000">2 s pro Bild</option><option value="4000">4 s pro Bild</option></select></label>
+      </div>
+      <label class="check"><input type="checkbox" id="tl-loop"> In Schleife abspielen</label>
+      <div class="sp-row"><button id="tl-gif" disabled>Als GIF speichern</button><button id="tl-video" disabled>Als Video speichern</button></div>
+      <p id="tl-hint" class="hint">Schieb nach links, um zu sehen, wie es am Morgen dieses Tages aussah. Läuft auf der Karte und in 3D.</p>
     </div>
     <div class="card">
       <div class="card-title">Mit heute vergleichen</div>
@@ -469,6 +477,7 @@
 <script src="/static/js/schematics.js"></script>
 <script src="/static/js/materials.js"></script>
 <script src="/static/js/chests.js"></script>
+<script src="/static/js/gif.js"></script>
 <script src="/static/js/history.js"></script>
 <script src="/static/js/keyboard.js"></script>
 <script src="/static/js/automation.js"></script>
