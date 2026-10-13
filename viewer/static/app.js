@@ -123,6 +123,7 @@ function rebuildTiles() {
   tiles = new RegionLayer({ tileSize: 512, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, maxNativeZoom: 0, minNativeZoom: MIN_ZOOM, keepBuffer: 1 });
   tiles.addTo(map);
   tiles.bringToBack();
+  if (tl && tl.layer) tlShow(tl.idx);   // Zeitraffer auf die neue Schicht umstellen
 }
 
 // ------------------------------------------------------------------ Auswahl Server / Dimension / Schicht
@@ -733,6 +734,7 @@ async function set3d(on) {
     view3d.setHour(Number($('#hour3d').value));
     view3d.setFancy($('#fancy3d').checked);
     view3d.setClip(cut.mode, cut.y);
+    view3d.setSpawn($('#spawn3d').checked);
     view3d.open(state.server, state.dim, c.x, y, c.z);
     view3d.setSchematics(schem.list);
     drawHistory();
@@ -875,6 +877,11 @@ $('#shot3d').addEventListener('click', () => {
   document.body.append(a); a.click(); a.remove();
 });
 $('#full3d').addEventListener('change', (e) => view3d && view3d.setFull(e.target.checked));
+// Mob-Spawns: nur ein Schalter, wird nicht gespeichert
+$('#spawn3d').addEventListener('change', (e) => {
+  $('#spawn3d-legend').hidden = !e.target.checked;
+  if (view3d) view3d.setSpawn(e.target.checked);
+});
 
 // ------------------------------------------------------------------ Schematic-Auswahl
 
@@ -2045,6 +2052,7 @@ async function loadHistoryDates() {
   sel.innerHTML = hist.dates.length ? hist.dates.slice().reverse().map((d) => `<option value="${d}">seit ${d.split('-').reverse().join('.')}</option>`).join('')
     : '<option value="">noch kein früherer Stand</option>';
   $('#hist-run').disabled = !hist.dates.length;
+  tlReset();
   hist.res = null; drawHistory();
   $('#hist-out').innerHTML = ''; $('#hist-list').innerHTML = '';
 }
@@ -2076,6 +2084,53 @@ $('#hist-list').addEventListener('click', (e) => {
   else { setFollow(false); map.setView(toLatLng(cx * 16 + 8, cz * 16 + 8), Math.max(map.getZoom(), 1)); }
 });
 $('#hist-show').addEventListener('change', drawHistory);
+
+/* Zeitraffer: Kacheln "Stand am Morgen von Tag X" (nur geaenderte Chunks) ueber die Karte legen */
+var tl = { layer: null, idx: 0, timer: null };
+const dayLabel = (d) => d.split('-').reverse().join('.');
+function tlReset() {
+  tlStop();
+  const n = hist.dates.length;
+  $('#tl-range').max = n; $('#tl-range').value = n;
+  $('#tl-range').disabled = $('#tl-play').disabled = !n;
+  $('#tl-hint').textContent = n ? 'Schieb nach links, um die Karte zu sehen, wie sie am Morgen dieses Tages aussah. Nur auf der 2D-Karte.'
+    : 'Noch keine früheren Stände. Die Mod sichert sie, sobald sich ein Chunk an einem neuen Tag ändert.';
+  tlShow(n);
+}
+function tlShow(i) {
+  const n = hist.dates.length;
+  tl.idx = Math.max(0, Math.min(n, i));
+  $('#tl-range').value = tl.idx;
+  const date = tl.idx < n ? hist.dates[tl.idx] : null;
+  $('#tl-label').textContent = date ? dayLabel(date) : 'heute';
+  $('#tl-badge').hidden = !date;
+  $('#tl-badge').textContent = date ? `Stand ${dayLabel(date)} · zurück zu heute ✕` : '';
+  const old = tl.layer;
+  tl.layer = null;
+  if (!date) { if (old) map.removeLayer(old); return; }
+  const url = `/api/tile/${encodeURIComponent(state.server)}/${encodeURIComponent(state.dim)}/${state.layer}/{z}/{x}/{y}.png?at=${date}`;
+  const layer = L.tileLayer(url, { tileSize: 512, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, maxNativeZoom: 0, minNativeZoom: MIN_ZOOM, keepBuffer: 1 });
+  // alten Stand erst entfernen, wenn der neue geladen ist (kein Flackern beim Abspielen)
+  if (old) layer.once('load', () => map.removeLayer(old));
+  layer.addTo(map);
+  tl.layer = layer;
+}
+function tlStop() {
+  clearInterval(tl.timer); tl.timer = null;
+  $('#tl-play').textContent = '▶'; $('#tl-play').title = 'Abspielen';
+}
+$('#tl-range').addEventListener('input', (e) => { tlStop(); tlShow(Number(e.target.value)); });
+$('#tl-play').addEventListener('click', () => {
+  if (tl.timer) { tlStop(); return; }
+  if (mode3d) toast('Der Zeitraffer läuft auf der 2D-Karte');
+  if (tl.idx >= hist.dates.length) tlShow(0);
+  $('#tl-play').textContent = '❚❚'; $('#tl-play').title = 'Anhalten';
+  tl.timer = setInterval(() => {
+    if (tl.idx >= hist.dates.length) { tlStop(); return; }
+    tlShow(tl.idx + 1);
+  }, 1500);
+});
+$('#tl-badge').addEventListener('click', () => { tlStop(); tlShow(hist.dates.length); });
 
 function drawHistory() {
   hist.layer.clearLayers();
@@ -2201,7 +2256,7 @@ function renderAuto() {
   $('#ab-toggle').classList.add('primary');
   $('#ab-toggle').disabled = !running && !(pl && pl.ingame);
   $('#ab-toggle').title = running || (pl && pl.ingame) ? '' : 'Erst „Ins Spiel“ einschalten, damit Baritone die Schematic aus Litematica bauen kann';
-  if (!a || a.mode === 'store' || a.mode === 'farm' || a.phase === 'off' && !a.log) { $('#ab-info').textContent = ''; $('#ab-log').innerHTML = ''; return; }
+  if (!a || a.mode === 'store' || a.mode === 'farm' || a.mode === 'flatten' || a.phase === 'off' && !a.log) { $('#ab-info').textContent = ''; $('#ab-log').innerHTML = ''; return; }
   $('#ab-info').innerHTML = `<b class="${a.phase === 'error' ? 'bad' : a.phase === 'done' ? 'ok' : a.paused ? 'warn' : ''}">${running && a.paused ? 'pausiert' : AB_PHASE[a.phase] || a.phase}</b>` +
     (running && !mine ? ' (andere Schematic)' : '') + (a.info ? ' · ' + esc(a.info) : '') + (a.fetched ? ` · ${a.fetched}× geholt` : '');
   $('#ab-log').innerHTML = (a.log || []).slice(-8).reverse().map(([t, m]) =>
@@ -2258,7 +2313,7 @@ $('#ab-toggle').addEventListener('click', async () => {
   const srv = (state.player && state.player.server) || state.server;
   const running = a && (a.mode || 'build') === 'build' && ['plan', 'fetch', 'approach', 'build', 'unpack', 'return', 'fix'].includes(a.phase);
   if (!running && !pl) return;
-  if (!running && a && a.mode === 'farm' && ['fplan', 'mine', 'deposit'].includes(a.phase) && !confirm('Gerade wird gefarmt. Farmen beenden und stattdessen bauen?')) return;
+  if (!running && a && (a.mode === 'farm' || a.mode === 'flatten') && ['fplan', 'mine', 'deposit'].includes(a.phase) && !confirm(a.mode === 'flatten' ? 'Gerade wird geebnet. Ebnen beenden und stattdessen bauen?' : 'Gerade wird gefarmt. Farmen beenden und stattdessen bauen?')) return;
   if (!running && !confirm('Autobau starten?\n\nBaritone läuft zu deinen Kisten, nimmt das fehlende Material und baut die Schematic. Unterwegs baut es nichts ab, beim Bauen selbst schon (falsche Blöcke im Rahmen).\n\nShulker im Inventar packt er neben sich aus und baut sie wieder ab.\\n\\nAbbrechen jederzeit mit „■ Stopp“.')) return;
   try {
     ctl.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify(running ? { srv } : { srv, pid: pl.id }) });
@@ -2478,7 +2533,7 @@ $('#q-start').addEventListener('click', async () => {
 });
 
 /* Farmen: Bereich auf der Karte, Bloecke mit Menge, wohin mit vollem Inventar */
-const farmUi = { box: null, dim: null, blocks: [], amounts: {}, rect: null, timer: null, auto: null };
+const farmUi = { box: null, dim: null, blocks: [], amounts: {}, rect: null, timer: null, auto: null, mode: 'farm', flat: null, inv: null };
 const FARM_RUN = ['fplan', 'mine', 'deposit'];
 
 function farmArea() {
@@ -2513,8 +2568,9 @@ function farmAreaChanged() {
   $('#fm-area').textContent = `${a.x0} ${a.z0} bis ${a.x1} ${a.z1}` + ($('#fm-snap').checked ? ` · ${cw * cl} Chunks` : '');
   drawFarmArea();
   fillFarmChests();
+  if ($('#fl-level').value === '') $('#fl-level').value = defaultLevel(a);
   clearTimeout(farmScanT);
-  farmScanT = setTimeout(scanFarm, 300);
+  farmScanT = setTimeout(farmUi.mode === 'flat' ? scanFlat : scanFarm, 300);
 }
 async function scanFarm() {
   const a = farmArea();
@@ -2553,26 +2609,93 @@ function fillFarmChests() {
     list.map(({ c, d }) => `<option value="${esc(c.key)}">${esc(c.title || chestWhere(c))} · ${fmt(d)} m</option>`).join('');
   $('#fm-chest').value = list.some(({ c }) => c.key === cur) ? cur : '';
 }
-function farmRunning() { const a = farmUi.auto; return !!(a && a.mode === 'farm' && FARM_RUN.includes(a.phase)); }
+function farmRunning() { const a = farmUi.auto; return !!(a && (a.mode === 'farm' || a.mode === 'flatten') && FARM_RUN.includes(a.phase)); }
+function flatReady() {
+  const lvl = $('#fl-level').value, fill = $('#fl-fill').checked;
+  return lvl !== '' && ($('#fl-clear').checked || fill) && (!fill || !!$('#fl-block').value.trim());
+}
 function renderFarmGo() {
   const run = farmRunning();
-  const any = Object.values(farmUi.amounts).some((n) => n > 0);
-  $('#fm-go').textContent = run ? '■ Farmen stoppen' : '▶ Farmen starten';
+  const flat = farmUi.mode === 'flat';
+  const ready = farmUi.box && (flat ? flatReady() : Object.values(farmUi.amounts).some((n) => n > 0));
+  const runFlat = run && farmUi.auto.mode === 'flatten';
+  $('#fm-go').textContent = run ? (runFlat ? '■ Ebnen stoppen' : '■ Farmen stoppen') : flat ? '▶ Ebnen starten' : '▶ Farmen starten';
   $('#fm-go').classList.toggle('danger', run);
-  $('#fm-go').disabled = !run && !(farmUi.box && any);
-  $('#fm-go').title = run || (farmUi.box && any) ? '' : 'Erst Bereich wählen und bei mindestens einem Block eine Menge eintragen';
+  $('#fm-go').disabled = !run && !ready;
+  $('#fm-go').title = run || ready ? '' : flat ? 'Erst Bereich wählen, Höhe eintragen und einen Füllblock angeben' : 'Erst Bereich wählen und bei mindestens einem Block eine Menge eintragen';
+}
+function setFarmMode(m) {
+  farmUi.mode = m;
+  const flat = m === 'flat';
+  $$('.fm-mode button').forEach((b) => b.classList.toggle('on', b.dataset.fmmode === m));
+  $('#fm-hint-farm').hidden = flat; $('#fm-hint-flat').hidden = !flat;
+  $('#fm-card').hidden = flat; $('#fl-card').hidden = !flat;
+  if (flat) { loadFlatInventory(); scanFlat(); } else if (farmUi.box) scanFarm();
+  renderFarmGo();
+}
+function defaultLevel(a) {
+  const p = state.player;
+  if (p && p.active && p.dim === (farmUi.dim || state.dim)) return Math.floor(p.y) - 1;
+  return a ? Math.max(a.y0, Math.min(a.y1, 64)) : 64;
+}
+const FILL_PREF = ['dirt', 'cobblestone', 'cobbled_deepslate', 'netherrack', 'stone', 'andesite', 'diorite', 'granite', 'tuff'];
+async function loadFlatInventory() {
+  try { farmUi.inv = await api('/api/inventory'); } catch (_) { farmUi.inv = null; }
+  const counts = {};
+  for (const it of (farmUi.inv && farmUi.inv.items) || []) if (it.slot == null || it.slot < 36) counts[it.id] = (counts[it.id] || 0) + it.count;
+  farmUi.invCounts = counts;
+  $('#fl-blocks').innerHTML = Object.keys(counts).map((id) => `<option value="${esc(id.replace('minecraft:', ''))}">`).join('');
+  if (!$('#fl-block').value) {
+    const have = FILL_PREF.find((b) => counts['minecraft:' + b]);
+    $('#fl-block').value = have || 'dirt';
+  }
+  renderFlatSum();
+}
+let flatScanT = null;
+async function scanFlat() {
+  const a = farmArea();
+  if (!a || $('#fl-level').value === '') { farmUi.flat = null; renderFlatSum(); return; }
+  try {
+    farmUi.flat = await api('/api/farm/flatscan?' + new URLSearchParams({ srv: state.server, dim: farmUi.dim || state.dim, ...a, level: $('#fl-level').value }));
+  } catch (e) { farmUi.flat = { error: e.message }; }
+  renderFlatSum();
+}
+function renderFlatSum() {
+  const a = farmArea(), f = farmUi.flat, run = farmUi.auto && farmUi.auto.mode === 'flatten' && farmRunning() && farmUi.auto.farm;
+  let txt = '';
+  if (run) {
+    const fl = run.flatten;
+    txt = fl.stage === 'clear' ? `Trägt ab: noch ${fmt(fl.clearLeft ?? 0)} Blöcke.` : `Füllt auf: noch ${fmt(fl.fillLeft ?? 0)} Löcher.`;
+  } else if (!a) {
+    txt = 'Erst einen Bereich wählen.';
+  } else if (f && f.error) {
+    txt = f.error;
+  } else if (f) {
+    const lvl = Number($('#fl-level').value);
+    const id = 'minecraft:' + $('#fl-block').value.trim().replace(/^minecraft:/, '');
+    const have = (farmUi.invCounts || {})[id] || 0;
+    const parts = [];
+    if ($('#fl-clear').checked) parts.push(`<span>${fmt(f.clear)} Blöcke abtragen (Y ${lvl + 1} bis ${a.y1})</span>`);
+    if ($('#fl-fill').checked) parts.push(`<span>${fmt(f.fill)} Löcher füllen (ab Y ${a.y0})</span>`, `<span>${fmt(have)} dabei</span>`);
+    txt = parts.join(' · ');
+    if ($('#fl-fill').checked && f.fill > have) txt += `<br><b class="warn">Es fehlen ${fmt(f.fill - have)} Blöcke, nimm mehr mit.</b>`;
+  }
+  $('#fl-sum').innerHTML = txt;
+  renderFarmGo();
 }
 function renderFarm() {
   const a = farmUi.auto;
   renderFarmGo();
   drawFarmArea();
-  if (!a || a.mode !== 'farm') { $('#fm-info').textContent = ''; $('#fm-log').innerHTML = ''; return; }
+  if (farmUi.mode === 'flat') renderFlatSum();
+  if (!a || (a.mode !== 'farm' && a.mode !== 'flatten')) { $('#fm-info').textContent = ''; $('#fm-log').innerHTML = ''; return; }
   const run = farmRunning();
-  $('#fm-info').innerHTML = `<b class="${a.phase === 'error' ? 'bad' : a.phase === 'done' ? 'ok' : a.paused ? 'warn' : ''}">${run && a.paused ? 'pausiert' : AB_PHASE[a.phase] || a.phase}</b>` +
+  const filling = a.mode === 'flatten' && a.phase === 'mine' && a.farm && a.farm.flatten && a.farm.flatten.stage === 'fill';
+  $('#fm-info').innerHTML = `<b class="${a.phase === 'error' ? 'bad' : a.phase === 'done' ? 'ok' : a.paused ? 'warn' : ''}">${run && a.paused ? 'pausiert' : filling ? 'füllt auf' : AB_PHASE[a.phase] || a.phase}</b>` +
     (a.info ? ' · ' + esc(a.info) : '') + (a.farm && a.farm.deposits ? ` · ${a.farm.deposits}× eingelagert` : '');
   $('#fm-log').innerHTML = (a.log || []).slice(-8).reverse().map(([t, m]) =>
     `<li><span class="mono muted">${new Date(t).toLocaleTimeString(I18N.locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span> ${esc(m)}</li>`).join('');
-  if (run && a.farm) renderFarmBlocks();
+  if (run && a.farm && a.mode === 'farm') renderFarmBlocks();
 }
 async function pollFarm() {
   if (document.hidden || !state.server) return;
@@ -2599,6 +2722,16 @@ $('#fm-snap').addEventListener('change', farmAreaChanged);
 $('#fm-y0').addEventListener('change', farmAreaChanged);
 $('#fm-y1').addEventListener('change', farmAreaChanged);
 $('#fm-filter').addEventListener('input', renderFarmBlocks);
+$$('.fm-mode button').forEach((b) => b.addEventListener('click', () => setFarmMode(b.dataset.fmmode)));
+$('#fl-level').addEventListener('input', () => { clearTimeout(flatScanT); flatScanT = setTimeout(scanFlat, 300); renderFarmGo(); });
+$('#fl-here').addEventListener('click', () => {
+  const p = state.player;
+  if (!p || !p.active) { toast('Spiel nicht verbunden'); return; }
+  $('#fl-level').value = Math.floor(p.y) - 1;
+  scanFlat();
+});
+for (const id of ['#fl-clear', '#fl-fill']) $(id).addEventListener('change', renderFlatSum);
+$('#fl-block').addEventListener('input', renderFlatSum);
 $('#fm-blocks').addEventListener('change', (e) => {
   const id = e.target.dataset && e.target.dataset.fm;
   if (!id) return;
@@ -2613,6 +2746,16 @@ $('#fm-go').addEventListener('click', async () => {
       farmUi.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv }) });
     } else {
       const a = farmArea();
+      if (farmUi.mode === 'flat') {
+        const level = Number($('#fl-level').value), clear = $('#fl-clear').checked, fill = $('#fl-fill').checked;
+        const block = $('#fl-block').value.trim();
+        const chest = $('#fm-chest').value;
+        const what = [clear ? `alles über Y ${level} abtragen` : '', fill ? `Löcher bis Y ${level} mit ${itemName('minecraft:' + block.replace(/^minecraft:/, ''))} füllen` : ''].filter(Boolean).join(' und ');
+        if (!confirm(`Ebnen starten?\n\nBaritone wird ${what}.\n\nVolles Inventar: ${chest ? 'zur gewählten Kiste bringen' : 'Kiste aus dem Inventar aufstellen und einpacken'}.\n\nAbbrechen jederzeit mit „■ Ebnen stoppen“.`)) return;
+        farmUi.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv, farm: { area: a, dim: farmUi.dim || state.dim, chest: chest || null, placeChest: true, flatten: { level, clear, fill, block } } }) });
+        renderFarm();
+        return;
+      }
       const targets = Object.fromEntries(Object.entries(farmUi.amounts).filter(([, n]) => n > 0));
       const what = Object.entries(targets).map(([id, n]) => `${fmt(n)}× ${itemName(id)}`).join(', ');
       const chest = $('#fm-chest').value;

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 import time
 
@@ -238,6 +239,11 @@ class Commands:
             if req.get("timeout"):
                 cmd["timeout"] = max(30, min(1800, int(req["timeout"])))
             cmd["ids"] = [str(i) for i in (req.get("ids") or [])][:64]
+            if req.get("fill"):
+                fill = str(req["fill"])
+                if not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_/.-]+", fill):
+                    raise ValueError("ungültiger Block")
+                cmd["fill"] = fill
         elif kind == "chestdump":
             cmd["slots"] = [int(v) for v in (req.get("slots") or [])][:36]
             cmd["ids"] = [str(i) for i in (req.get("ids") or [])][:64]
@@ -451,6 +457,34 @@ class History:
         except OSError:
             return []
         return [d for d in names if os.path.isdir(self._dir(server, d, dim))]
+
+    def index(self, server: str, dim: str, date: str) -> dict:
+        """{(cx, cz): (Region-Datei, Index)} des fruehesten gesicherten Stands ab ``date``.
+
+        Das ist der Stand des Chunks zu Beginn dieses Tages (fuer den Zeitraffer).
+        Kurz zwischengespeichert, die Mod legt hoechstens neue Sicherungen dazu.
+        """
+        key = ("idx", server, dim, date)
+        hit = self._cache.get(key)
+        if hit and time.monotonic() - hit[0] < 10.0:
+            return hit[1]
+        first: dict = {}
+        for d in self.dates(server, dim):
+            if d < date:
+                continue
+            rdir = self._dir(server, d, dim)
+            for n in sorted(os.listdir(rdir)):
+                m = _REGION_RE.match(n)
+                if not m:
+                    continue
+                p = os.path.join(rdir, n)
+                rx, rz = int(m.group(1)), int(m.group(2))
+                for idx in Region(p, rx, rz).chunk_indices():
+                    first.setdefault((rx * 32 + (int(idx) & 31), rz * 32 + (int(idx) >> 5)), (p, int(idx)))
+        if len(self._cache) > 40:
+            self._cache.clear()
+        self._cache[key] = (time.monotonic(), first)
+        return first
 
     def _tables(self):
         names = BLOCKS.names

@@ -6,7 +6,7 @@ Endpunkte (alle JSON, ausser Bildern):
 
     GET  /                                   Oberflaeche
     GET  /api/worlds                         Server, Dimensionen, Schichten
-    GET  /api/tile/<srv>/<dim>/<layer>/<z>/<x>/<y>.png
+    GET  /api/tile/<srv>/<dim>/<layer>/<z>/<x>/<y>.png[?at=JJJJ-MM-TT]   (at: Stand an dem Tag, nur geaenderte Chunks)
     GET  /api/changes?srv=&dim=&since=       Regionen, die sich seit <since> geaendert haben
     GET  /api/column?srv=&dim=&x=&z=&layer=  oberster Block, Hoehe, Biom an einer Stelle
     GET  /api/markers?srv=&dim=&layer=       Schilder + Behaelter je Chunk
@@ -35,7 +35,10 @@ Endpunkte (alle JSON, ausser Bildern):
     GET/POST /api/auto/settings              Autobau-Schutz: radar, radarDist, friends, eat, tools, leftovers, fix
     POST /api/auto {srv, queue: [pid]}       Warteschlange setzen
     POST /api/auto {srv, farm: {area, dim, targets, chest, placeChest}}   Farmen starten
+    POST /api/auto {srv, farm: {area, dim, flatten: {level, clear, fill, block}, chest, placeChest}}   Ebnen
     GET  /api/farm/scan?srv=&dim=&x0=..      welche Bloecke im Bereich stehen
+    GET  /api/farm/flatscan?..&level=        Ebnen: wie viele Bloecke ab, wie viele Loecher
+    GET  /api/spawn/<srv>/<dim>/<cx>/<cz>    wo Monster spawnen koennen (braucht Licht in der Aufnahme)
     POST /api/fix {srv, pid, extra}          falsche/verdrehte (und ueberfluessige) Bloecke abbauen lassen
     GET  /api/radar?srv=                     Logbuch: wer war wann in Sichtweite
     GET  /editor?file=                       Schematic-Editor (eigene Seite)
@@ -65,11 +68,11 @@ from .core.chunk import BIOMES
 from .core.mesher import mesh_chunk
 from .core.models import MODELS
 from .core.schem import export as schem_export
-from .core.tiles import Layer, TileStore, render_chunk
+from .core.tiles import Layer, PastTiles, TileStore, render_chunk
 from .core.world import ChunkCache
 from .placements import Placements
 from .editor import Editor
-from . import farm
+from . import farm, spawn
 from .autobuild import AutoBuild
 from .extras import Commands, Containers, Control, History, LidLog, Radar, world_chests
 from .core.world import DIM_LABELS, LEGACY_SERVER, Recording
@@ -84,6 +87,7 @@ class App:
     def __init__(self, recording: str, cache_dir: str):
         self.rec = Recording(recording)
         self.tiles = TileStore(self.rec, cache_dir)
+        self._past: dict = {}
         self.cache_dir = cache_dir
         self.player: dict | None = None
         self.player_ts = 0.0
@@ -114,6 +118,17 @@ class App:
         self.trail_saved = time.monotonic()
 
     # -------------------------------------------------------------- Litematica-Bruecke
+
+    def past(self, server: str, dim_key: str, date: str) -> PastTiles:
+        """Kacheln fuer den Zeitraffer: Karte am Anfang von ``date``."""
+        key = (server, dim_key, date)
+        pt = self._past.get(key)
+        if pt is None:
+            if len(self._past) > 64:
+                self._past.clear()
+            pt = self._past[key] = PastTiles(self.rec, os.path.join(self.cache_dir, "_past", date),
+                                             lambda: self.history.index(server, dim_key, date))
+        return pt
 
     def with_ingame(self, pls: list) -> list:
         """Haengt an jede Platzierung, ob sie gerade in Litematica im Spiel ist."""
@@ -405,7 +420,7 @@ def make_handler(app: App):
                 if p == "/api/worlds":
                     return self.json({"worlds": app.worlds(), "now": time.time()})
                 if p.startswith("/api/tile/"):
-                    return self.tile(p)
+                    return self.tile(p, q)
                 if p == "/api/changes":
                     dim = self.dim_from(q)
                     since = float(q.get("since", ["0"])[0])
@@ -538,6 +553,25 @@ def make_handler(app: App):
                     return self.json(app.auto.get_settings())
                 if p == "/api/auto":
                     return self.json(app.auto.view(q["srv"][0]))
+                if p.startswith("/api/spawn/"):
+                    parts = [unquote(x) for x in p.split("/")[3:]]
+                    dim = app.rec.dimension(parts[0], parts[1]) if len(parts) == 4 else None
+                    if dim is None:
+                        return self.fail(404, "keine Aufnahme")
+                    ch = app.rec.chunk(dim, int(parts[2]), int(parts[3]))
+                    return self.json(spawn.points(ch, dim.key) if ch else {"light": False, "pts": []})
+                if p == "/api/farm/flatscan":
+                    dim = app.rec.dimension(q["srv"][0], q["dim"][0])
+                    if dim is None:
+                        return self.fail(404, "keine Aufnahme")
+                    try:
+                        a = {k: q[k][0] for k in ("x0", "z0", "x1", "z1", "y0", "y1")}
+                        level = int(q["level"][0])
+                        above = dict(farm.norm_area(a), y0=level + 1)
+                        clear = farm.count(app.rec, dim, above, {farm.ANY})[farm.ANY] if above["y0"] <= above["y1"] else 0
+                        return self.json({"clear": clear, "fill": len(farm.holes(app.rec, dim, a, level))})
+                    except (KeyError, ValueError) as e:
+                        return self.fail(400, str(e))
                 if p == "/api/farm/scan":
                     dim = app.rec.dimension(q["srv"][0], q["dim"][0])
                     if dim is None:
@@ -699,7 +733,7 @@ def make_handler(app: App):
                 ctype += "; charset=utf-8"
             self.send(200, data, ctype, "no-cache")
 
-        def tile(self, p: str):
+        def tile(self, p: str, q=None):
             parts = [unquote(x) for x in p.split("/")[3:]]
             if len(parts) != 6 or not parts[5].endswith(".png"):
                 return self.fail(400, "Kachelpfad: /api/tile/<srv>/<dim>/<layer>/<z>/<x>/<y>.png")
@@ -710,7 +744,11 @@ def make_handler(app: App):
             zoom, tx, tz = int(z), int(x), int(y[:-4])
             if zoom < -8 or zoom > 0:
                 return self.fail(400, "Zoom ausserhalb")
-            path = app.tiles.tile(dim, Layer.parse(layer_s), zoom, tx, tz)
+            at = (q or {}).get("at", [""])[0]
+            if at and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", at):
+                return self.fail(400, "Datum: JJJJ-MM-TT")
+            store = app.past(srv, dim_key, at) if at else app.tiles
+            path = store.tile(dim, Layer.parse(layer_s), zoom, tx, tz)
             if path is None:
                 return self.send(200, empty_png, "image/png", "no-cache")
             etag = f'"{int(os.path.getmtime(path) * 1000)}"'
@@ -792,6 +830,8 @@ def make_handler(app: App):
                         return self.json(app.auto.view(str(req["srv"])))
                     if "queue" in req:
                         return self.json(app.auto.set_queue(str(req["srv"]), list(req["queue"] or [])))
+                    if req.get("farm") and (req["farm"] or {}).get("flatten"):
+                        return self.json(app.auto.start_flatten(str(req["srv"]), dict(req["farm"])))
                     if req.get("farm"):
                         return self.json(app.auto.start_farm(str(req["srv"]), dict(req["farm"])))
                     if req.get("pid"):

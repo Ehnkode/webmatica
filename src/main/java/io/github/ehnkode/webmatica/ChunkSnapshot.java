@@ -7,7 +7,11 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.world.LightType;
+import net.minecraft.world.chunk.ChunkNibbleArray;
 import net.minecraft.world.chunk.ChunkSection;
+import net.minecraft.world.chunk.light.LightingProvider;
 import net.minecraft.world.chunk.PalettesFactory;
 import net.minecraft.world.chunk.WorldChunk;
 
@@ -21,6 +25,9 @@ import java.util.List;
  * und Block-Entities (billig). {@link #toNbt} laeuft danach auf dem IO-Thread
  * und fasst den lebenden Chunk nicht mehr an, sodass das Spiel ihn
  * gleichzeitig weiter veraendern darf.
+ *
+ * Das Licht (Block- und Himmelslicht, wie es der Server schickt) kommt mit,
+ * damit der Viewer genau zeigen kann, wo Monster spawnen koennen.
  */
 public final class ChunkSnapshot {
 
@@ -29,14 +36,19 @@ public final class ChunkSnapshot {
     private final ChunkSection[] sections;
     private final List<NbtCompound> blockEntities;
     private final PalettesFactory palettes;
+    private final byte[][] blockLight;
+    private final byte[][] skyLight;
 
     private ChunkSnapshot(ChunkPos pos, int bottomSectionY, ChunkSection[] sections,
-                          List<NbtCompound> blockEntities, PalettesFactory palettes) {
+                          List<NbtCompound> blockEntities, PalettesFactory palettes,
+                          byte[][] blockLight, byte[][] skyLight) {
         this.pos = pos;
         this.bottomSectionY = bottomSectionY;
         this.sections = sections;
         this.blockEntities = blockEntities;
         this.palettes = palettes;
+        this.blockLight = blockLight;
+        this.skyLight = skyLight;
     }
 
     public ChunkPos pos() {
@@ -61,8 +73,28 @@ public final class ChunkSnapshot {
                 // Einzelne kaputte Block-Entity ueberspringen, Rest weiter speichern.
             }
         }
+        LightingProvider light = chunk.getWorld().getLightingProvider();
+        byte[][] block = new byte[live.length][];
+        byte[][] sky = new byte[live.length][];
+        for (int i = 0; i < live.length; i++) {
+            ChunkSectionPos sp = ChunkSectionPos.from(chunk.getPos(), chunk.getBottomSectionCoord() + i);
+            block[i] = lightBytes(light, LightType.BLOCK, sp);
+            sky[i] = lightBytes(light, LightType.SKY, sp);
+        }
         return new ChunkSnapshot(chunk.getPos(), chunk.getBottomSectionCoord(), copy, bes,
-                PalettesFactory.fromRegistryManager(registries));
+                PalettesFactory.fromRegistryManager(registries), block, sky);
+    }
+
+    /** Lichtwerte einer Sektion (2048 Bytes, 4 Bit je Block) oder null, wenn der Client keine hat. */
+    private static byte[] lightBytes(LightingProvider light, LightType type, ChunkSectionPos sp) {
+        try {
+            ChunkNibbleArray arr = light.get(type).getLightSection(sp);
+            // copy(): eine "leere" Sektion traegt nur einen Standardwert (z. B. 0 im
+            // Dunkeln); asByteArray() der Kopie fuellt ihn aus, ohne das Original anzufassen.
+            return arr == null ? null : arr.copy().asByteArray();
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     /** Vanilla-Chunk-NBT (wie SerializedChunk), lesbar von Amulet, MCA Selector, BlueMap. */
@@ -75,7 +107,7 @@ public final class ChunkSnapshot {
         root.putString("Status", "minecraft:full");
         root.putLong("LastUpdate", 0L);
         root.putLong("InhabitedTime", 0L);
-        root.putBoolean("isLightOn", false);
+        root.putBoolean("isLightOn", true);
 
         NbtList sectionList = new NbtList();
         for (int i = 0; i < sections.length; i++) {
@@ -91,6 +123,12 @@ public final class ChunkSnapshot {
             palettes.biomeContainerCodec()
                     .encodeStart(NbtOps.INSTANCE, section.getBiomeContainer())
                     .result().ifPresent(nbt -> sec.put("biomes", nbt));
+            if (blockLight[i] != null) {
+                sec.putByteArray("BlockLight", blockLight[i]);
+            }
+            if (skyLight[i] != null) {
+                sec.putByteArray("SkyLight", skyLight[i]);
+            }
             sectionList.add(sec);
         }
         root.put("sections", sectionList);

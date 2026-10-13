@@ -93,16 +93,50 @@ class Chunk:
     blocks: np.ndarray              # uint16 (H, 16, 16) [y, z, x], globale BLOCKS-IDs
     biomes: np.ndarray              # uint16 (H/4, 4, 4) [y, z, x], globale BIOMES-IDs
     block_entities: list = field(default_factory=list)
+    #: Licht je Sektion (Index ab unten): (BlockLight, SkyLight) als rohe 2048 Bytes oder None
+    light_raw: dict = field(default_factory=dict)
 
     @property
     def height(self) -> int:
         return self.blocks.shape[0]
+
+    def light(self) -> tuple[np.ndarray, np.ndarray] | None:
+        """(Blocklicht, Himmelslicht) uint8 (H, 16, 16) [y, z, x], oder None ohne Lichtdaten.
+
+        Sektionen ohne Himmelslicht-Daten gelten als ganz hell (so macht es Vanilla
+        ueber freiem Himmel), ohne Blocklicht-Daten als dunkel.
+        """
+        if not self.light_raw:
+            return None
+        bl = np.zeros(self.blocks.shape, np.uint8)
+        sl = np.full(self.blocks.shape, 15, np.uint8)
+        for i, (b, k) in self.light_raw.items():
+            if b is not None:
+                bl[i * 16:(i + 1) * 16] = _nibbles(b)
+            if k is not None:
+                sl[i * 16:(i + 1) * 16] = _nibbles(k)
+        return bl, sl
 
     def block(self, x: int, y: int, z: int) -> str:
         ly = y - self.min_y
         if not 0 <= ly < self.height:
             return "minecraft:air"
         return BLOCKS.names[self.blocks[ly, z & 15, x & 15]]
+
+
+def _raw(arr) -> bytes | None:
+    if arr is None or len(arr) != 2048:
+        return None
+    return np.asarray(arr).tobytes() if isinstance(arr, np.ndarray) else bytes(arr)
+
+
+def _nibbles(raw: bytes) -> np.ndarray:
+    """2048 Bytes Vanilla-Licht (4 Bit je Block, Index y<<8 | z<<4 | x) -> (16, 16, 16)."""
+    b = np.frombuffer(raw, np.uint8)
+    out = np.empty(4096, np.uint8)
+    out[0::2] = b & 15
+    out[1::2] = b >> 4
+    return out.reshape(16, 16, 16)
 
 
 def from_nbt(root: dict, cx: int | None = None, cz: int | None = None) -> Chunk | None:
@@ -114,6 +148,7 @@ def from_nbt(root: dict, cx: int | None = None, cz: int | None = None) -> Chunk 
     n = hi - lo + 1
     blocks = np.zeros((n * 16, 16, 16), dtype=np.uint16)
     biomes = np.zeros((n * 4, 4, 4), dtype=np.uint16)
+    light_raw: dict = {}
 
     for s in sections:
         if "Y" not in s:
@@ -128,6 +163,9 @@ def from_nbt(root: dict, cx: int | None = None, cz: int | None = None) -> Chunk 
                 idx = unpack(bs.get("data"), bits, 4096)
                 np.clip(idx, 0, len(pal) - 1, out=idx)
                 blocks[i * 16:(i + 1) * 16] = lut[idx].reshape(16, 16, 16)
+        bl, sl = _raw(s.get("BlockLight")), _raw(s.get("SkyLight"))
+        if bl is not None or sl is not None:
+            light_raw[i] = (bl, sl)
         bm = s.get("biomes")
         if bm:
             pal = bm.get("palette") or []
@@ -145,4 +183,5 @@ def from_nbt(root: dict, cx: int | None = None, cz: int | None = None) -> Chunk 
         blocks=blocks,
         biomes=biomes,
         block_entities=root.get("block_entities") or [],
+        light_raw=light_raw,
     )

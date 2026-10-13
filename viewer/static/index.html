@@ -11,6 +11,7 @@
 </head>
 <body>
 <div id="map"></div>
+<button id="tl-badge" class="panel tl-badge" hidden title="Zurück zu heute"></button>
 <div id="view3d" hidden>
   <div id="set3d" class="set3d panel" hidden>
     <label title="Sichtweite in Chunks mit vollen Blockmodellen">Chunks <input type="range" id="radius3d" min="4" max="48" value="12"> <span id="radius3d-val" class="mono">12</span></label>
@@ -20,7 +21,9 @@
       <label class="check"><input type="checkbox" id="fog3d"> Nebel</label>
       <label class="check" title="Höhlen und Inneres mitladen (langsamer)"><input type="checkbox" id="full3d"> Höhlen</label>
       <label class="check" title="Sonne, Schatten, Himmel und Lichtstimmung"><input type="checkbox" id="fancy3d"> Shader</label>
+      <label class="check" title="Wo Monster spawnen können: rot jederzeit, orange nur nachts"><input type="checkbox" id="spawn3d"> Mob-Spawns</label>
     </div>
+    <div id="spawn3d-legend" class="spawn-legend" hidden><span class="sw sw-red"></span> jederzeit <span class="sw sw-orange"></span> nur nachts</div>
   </div>
   <div class="hint3d panel">
     <span id="hint3d-text">Klick auf Spieler oder Schematic wählt aus · sonst Maus fangen · <b>WASD</b> fliegen · <b>Leertaste/Shift</b> hoch/runter · <b>Strg</b> schneller · <b>Esc</b> Maus frei</span>
@@ -152,7 +155,9 @@
     <ul id="ct-list" class="list"></ul>
   </section>
   <section data-pane="farm" class="pane">
-    <p class="hint">Baritone baut in einem Bereich bestimmte Blöcke ab, bis die Menge erreicht ist, und sammelt alles ein.</p>
+    <div class="seg fm-mode"><button data-fmmode="farm" class="on">Blöcke farmen</button><button data-fmmode="flat">Ebnen</button></div>
+    <p class="hint" id="fm-hint-farm">Baritone baut in einem Bereich bestimmte Blöcke ab, bis die Menge erreicht ist, und sammelt alles ein.</p>
+    <p class="hint" id="fm-hint-flat" hidden>Baritone trägt im Bereich alles über einer Höhe ab und füllt Löcher bis zu dieser Höhe auf. So entsteht eine ebene Baufläche.</p>
     <div class="card">
       <div class="card-title">1 · Bereich</div>
       <div class="sp-row"><button id="fm-pick" class="primary">Auf der Karte wählen</button></div>
@@ -160,7 +165,15 @@
       <div class="sp-row fm-y"><label>Y von <input type="number" id="fm-y0"></label><label>bis <input type="number" id="fm-y1"></label>
         <label class="check" title="Bereich auf ganze Chunks (16 × 16) erweitern"><input type="checkbox" id="fm-snap" checked> ganze Chunks</label></div>
     </div>
-    <div class="card">
+    <div class="card" id="fl-card" hidden>
+      <div class="card-title">2 · Höhe und Füllblock</div>
+      <div class="sp-row"><label>Eben auf Y <input type="number" id="fl-level"></label><button id="fl-here" title="Höhe unter deinen Füßen">Meine Höhe</button></div>
+      <label class="check"><input type="checkbox" id="fl-clear" checked> Alles darüber abtragen</label>
+      <div class="sp-row"><label class="check"><input type="checkbox" id="fl-fill" checked> Löcher auffüllen mit</label>
+        <input id="fl-block" list="fl-blocks" placeholder="z. B. dirt"><datalist id="fl-blocks"></datalist></div>
+      <p id="fl-sum" class="hint"></p>
+    </div>
+    <div class="card" id="fm-card">
       <div class="card-title">2 · Blöcke und Menge <span id="fm-sum" class="muted"></span></div>
       <p id="fm-blocks-hint" class="hint">Erst einen Bereich wählen.</p>
       <input id="fm-filter" placeholder="Block suchen …" hidden>
@@ -183,11 +196,19 @@
     </div>
   </section>
   <section data-pane="history" class="pane">
-    <p class="hint">Vergleicht die Welt mit einem früheren Tag. Die Mod sichert ab Version 0.3.1 jeden Tag den alten Stand geänderter Chunks.</p>
+    <p class="hint">Die Mod sichert jeden Tag den alten Stand geänderter Chunks. Damit kannst du zurückblättern und vergleichen.</p>
+    <div class="card">
+      <div class="card-title">Zeitraffer</div>
+      <div class="sp-row tl-row"><button id="tl-play" title="Abspielen">▶</button><input type="range" id="tl-range" min="0" max="0" value="0" step="1"><span id="tl-label" class="mono">heute</span></div>
+      <p id="tl-hint" class="hint">Schieb nach links, um die Karte zu sehen, wie sie am Morgen dieses Tages aussah. Nur auf der 2D-Karte.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Mit heute vergleichen</div>
     <div class="sp-row"><select id="hist-date"></select><button id="hist-run" class="primary">Vergleichen</button></div>
     <label class="check"><input type="checkbox" id="hist-show" checked> Auf Karte und in 3D zeigen</label>
     <div id="hist-out"></div>
     <ul id="hist-list" class="list"></ul>
+    </div>
   </section>
   <section data-pane="radar" class="pane">
     <p class="hint">Spieler, die dein Client gerade sieht (Mod 0.3.2). Rot auf Karte und in 3D.</p>

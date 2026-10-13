@@ -98,13 +98,14 @@ public final class RegionStore {
 
     // ---------------------------------------------------------------- Client-Thread
 
-    /** Chunk vom Server empfangen. */
+    /**
+     * Chunk vom Server empfangen. Geschrieben wird erst nach {@link #DIRTY_DELAY_MS}:
+     * das Licht kommt im selben Paket, wird vom Client aber erst danach eingetragen.
+     */
     public void onChunkLoad(ClientWorld world, WorldChunk chunk) {
-        if (!enabled) {
-            return;
+        if (enabled) {
+            dirty.put(chunk.getPos().toLong(), System.currentTimeMillis());
         }
-        dirty.remove(chunk.getPos().toLong());
-        submit(world, chunk);
     }
 
     /** Chunk verlaesst die Sichtweite: offene Aenderungen sofort sichern. */
