@@ -16,9 +16,8 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
 | | |
 |---|---|
-| ![Wüstendorf in 3D](docs/village.de.jpg) | ![Berg mit Fernsicht](docs/mountain.de.jpg) |
-| ![Rechtsklick auf die Karte, Baritone läuft hin](docs/goto.gif) | ![Kiste anklicken, Inhalt sehen, alle Kisten durchsuchen](docs/storage.gif) |
-| ![Schematic in der Welt platzieren und verschieben](docs/place.gif) | ![Mit einem Klick von der Karte in 3D](docs/2d-3d.gif) |
+| ![Wüstendorf in 3D](docs/village.de.jpg) | ![Rechtsklick auf die Karte, Baritone läuft hin](docs/goto.gif) |
+| ![Kiste anklicken, Inhalt sehen, alle Kisten durchsuchen](docs/storage.gif) | ![Schematic in der Welt platzieren und verschieben](docs/place.gif) |
 | ![Schematic Schicht für Schicht aufschneiden](docs/editor-cut.gif) | ![Bereich mit Baritone ebnen](docs/automation.de.jpg) |
 
 - **Karte und 3D** von allem, was du gesehen hast, mit echten Blockmodellen, weichem Licht,
