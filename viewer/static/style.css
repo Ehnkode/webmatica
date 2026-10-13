@@ -580,3 +580,9 @@ body:not(.mode3d) .only3d { display: none !important; }
 .xray-chip button { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0 0 0 2px; font-size: 12px; }
 .xray-chip button:hover { color: var(--fg); }
 body.xray-on:not(.mode3d) #map .leaflet-tile-pane { filter: brightness(0.38) saturate(0.5); }
+.xray-pin { background: none; border: none; }
+.xray-pin-ring { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; box-sizing: border-box;
+  border-radius: 6px; border: 2px solid var(--c); background: rgba(14, 16, 20, 0.85); box-shadow: 0 0 8px var(--c); }
+.xray-pin-ring .ico.none { border-radius: 3px; background: var(--c); width: 10px !important; height: 10px !important; }
+.xray-pop { display: flex; flex-direction: column; gap: 6px; min-width: 190px; }
+.xray-pop-head { display: flex; align-items: center; gap: 8px; }

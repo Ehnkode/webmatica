@@ -27,7 +27,6 @@ const xray = {
   counts: null,
   // 2D map: dots for the finds around the map centre
   layer: L.layerGroup().addTo(map),
-  renderer: L.canvas({ padding: 0.3 }),
   pts: [], names: [], visited: new Set(), timer: null, seq: 0,
 };
 
@@ -211,17 +210,47 @@ async function xray2dLoad() {
     xray.names = d.names;
     xray.pts = [];
     for (let i = 0; i < d.pts.length; i += 4) xray.pts.push([d.pts[i], d.pts[i + 1], d.pts[i + 2], d.pts[i + 3]]);
-    for (const [x, y, z, k] of xray.pts) {
-      const id = d.names[k];
-      L.circleMarker(toLatLng(x + 0.5, z + 0.5), { renderer: xray.renderer, radius: 4, weight: 1.5, color: '#fff', opacity: 0.85,
-        fillColor: color[id] || '#fff', fillOpacity: 1 })
-        .bindTooltip(`${xrayPretty(id)} · ${x} ${y} ${z}`).addTo(xray.layer);
+    // Item icons with a ring in the search colour; at most XRAY_2D_MAX (nearest to the centre) as map markers
+    const near = xray.pts.slice().sort((a, b2) => ((a[0] - c.x) ** 2 + (a[2] - c.z) ** 2) - ((b2[0] - c.x) ** 2 + (b2[2] - c.z) ** 2))
+      .slice(0, XRAY_2D_MAX);
+    const icons = {};
+    for (const a of near) {
+      const id = d.names[a[3]];
+      const icon = icons[id] || (icons[id] = L.divIcon({ className: 'xray-pin', iconSize: [22, 22], iconAnchor: [11, 11],
+        html: `<span class="xray-pin-ring" style="--c:${esc(color[id] || '#fff')}">${itemIcon(id, 16)}</span>` }));
+      L.marker(toLatLng(a[0] + 0.5, a[2] + 0.5), { icon, riseOnHover: true, keyboard: false })
+        .bindTooltip(`${esc(xrayPretty(id))} · ${a[0]} ${a[1]} ${a[2]}`, { direction: 'top', offset: [0, -10] })
+        .on('click', () => xrayPopup(a, id))
+        .addTo(xray.layer);
     }
     xrayStats({ on: true, counts: d.counts, names: d.names });
     if (half / 16 > 24 && !xray.zoomHint) { xray.zoomHint = true; toast('X-Ray zeigt auf der Karte die Funde im Umkreis von 384 Blöcken um die Mitte'); }
   } catch (e) {
     if (seq === xray.seq) toast('X-Ray: ' + e.message);
   }
+}
+
+const XRAY_2D_MAX = 1500;
+
+/* Click on a find: where it is, and Baritone or 3D from there */
+function xrayPopup(a, id) {
+  const [x, y, z] = a;
+  const d = document.createElement('div');
+  d.className = 'xray-pop';
+  d.innerHTML = `<div class="xray-pop-head">${itemIcon(id, 20)}<b>${esc(xrayPretty(id))}</b></div>
+    <div class="mono muted">${x} ${y} ${z}</div>
+    <button data-x="goto" class="primary">Mit Baritone hingehen</button>
+    <button data-x="3d">In 3D ansehen</button>
+    <button data-x="copy">Koordinaten kopieren</button>`;
+  d.addEventListener('click', async (e) => {
+    const b = e.target.closest('button[data-x]');
+    if (!b) return;
+    map.closePopup();
+    if (b.dataset.x === 'goto') baritone({ kind: 'goto', x, y: y + 1, z });
+    else if (b.dataset.x === '3d') { await set3d(true); if (view3d) view3d.setCamera(x + 0.5, y + 4, z + 6.5, 180, 30); }
+    else { try { await navigator.clipboard.writeText(`${x} ${y} ${z}`); toast('Kopiert: ' + `${x} ${y} ${z}`); } catch (_) { toast(`${x} ${y} ${z}`); } }
+  });
+  L.popup({ closeButton: false, className: 'ctx', offset: [0, -8] }).setLatLng(toLatLng(x + 0.5, z + 0.5)).setContent(d).openOn(map);
 }
 
 function xray2dNext() {
@@ -236,6 +265,7 @@ function xray2dNext() {
   setFollow(false);
   map.setView(toLatLng(best[0] + 0.5, best[2] + 0.5), Math.max(map.getZoom(), 2));
   flash(best[0], best[2]);
+  xrayPopup(best, xray.names[best[3]]);
   toast(`${xrayPretty(xray.names[best[3]])} bei ${best[0]} ${best[1]} ${best[2]}`);
 }
 
