@@ -13,22 +13,7 @@
 <div id="map"></div>
 <button id="tl-badge" class="panel tl-badge" hidden title="Zurück zu heute"></button>
 <div id="view3d" hidden>
-  <div id="set3d" class="set3d panel" hidden>
-    <label title="Wie weit du siehst. Nah mit vollen Blockmodellen, dahinter vereinfachtes Gelände aus der Karte. Weiter = mehr Arbeit für PC und Viewer.">Sichtweite <input type="range" id="sight3d" min="0" max="12" value="6"> <span id="sight3d-val" class="mono"></span></label>
-    <label id="hour3d-wrap" title="Tageszeit für den Shader">Uhrzeit <input type="range" id="hour3d" min="0" max="24" step="0.25" value="10"> <span id="hour3d-val" class="mono">10:00</span></label>
-    <div class="set3d-checks">
-      <label class="check"><input type="checkbox" id="fog3d"> Nebel</label>
-      <label class="check" title="Höhlen und Inneres mitladen (langsamer)"><input type="checkbox" id="full3d"> Höhlen</label>
-      <label class="check" title="Sonne, Schatten, Himmel und Lichtstimmung"><input type="checkbox" id="fancy3d"> Shader</label>
-      <label class="check" title="Wo Monster spawnen können: rot jederzeit, orange nur nachts"><input type="checkbox" id="spawn3d"> Mob-Spawns</label>
-    </div>
-    <div id="spawn3d-legend" class="spawn-legend" hidden><span class="sw sw-red"></span> jederzeit <span class="sw sw-orange"></span> nur nachts</div>
-  </div>
-  <div class="hint3d panel">
-    <span id="hint3d-text">Klick auf Spieler oder Schematic wählt aus · sonst Maus fangen · <b>WASD</b> fliegen · <b>Leertaste/Shift</b> hoch/runter · <b>Strg</b> schneller · <b>Esc</b> Maus frei</span>
-    <button id="set3d-btn" class="toggle" title="3D-Einstellungen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Einstellungen</button>
-    <button id="shot3d" title="Bildschirmfoto speichern">Foto</button>
-  </div>
+  <div class="hint3d panel"><span id="hint3d-text">Klick auf Spieler oder Schematic wählt aus · sonst Maus fangen · <b>WASD</b> fliegen · <b>Leertaste/Shift</b> hoch/runter · <b>Strg</b> schneller · <b>Esc</b> Maus frei</span></div>
   <div id="mini" class="mini panel" title="Klick: dorthin fliegen · Rad: Zoom">
     <div id="mini-map"></div>
     <div id="mini-arrow" class="mini-arrow"></div>
@@ -48,21 +33,17 @@
 </div>
 
 <header class="bar top-left panel">
-  <div class="brand">Webmatica</div>
-  <button class="lang-btn" data-noi18n title="Deutsch / English" onclick="I18N.set(I18N.lang === 'de' ? 'en' : 'de')"><script>document.currentScript.parentNode.append(I18N.lang === 'de' ? 'EN' : 'DE')</script></button>
+  <div class="brand"><svg viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" rx="3.5"/><path d="M3 11l3-4 2 3 2-2 3 3z"/></svg>Webmatica</div>
   <select id="server" title="Server"></select>
   <div id="dims" class="seg" role="tablist" aria-label="Dimension"></div>
   <div id="layers" class="seg small" aria-label="Schicht"></div>
-  <div class="cut" title="Schichten: Welt bei einer Höhe aufschneiden (Tasten , und .)">
-    <select id="cut-mode" aria-label="Schnitt">
-      <option value="off">Schichten aus</option>
-      <option value="below">Alles bis Y</option>
-      <option value="layer">Nur Ebene Y</option>
-    </select>
-    <input type="range" id="cut-y" min="-64" max="319" value="64" aria-label="Schnitthöhe">
-    <input type="number" id="cut-yn" min="-64" max="319" value="64" aria-label="Schnitthöhe">
-  </div>
 </header>
+
+<form id="goto" class="search panel" autocomplete="off" role="search">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+  <input id="goto-input" placeholder="Koordinaten oder Wegpunkt …" aria-label="Suchen oder zu Koordinaten springen" list="goto-list"><datalist id="goto-list"></datalist>
+  <kbd>/</kbd>
+</form>
 
 <div id="activity" class="panel activity" hidden>
   <span id="act-dot" class="act-dot"></span>
@@ -71,43 +52,37 @@
   <button id="act-x" class="act-x" title="Ausblenden">✕</button>
 </div>
 
-<div class="bar top-right panel">
-  <form id="goto" autocomplete="off">
-    <input id="goto-input" placeholder="Koordinaten, z. B. 1200 -340" aria-label="Zu Koordinaten springen">
-  </form>
-  <button id="btn-select" class="toggle" title="Bereich wählen und als Schematic speichern (E)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/></svg>Auswahl</button>
-  <button id="btn-trail" class="toggle" title="Spur des Spielers zeigen (T)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-9 4-11"/></svg>Spur</button>
-  <button id="btn-3d" class="toggle" title="3D-Ansicht (Tab)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>3D</button>
-  <button id="btn-follow" class="toggle" title="Karte folgt dir (F)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>Folgen</button>
-</div>
 
 <nav id="rail" class="panel rail" aria-label="Bereiche">
-  <button data-tab="waypoints" title="Wegpunkte (1)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 1 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg><span>Wegpunkte</span></button>
-  <button data-tab="signs" title="Schilder (2)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="10" rx="1.5"/><path d="M12 15v5M8 9h8M8 12h5"/></svg><span>Schilder</span></button>
-  <button data-tab="stashes" title="Stashes (3)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9l8-5 8 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M4 9h16M10 13h4"/></svg><span>Stashes</span></button>
-  <button data-tab="schematics" title="Schematics (4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><span>Schematics</span></button>
-  <button data-tab="editor" title="Editor (5)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span>Editor</span></button>
-  <button data-tab="chests" title="Kisten (6)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="M3 11h18M11 11v3h2v-3"/></svg><span>Kisten</span></button>
-  <button data-tab="farm" title="Automationen (7)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4c3 0 6 1.5 6 3-2.5-.8-5-.8-7.5 0z"/><path d="M13 5.5L4 19.5l1.5 1L14.5 7"/></svg><span>Automationen</span></button>
-  <button data-tab="history" title="Zeitleiste (8)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>Zeitleiste</span></button>
-  <button data-tab="radar" title="Radar (9)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/></svg><span>Radar</span><i id="radar-badge" class="badge" hidden></i></button>
+  <!-- Neue Bereiche: hier einen Knopf mit data-tab eintragen, eine <section data-pane> in #side
+       anlegen und (bei Unterseiten) in AREAS in app.js die Gruppe ergaenzen. -->
+  <span class="rail-head">Werkzeuge</span>
+  <button data-tab="build" class="tool tool-build" title="Bauen: Schematics und Editor (1)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><span>Bauen</span></button>
+  <button data-tab="farm" class="tool tool-auto" title="Automationen: Farmen, Abbauen, Füllen, Ebnen (2)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4M9 13h.01M15 13h.01M9.5 16.5h5M3 13v2M21 13v2"/></svg><span>Automation</span><i id="auto-badge" class="badge live" hidden></i></button>
+  <button data-tab="chests" class="tool tool-store" title="Lager: Kisten, Items suchen, Einlagern, Stashes (3)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="M3 11h18M11 11v3h2v-3"/></svg><span>Lager</span></button>
   <span class="rail-sep"></span>
+  <span class="rail-head">Karte</span>
+  <button data-tab="places" title="Orte: Wegpunkte und Schilder (4)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 1 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg><span>Orte</span></button>
+  <button data-tab="history" title="Verlauf: Zeitraffer und Vergleich (5)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>Verlauf</span></button>
+  <button data-tab="radar" title="Radar (6)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/></svg><span>Radar</span><i id="radar-badge" class="badge" hidden></i></button>
+  <span class="rail-grow"></span>
+  <span class="rail-sep"></span>
+  <button data-tab="settings" title="Einstellungen (7)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span>Optionen</span></button>
   <button id="btn-help" title="Tastenkürzel (?)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.4M12 16.6v.2"/></svg><span>Hilfe</span></button>
 </nav>
 
 <aside id="side" class="panel" hidden>
   <div class="side-head"><b id="side-title">Wegpunkte</b><button id="side-close" class="icon" title="Schließen (S)">✕</button></div>
+  <nav id="side-sub" class="side-sub seg" hidden></nav>
   <section data-pane="waypoints" class="pane active">
     <p class="hint">Rechtsklick auf die Karte setzt einen Wegpunkt.</p>
     <ul id="wp-list" class="list"></ul>
   </section>
   <section data-pane="signs" class="pane">
-    <label class="check"><input type="checkbox" id="show-signs" checked> Auf der Karte zeigen</label>
     <input id="sign-filter" placeholder="Text suchen …">
     <ul id="sign-list" class="list"></ul>
   </section>
   <section data-pane="stashes" class="pane">
-    <label class="check"><input type="checkbox" id="show-stashes" checked> Auf der Karte zeigen</label>
     <label class="range">Ab <input type="number" id="stash-min" value="6" min="1" max="500"> Behältern pro Chunk</label>
     <ul id="stash-list" class="list"></ul>
   </section>
@@ -144,7 +119,6 @@
       </div>
       <div id="st-info" class="ab-info muted"></div>
     </div>
-    <label class="check"><input type="checkbox" id="show-chests" checked> Auf der Karte zeigen</label>
     <p class="hint">Inhalt kennt der Viewer, sobald du eine Kiste einmal öffnest. Grau = noch nie geöffnet, lila Ring = jemand anderes war dran.</p>
     <div class="seg ct-mode"><button data-ctmode="items" class="on">Alle Items</button><button data-ctmode="chests">Kisten</button></div>
     <div class="sp-row"><input id="ct-filter" placeholder="Item suchen, z. B. obsidian …"><button id="ct-csv" title="Alle Items als Tabelle">CSV</button></div>
@@ -223,6 +197,29 @@
     <ul id="rd-now" class="list"></ul>
     <h4>Logbuch</h4>
     <ul id="rd-log" class="list"></ul>
+  </section>
+  <section data-pane="settings" class="pane">
+    <div class="card">
+      <div class="card-title">Sprache</div>
+      <div class="seg" id="opt-lang" data-noi18n><button data-lang="de">Deutsch</button><button data-lang="en">English</button></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Schutz bei Automationen <span id="gd-sum" class="muted"></span></div>
+      <div class="guard">
+      <label class="check" title="Baritone hält an (#pause), solange ein anderer Spieler in der Nähe ist, und macht 15 s nachdem er weg ist weiter"><input type="checkbox" data-guard="radar"> Pause, wenn ein Spieler näher als <input type="number" id="gd-dist" class="gd-dist" min="8" max="256" step="8"> m kommt</label>
+      <label class="gd-row">Freunde, die nicht zählen <input id="gd-friends" placeholder="Namen, mit Komma getrennt" spellcheck="false"></label>
+      <label class="check" title="Bei Hunger kurz anhalten und das beste Essen aus dem Inventar essen (keine Goldäpfel, nichts Giftiges)"><input type="checkbox" data-guard="eat"> Automatisch essen</label>
+      <p class="hint gd-note">Aus lassen, wenn schon ein anderer Mod automatisch isst.</p>
+      <label class="check" title="Baritones Werkzeugschutz (itemSaver): ein Werkzeug mit weniger als 10 Haltbarkeit wird nicht mehr benutzt"><input type="checkbox" data-guard="tools"> Werkzeug nicht kaputtmachen</label>
+      <label class="check" title="Wenn alles steht: falsch gedrehte und überflüssige Blöcke im Rahmen abbauen und richtig neu setzen"><input type="checkbox" data-guard="fix"> Am Ende falsche Blöcke korrigieren</label>
+      <label class="check" title="Wenn alles steht: übrig gebliebene Baumaterialien in Kisten bringen, in denen dieses Item schon liegt"><input type="checkbox" data-guard="leftovers"> Reste nach dem Bauen zurück in die Kisten</label>
+      <p class="hint">Gilt nur, solange der Autobau läuft. Wird gespeichert.</p>
+    </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Hilfe</div>
+      <div class="sp-row"><button id="opt-keys">Tastenkürzel</button></div>
+    </div>
   </section>
 </aside>
 
@@ -308,19 +305,7 @@
       <ol id="q-list" class="q-list"></ol>
       <div class="sp-row"><button id="q-add">+ Diese einreihen</button><button id="q-start" hidden>▶ Warteschlange starten</button></div>
     </div>
-    <details class="fold" data-fold="guard">
-    <summary>Schutz und Reste <span id="gd-sum" class="muted"></span></summary>
-    <div class="guard">
-      <label class="check" title="Baritone hält an (#pause), solange ein anderer Spieler in der Nähe ist, und macht 15 s nachdem er weg ist weiter"><input type="checkbox" data-guard="radar"> Pause, wenn ein Spieler näher als <input type="number" id="gd-dist" class="gd-dist" min="8" max="256" step="8"> m kommt</label>
-      <label class="gd-row">Freunde, die nicht zählen <input id="gd-friends" placeholder="Namen, mit Komma getrennt" spellcheck="false"></label>
-      <label class="check" title="Bei Hunger kurz anhalten und das beste Essen aus dem Inventar essen (keine Goldäpfel, nichts Giftiges)"><input type="checkbox" data-guard="eat"> Automatisch essen</label>
-      <p class="hint gd-note">Aus lassen, wenn schon ein anderer Mod automatisch isst.</p>
-      <label class="check" title="Baritones Werkzeugschutz (itemSaver): ein Werkzeug mit weniger als 10 Haltbarkeit wird nicht mehr benutzt"><input type="checkbox" data-guard="tools"> Werkzeug nicht kaputtmachen</label>
-      <label class="check" title="Wenn alles steht: falsch gedrehte und überflüssige Blöcke im Rahmen abbauen und richtig neu setzen"><input type="checkbox" data-guard="fix"> Am Ende falsche Blöcke korrigieren</label>
-      <label class="check" title="Wenn alles steht: übrig gebliebene Baumaterialien in Kisten bringen, in denen dieses Item schon liegt"><input type="checkbox" data-guard="leftovers"> Reste nach dem Bauen zurück in die Kisten</label>
-      <p class="hint">Gilt nur, solange der Autobau läuft. Wird gespeichert.</p>
-    </div>
-    </details>
+    <p class="hint">Schutz beim Bauen (Pause bei Spielern, Essen, Werkzeug, Reste): unter <a href="#" data-goto-tab="settings">Optionen</a>.</p>
     <details class="fold" data-fold="baritone">
     <summary>Baritone von Hand</summary>
     <div class="sp-row bd-btns">
@@ -364,8 +349,63 @@
   <span id="info" class="muted"></span>
 </footer>
 
-<div class="bar bottom-right panel mono" id="status">
-  <span id="player-status" class="dot off">Spieler offline</span>
+<div id="player-chip" class="panel player-chip">
+  <button id="pc-jump" class="pc-main" title="Zu dir springen">
+    <img id="pc-head" alt="" hidden><span id="player-status" class="dot off">Spieler offline</span>
+  </button>
+  <button id="btn-follow" class="toggle icon-btn" title="Mitlaufen: Karte bzw. 3D-Kamera folgt dir (F)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+</div>
+
+<!-- Ansicht: eine Leiste fuer 2D und 3D. Popover-Inhalte liegen direkt darueber. -->
+<div id="dock" class="panel dock">
+  <div class="seg view-seg">
+    <button id="btn-2d" class="on" title="Karte (Tab)">2D</button>
+    <button id="btn-3d" title="3D-Ansicht (Tab)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>3D</button>
+  </div>
+  <span class="dock-sep"></span>
+  <button id="btn-select" class="toggle icon-btn" title="Bereich auswählen (E): als Schematic speichern, im Editor öffnen oder farmen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/></svg></button>
+  <button id="btn-cut" class="toggle icon-btn" data-pop="pop-cut" title="Schichten: Welt bei einer Höhe aufschneiden (, und .)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4M3 16l9 4 9-4"/></svg><span id="cut-label" class="mono"></span></button>
+  <button id="btn-trail" class="toggle icon-btn" title="Spur des Spielers zeigen (T)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c3 0 3-5 6-5s3 4 6 4 3-9 4-11"/></svg></button>
+  <span class="dock-sep"></span>
+  <button id="btn-view" class="icon-btn" data-pop="pop-view" title="Ansicht: was auf der Karte und in 3D zu sehen ist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/></svg></button>
+  <button id="shot3d" class="icon-btn only3d" title="Bildschirmfoto speichern"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+</div>
+
+<div id="pop-cut" class="panel pop" hidden>
+  <div class="pop-title">Schichten</div>
+  <div class="cut">
+    <select id="cut-mode" aria-label="Schnitt">
+      <option value="off">Schichten aus</option>
+      <option value="below">Alles bis Y</option>
+      <option value="layer">Nur Ebene Y</option>
+    </select>
+    <input type="range" id="cut-y" min="-64" max="319" value="64" aria-label="Schnitthöhe">
+    <input type="number" id="cut-yn" min="-64" max="319" value="64" aria-label="Schnitthöhe">
+  </div>
+  <p class="hint">Karte: oberster Block bis zu dieser Höhe. 3D: alles darüber wird weggeschnitten. Tasten <kbd>,</kbd> <kbd>.</kbd></p>
+</div>
+
+<div id="pop-view" class="panel pop" hidden>
+  <div class="pop-title">Auf der Karte</div>
+  <div class="pop-checks">
+    <label class="check"><input type="checkbox" id="show-signs" checked> Schilder</label>
+    <label class="check"><input type="checkbox" id="show-stashes" checked> Stashes</label>
+    <label class="check"><input type="checkbox" id="show-chests" checked> Kisten</label>
+  </div>
+  <div class="only3d">
+    <div class="pop-title">3D</div>
+    <div id="set3d" class="set3d">
+    <label title="Wie weit du siehst. Nah mit vollen Blockmodellen, dahinter vereinfachtes Gelände aus der Karte. Weiter = mehr Arbeit für PC und Viewer.">Sichtweite <input type="range" id="sight3d" min="0" max="12" value="6"> <span id="sight3d-val" class="mono"></span></label>
+    <label id="hour3d-wrap" title="Tageszeit für den Shader">Uhrzeit <input type="range" id="hour3d" min="0" max="24" step="0.25" value="10"> <span id="hour3d-val" class="mono">10:00</span></label>
+    <div class="set3d-checks">
+      <label class="check"><input type="checkbox" id="fog3d"> Nebel</label>
+      <label class="check" title="Höhlen und Inneres mitladen (langsamer)"><input type="checkbox" id="full3d"> Höhlen</label>
+      <label class="check" title="Sonne, Schatten, Himmel und Lichtstimmung"><input type="checkbox" id="fancy3d"> Shader</label>
+      <label class="check" title="Wo Monster spawnen können: rot jederzeit, orange nur nachts"><input type="checkbox" id="spawn3d"> Mob-Spawns</label>
+    </div>
+    <div id="spawn3d-legend" class="spawn-legend" hidden><span class="sw sw-red"></span> jederzeit <span class="sw sw-orange"></span> nur nachts</div>
+    </div>
+  </div>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -375,10 +415,10 @@
     <div class="side-head"><b>Tastenkürzel</b><button id="help-close" class="icon" title="Schließen (Esc)">✕</button></div>
     <div class="keys">
       <h4>Karte</h4>
-      <div><kbd>1</kbd>–<kbd>9</kbd><span>Bereiche öffnen (Wegpunkte … Radar)</span></div>
+      <div><kbd>1</kbd>–<kbd>7</kbd><span>Bereiche öffnen (Bauen … Optionen)</span></div>
       <div><kbd>S</kbd><span>Seitenleiste auf/zu</span></div>
-      <div><kbd>/</kbd><span>zu Koordinaten springen</span></div>
-      <div><kbd>F</kbd><span>dir folgen</span></div>
+      <div><kbd>/</kbd><span>Suche: Koordinaten oder Wegpunkt</span></div>
+      <div><kbd>F</kbd><span>Mitlaufen (Karte bzw. 3D-Kamera)</span></div>
       <div><kbd>T</kbd><span>Spur zeigen</span></div>
       <div><kbd>E</kbd><span>Bereich auswählen</span></div>
       <div><kbd>,</kbd> <kbd>.</kbd><span>Schnitthöhe runter/rauf</span></div>

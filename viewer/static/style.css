@@ -36,11 +36,12 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
 }
 .bar { position: fixed; z-index: 1000; display: flex; align-items: center; gap: 8px; padding: 6px; }
 .top-left { top: 12px; left: 12px; flex-wrap: wrap; max-width: calc(100vw - 24px); }
-.top-right { top: 12px; right: 12px; }
-.bottom-left { bottom: 12px; left: 12px; padding: 6px 10px; gap: 14px; max-width: calc(100vw - 220px); }
-.bottom-right { bottom: 12px; right: 56px; padding: 6px 10px; }
+.bottom-left { bottom: 12px; left: 12px; padding: 6px 10px; gap: 14px; max-width: calc(50vw - 200px); overflow: hidden; white-space: nowrap; }
 
-.brand { font-weight: 700; letter-spacing: 0.02em; padding: 0 6px 0 4px; }
+.brand { display: flex; align-items: center; gap: 7px; font-weight: 700; letter-spacing: 0.02em; padding: 0 6px 0 4px; }
+.brand svg { width: 20px; height: 20px; flex: none; }
+.brand svg rect { fill: var(--accent); }
+.brand svg path { fill: #fff; }
 .mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12.5px; }
 .muted { color: var(--muted); }
 .hint { color: var(--muted); font-size: 12.5px; margin: 4px 0 10px; }
@@ -53,7 +54,6 @@ button { cursor: pointer; transition: background .12s, border-color .12s, color 
 button:hover, select:hover { background: rgba(255, 255, 255, 0.1); }
 button:disabled { opacity: .45; cursor: default; }
 button svg, .rail svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-.top-right button { display: inline-flex; align-items: center; gap: 6px; }
 button.icon { padding: 4px 8px; border-color: transparent; background: transparent; color: var(--muted); }
 button.icon:hover { color: var(--fg); background: rgba(255,255,255,.08); }
 kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; border: 1px solid var(--line-strong); border-bottom-width: 2px;
@@ -61,7 +61,6 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0 5px; margin: 0 1px; bo
 button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 button.toggle.on, .seg button.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
 select { padding-right: 6px; }
-#goto-input { width: 220px; }
 
 .seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: rgba(0, 0, 0, 0.25); }
 .seg button { border: 0; background: transparent; padding: 5px 10px; }
@@ -69,7 +68,7 @@ select { padding-right: 6px; }
 .seg:empty { display: none; }
 
 #side {
-  position: fixed; z-index: 999; top: 64px; right: 84px; bottom: 60px; width: 340px;
+  position: fixed; z-index: 999; top: 12px; right: 94px; bottom: 68px; width: 360px;
   display: flex; flex-direction: column; overflow: hidden;
 }
 #side[hidden] { display: none; }
@@ -142,18 +141,15 @@ body.selecting #map { cursor: crosshair; }
 @media (max-width: 720px) {
   #sel-panel { top: auto; bottom: 110px; left: 12px; right: 12px; width: auto; }
   .top-left { right: 12px; }
-  .top-right { top: auto; bottom: 56px; right: 12px; }
-  #goto-input { width: 150px; }
-  #side { top: auto; height: 50vh; left: 12px; right: 12px; width: auto; bottom: 120px; }
-  .bottom-right { display: none; }
-  .bottom-left { max-width: calc(100vw - 24px); }
+  #side { top: auto; height: 50vh; left: 12px; right: 12px; width: auto; bottom: 132px; }
+  .bottom-left { display: none; }
 }
 
 /* 3D */
 #view3d { position: fixed; inset: 0; z-index: 500; background: #000; }
 #view3d[hidden] { display: none; }
 #view3d canvas { display: block; width: 100%; height: 100%; outline: none; }
-.hint3d { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); padding: 6px 12px;
+.hint3d { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); padding: 6px 12px;
   font-size: 12.5px; color: var(--muted); display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 24px); }
 .hint3d b { color: var(--fg); font-weight: 600; }
 .hint3d label { display: inline-flex; gap: 6px; align-items: center; color: var(--fg); }
@@ -169,7 +165,7 @@ body.mode3d .bottom-left, body.mode3d .leaflet-control-zoom { display: none; }
 .cut.off input { display: none; }
 
 /* 3D: Kamera-Panel */
-#cam-panel { position: absolute; top: 72px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; padding: 6px 8px; }
+#cam-panel { position: absolute; top: 108px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; padding: 6px 8px; }
 #cam-panel[hidden] { display: none; }
 .cam-name { font-weight: 600; padding: 0 4px; }
 #view3d.locked .hint3d span { opacity: 0.6; }
@@ -330,7 +326,7 @@ ol.tour .btns button { font-size: 12px; padding: 2px 8px; }
 
 
 /* ------------------------------------------------------------ Navigation rechts */
-.rail { position: fixed; z-index: 1000; top: 64px; right: 12px; width: 64px; padding: 6px 4px; display: flex; flex-direction: column; gap: 2px; align-items: stretch; }
+.rail { position: fixed; z-index: 1000; top: 12px; right: 12px; max-height: calc(100vh - 80px); overflow-y: auto; scrollbar-width: none; width: 74px; padding: 6px 4px; display: flex; flex-direction: column; gap: 2px; align-items: stretch; }
 .rail button { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px 6px; border: 0; border-radius: 9px;
   background: transparent; color: var(--muted); font-size: 10.5px; line-height: 1.1; }
 .rail button:hover { color: var(--fg); background: rgba(255,255,255,.07); }
@@ -344,7 +340,7 @@ ol.tour .btns button { font-size: 12px; padding: 2px 8px; }
 .side-head b { font-size: 15px; }
 
 /* ------------------------------------------------------------ Aktivitaet */
-.activity { position: fixed; z-index: 1002; top: 0; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px;
+.activity { position: fixed; z-index: 1002; top: 60px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px;
   padding: 2px 4px 2px 10px; border-top: 0; border-radius: 0 0 10px 10px; max-width: min(520px, calc(100vw - 900px)); min-width: 200px; font-size: 12.5px; }
 .activity[hidden] { display: none; }
 .act-dot { width: 8px; height: 8px; border-radius: 50%; background: #3e9bf5; flex: none; }
@@ -407,7 +403,7 @@ details.fold > :last-child { margin-bottom: 10px; }
   .rail-sep { display: none; }
   .bottom-left { bottom: 92px; }
 }
-@media (min-width: 900px) { .hint3d { max-width: calc(100vw - 500px); } }
+@media (min-width: 900px) { .hint3d { max-width: calc(100vw - 600px); } }
 
 /* Fehlende Items im Material-Tab */
 .miss-card { margin-bottom: 10px; }
@@ -426,27 +422,22 @@ details.fold > :last-child { margin-bottom: 10px; }
 .guard .gd-note { margin: -2px 0 4px 24px; }
 .guard .hint { font-size: 12px; }
 b.warn { color: #ffcf6b; }
-.lang-btn { font-size: 11px; font-weight: 700; padding: 2px 6px; min-width: 0; letter-spacing: 0.04em; }
 
-/* 3D: Einstellungen hinter dem Zahnrad, Hinweis blendet aus */
-.set3d { position: absolute; bottom: 62px; left: 50%; transform: translateX(-50%); padding: 10px 14px; display: grid; gap: 8px;
-  font-size: 12.5px; min-width: 300px; }
-.set3d[hidden] { display: none; }
+/* 3D-Einstellungen (im Ansicht-Fenster) */
+.set3d { display: grid; gap: 8px; font-size: 12.5px; }
 .set3d label { display: flex; gap: 8px; align-items: center; color: var(--fg); }
 .set3d input[type=range] { flex: 1; padding: 0; }
 .set3d .mono { min-width: 70px; text-align: right; color: var(--muted); }
-.set3d-checks { display: flex; gap: 14px; }
+.set3d-checks { display: flex; gap: 6px 14px; flex-wrap: wrap; }
+.set3d label input[type=range] { min-width: 0; }
 .spawn-legend[hidden], #hour3d-wrap[hidden] { display: none; }
 .spawn-legend { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
 .spawn-legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
 .spawn-legend .sw + .sw, .spawn-legend .sw:not(:first-child) { margin-left: 8px; }
 .spawn-legend .sw-red { background: var(--danger); }
 .spawn-legend .sw-orange { background: var(--warn); }
-#hint3d-text { transition: opacity .6s, max-width .6s; max-width: 900px; overflow: hidden; white-space: nowrap; }
-#hint3d-text.gone { opacity: 0; max-width: 0; }
-.hint3d { flex-wrap: nowrap; }
-.hint3d button { display: inline-flex; gap: 6px; align-items: center; }
-.hint3d button svg { width: 15px; height: 15px; }
+.hint3d { transition: opacity .6s; text-align: center; }
+.hint3d.gone { opacity: 0; }
 
 /* Schematic-Fenster: Schnellzeile und grosse Reiter */
 .sp-quick { display: flex; gap: 6px; margin: 0 0 4px; }
@@ -500,7 +491,7 @@ b.warn { color: #ffcf6b; }
 .tl-row { align-items: center; }
 .tl-row input[type=range] { flex: 1; min-width: 0; }
 #tl-label { min-width: 84px; text-align: right; }
-.tl-badge { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 500; padding: 6px 12px;
+.tl-badge { position: absolute; top: 106px; left: 50%; transform: translateX(-50%); z-index: 500; padding: 6px 12px;
   border-radius: 999px; font-weight: 600; color: var(--warn); border: 1px solid var(--warn); }
 body.mode3d .tl-badge { display: none; }
 
@@ -510,4 +501,69 @@ body.mode3d .tl-badge { display: none; }
 #view3d.picking canvas { cursor: crosshair; }
 /* lange Beschriftung ("Automationen") passt sonst nicht in die 64 px */
 .rail button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.rail button[data-tab="farm"] span { font-size: 9px; letter-spacing: -0.2px; }
+.rail-head { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: center; opacity: .7; padding: 4px 0 2px; }
+.rail-grow { flex: 1; min-height: 4px; }
+/* Werkzeuge: eigene Farbe je Bereich, damit sie auffallen */
+.rail .tool { --tc: var(--accent); color: var(--fg); }
+.rail .tool svg { color: var(--tc); }
+.rail .tool:hover { background: color-mix(in srgb, var(--tc) 14%, transparent); }
+.rail .tool.active { background: color-mix(in srgb, var(--tc) 22%, transparent); box-shadow: inset 3px 0 0 var(--tc); }
+.tool-build { --tc: #5aa9ff !important; }
+.tool-auto { --tc: #f5a524 !important; }
+.tool-store { --tc: #d39a5c !important; }
+.rail .badge.live { min-width: 9px; width: 9px; height: 9px; padding: 0; top: 7px; right: 14px; background: var(--warn); animation: pulse 1.2s ease-in-out infinite; }
+
+/* Unterseiten eines Bereichs */
+.side-sub { display: flex; margin: 8px 12px 0; flex: none; }
+.side-sub[hidden] { display: none; }
+.side-sub button { flex: 1; }
+
+/* Suche oben in der Mitte */
+.search { position: fixed; z-index: 1000; top: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px 4px 10px; width: 330px; max-width: calc(100vw - 24px); }
+.search svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; flex: none; }
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 5px 2px; }
+.search input:focus-visible { outline: none; }
+.search:focus-within { border-color: var(--accent); }
+.search kbd { color: var(--muted); }
+.search:focus-within kbd { display: none; }
+@media (max-width: 1250px) { #sel-panel, #schem-panel { top: 112px; } .search { top: 64px; left: 12px; transform: none; } .activity { top: 112px; } .hint3d { top: 112px; } }
+
+/* Spieler unten rechts */
+.player-chip { position: fixed; z-index: 1000; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 2px; padding: 3px; max-width: calc(50vw - 160px); }
+.pc-main { display: flex; align-items: center; gap: 8px; min-width: 0; border: 0; background: transparent; padding: 4px 8px 4px 4px; font-size: 12.5px; }
+.pc-main img { width: 22px; height: 22px; image-rendering: pixelated; border-radius: 4px; flex: none; }
+.pc-main img[hidden] { display: none; }
+.pc-main span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+.leaflet-bottom.leaflet-right { margin-bottom: 52px; }
+
+/* Untere Leiste: Ansicht und Werkzeuge auf der Karte */
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 34px; height: 32px; padding: 0 8px; border-color: transparent; background: transparent; color: var(--muted); }
+.icon-btn:hover { color: var(--fg); }
+.icon-btn.open { color: var(--fg); background: rgba(255,255,255,.1); }
+.icon-btn .mono:empty { display: none; }
+.dock { position: fixed; z-index: 1000; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 4px; }
+.dock-sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+.view-seg button { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px; font-weight: 600; }
+.view-seg svg { width: 16px; height: 16px; }
+body:not(.mode3d) .only3d { display: none !important; }
+.pop { position: fixed; z-index: 1001; bottom: 60px; padding: 10px 14px; width: 400px; max-width: calc(100vw - 24px); }
+.pop[hidden] { display: none; }
+.pop-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 2px 0 6px; }
+.pop .only3d { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; }
+.pop-checks { display: flex; gap: 14px; flex-wrap: wrap; }
+.pop .cut { display: flex; }
+.pop .cut input[type=range] { display: block; flex: 1; }
+.pop .cut.off input { display: none; }
+.pop .hint { margin: 8px 0 0; }
+@media (max-width: 720px) {
+  .dock { bottom: 70px; }
+  .pop { bottom: 116px; }
+  .player-chip { bottom: auto; top: 112px; max-width: calc(100vw - 24px); }
+  .search { right: 12px; width: auto; }
+  .rail-head { display: none; }
+  .leaflet-control-zoom { display: none; }
+}
+/* Optionen: Schutz-Einstellungen im Panel */
+.pane .guard .gd-dist { width: 58px; margin: 0 2px; padding: 2px 4px; }
+.pane .guard .gd-row input { margin: 0; }
