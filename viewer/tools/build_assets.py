@@ -290,7 +290,8 @@ def _chest(res, img, name, kind):
         t["west"] = t["east"] = s_img
     else:
         s_img = tex("side", _tile([(side(strips["side"], 14), 1, 2)]))
-        t["east" if kind == "left" else "west"] = s_img
+        # Seitenteil an das geschlossene Ende (die offene Seite stoesst an die Partnerhaelfte)
+        t["west" if kind == "left" else "east"] = s_img
     return {"elements": [_box((x0, 0, 1), (x1, 14, 15), t)], "particle": t["up"], "ao": True}
 
 
