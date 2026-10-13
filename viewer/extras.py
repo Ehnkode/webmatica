@@ -441,6 +441,7 @@ class History:
     def __init__(self, rec_root: str):
         self.root = rec_root
         self._cache: dict = {}
+        self._chunks: dict = {}
         self._names_len = 0
         self._base = np.zeros(0, np.int32)
         self._air = np.zeros(0, bool)
@@ -485,6 +486,23 @@ class History:
             self._cache.clear()
         self._cache[key] = (time.monotonic(), first)
         return first
+
+    def chunk_at(self, rec, dim, date: str, cx: int, cz: int):
+        """The chunk as it was at the start of ``date`` (today's state if it has not changed since)."""
+        src = self.index(dim.server, dim.key, date).get((cx, cz))
+        if src is None:
+            return rec.chunk(dim, cx, cz)
+        path, idx = src
+        key = ("chunk", path, idx, os.path.getmtime(path))
+        hit = self._chunks.get(key)
+        if hit is None:
+            m = _REGION_RE.match(os.path.basename(path))
+            root = Region(path, int(m.group(1)), int(m.group(2))).read_nbt(idx)
+            hit = from_nbt(root, cx, cz) if root else None
+            if len(self._chunks) > 512:
+                self._chunks.clear()
+            self._chunks[key] = hit
+        return hit
 
     def _tables(self):
         names = BLOCKS.names

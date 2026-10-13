@@ -264,6 +264,7 @@ async function set3d(on) {
     view3d.setClip(cut.mode, cut.y);
     view3d.setSpawn($('#spawn3d').checked);
     xrayApply();
+    view3d.setAt(tl.date);
     view3d.open(state.server, state.dim, c.x, y, c.z);
     view3d.setSchematics(schem.list);
     drawHistory();

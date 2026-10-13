@@ -493,7 +493,10 @@ b.warn { color: #ffcf6b; }
 #tl-label { min-width: 84px; text-align: right; }
 .tl-badge { position: absolute; top: 106px; left: 50%; transform: translateX(-50%); z-index: 500; padding: 6px 12px;
   border-radius: 999px; font-weight: 600; color: var(--warn); border: 1px solid var(--warn); }
-body.mode3d .tl-badge { display: none; }
+body.mode3d .tl-badge { position: fixed; z-index: 600; top: 112px; }
+.tl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin: 6px 0; }
+.tl-grid label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.tl-grid select { width: 100%; }
 
 /* Automations: the mode shows/hides parts of the card */
 #fl-card[data-mode="clear"] .fl-blockrow, #fl-card:not([data-mode="flat"]) .fl-flat, #fl-card[data-mode="flat"] .fl-fillonly { display: none; }
