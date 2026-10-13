@@ -1409,7 +1409,9 @@ export function create(container, ctx) {
     screenshot() { return renderer.domElement.toDataURL('image/png'); },
     stats() {
       return { chunks: Array.from(st.chunks.values()).filter((c) => c.group).length,
-        regions: Array.from(st.regions.values()).filter((r) => r.mesh).length, loading: st.queue };
+        regions: Array.from(st.regions.values()).filter((r) => r.mesh).length, loading: st.queue,
+        active: st.active, srv: st.srv, dim: st.dim, atlas: atlasW, pending: pending.length,
+        cam: [Math.round(camera.position.x), Math.round(camera.position.y), Math.round(camera.position.z)] };
     },
     debugMasks() {
       return Array.from(st.regions.entries()).map(([k, r]) => [k, r.mask ? r.mask.image.data.reduce((a, b) => a + (b ? 1 : 0), 0) : -1]);
