@@ -595,6 +595,7 @@ Fluggeschwindigkeit {} Blöcke/s	Flight speed {} blocks/s
 Schematic würde zu groß ({}×{}×{}), höchstens {} pro Kante	Schematic would get too big ({}×{}×{}), at most {} per side
 3D braucht die Blockmodelle (build_assets)	3D needs the block models (build_assets)
 3D braucht die Blockmodelle: python -m viewer.tools.build_assets --jar	3D needs the block models: python -m viewer.tools.build_assets --jar
+3D: Blocktexturen nicht geladen ({}), versuche es weiter …	3D: block textures not loaded ({}), still trying …
 3D konnte nicht starten	3D could not start
 Laden fehlgeschlagen	Loading failed
 # --- errors from the server

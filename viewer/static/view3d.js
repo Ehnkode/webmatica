@@ -87,15 +87,24 @@ export function create(container, ctx) {
   }
 
   let atlasW = 0, atlasH = 0;
-  fetch('/api/blocks-info').then((r) => r.json()).then((j) => {
-    if (!j.available) { ctx.toast && ctx.toast('3D braucht die Blockmodelle: python -m viewer.tools.build_assets --jar <client.jar>'); return; }
-    const img = new Image();
-    img.onload = () => {
-      atlas.image = img; atlas.repeat.set(1 / (16 * j.width), 1 / (16 * j.height)); atlas.needsUpdate = true;
-      atlasW = j.width; atlasH = j.height;
+  // Without the atlas nothing streams, so a failed load is retried and reported instead of leaving 3D empty.
+  function loadAtlas(attempt = 0) {
+    const retry = (why) => {
+      if (attempt === 2) ctx.toast && ctx.toast('3D: Blocktexturen nicht geladen (' + why + '), versuche es weiter …');
+      setTimeout(() => loadAtlas(attempt + 1), Math.min(10000, 1000 * (attempt + 1)));
     };
-    img.src = `/api/blocks.png?v=${encodeURIComponent(j.version || '')}`;
-  });
+    fetch('/api/blocks-info').then((r) => r.json()).then((j) => {
+      if (!j.available) { ctx.toast && ctx.toast('3D braucht die Blockmodelle: python -m viewer.tools.build_assets --jar <client.jar>'); return; }
+      const img = new Image();
+      img.onload = () => {
+        atlas.image = img; atlas.repeat.set(1 / (16 * j.width), 1 / (16 * j.height)); atlas.needsUpdate = true;
+        atlasW = j.width; atlasH = j.height;
+      };
+      img.onerror = () => retry('blocks.png');
+      img.src = `/api/blocks.png?v=${encodeURIComponent(j.version || '')}`;
+    }).catch((e) => retry(String(e && e.message || e)));
+  }
+  loadAtlas();
 
   // ------------------------------------------------------------ State
 
