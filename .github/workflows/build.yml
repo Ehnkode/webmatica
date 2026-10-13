@@ -31,3 +31,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: build/libs/webmatica-*[0-9].jar
+
+  viewer-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s viewer/tests -t . -v
