@@ -40,7 +40,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 ## Voraussetzungen
 
 - Minecraft 1.21.11, 26.1, 26.2 oder 26.3 mit Fabric Loader und Fabric API
-- Python 3.10+ (Windows: „Add python.exe to PATH“ anhaken)
+- Python 3.10+
 - Optional: [Baritone](https://github.com/cabaletta/baritone), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib), Litematica Printer
 
 ## Installation
