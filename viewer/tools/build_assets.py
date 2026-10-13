@@ -1,15 +1,15 @@
-"""Baut die Block-Assets des Viewers aus dem Minecraft-Client.
+"""Builds the viewer's block assets from the Minecraft client.
 
     python -m viewer.tools.build_assets --jar "<.minecraft>/versions/1.21.11/1.21.11.jar"
 
-Liest Blockstates, Blockmodelle und Blocktexturen direkt aus dem Jar und
-schreibt nach ``viewer/assets/``:
+Reads blockstates, block models and block textures directly from the jar and
+writes to ``viewer/assets/``:
 
-    blocks.png   Atlas aller Blocktexturen (16x16, erstes Animationsbild)
-    blocks.json  Blockstates (roh) + aufgeloeste Modelle (Elternketten und
-                 Texturvariablen bereits ersetzt, Texturen als Atlas-Index)
+        blocks.png   atlas of all block textures (16x16, first animation frame)
+        blocks.json  blockstates (raw) + resolved models (parent chains and
+                                  texture variables already replaced, textures as atlas index)
 
-Die Dateien enthalten Mojang-Assets und gehoeren deshalb nicht ins Git-Repo.
+The files contain Mojang assets and therefore don't belong in the git repo.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ TILE = 16
 
 
 class Source:
-    """Liest entweder aus dem Client-Jar oder aus einem entpackten Ordner."""
+    """Reads either from the client jar or from an extracted folder."""
 
     def __init__(self, jar: str | None, directory: str | None):
         self.zip = zipfile.ZipFile(jar) if jar else None
@@ -50,7 +50,7 @@ class Source:
                 return self.zip.read(self.prefix + rel)
             except KeyError:
                 return None
-        # Alter Ordner-Aufbau des Projekts: textures/{block,blockstates,models/block}
+        # Old project folder layout: textures/{block,blockstates,models/block}
         alt = rel.replace("textures/block/", "block/")
         for cand in (rel, alt):
             p = os.path.join(self.dir, cand)
@@ -78,9 +78,9 @@ def norm_id(ref: str) -> str:
 class ModelResolver:
     def __init__(self, src: Source):
         self.src = src
-        self.synthetic: dict[str, Image.Image] = {}   # selbst gebaute Texturen (Truhen, Betten, ...)
+        self.synthetic: dict[str, Image.Image] = {}   # self-built textures (chests, beds, ...)
         self.raw: dict[str, dict | None] = {}
-        self.textures: dict[str, int] = {}   # 'block/stone' -> Atlas-Index
+        self.textures: dict[str, int] = {}   # 'block/stone' -> atlas index
         self.tex_list: list[str] = []
 
     def load(self, mid: str):
@@ -166,7 +166,7 @@ def build(src: Source, out_dir: str = OUT):
                     if mid not in models:
                         models[mid] = res.resolve(mid)
     add_entity_blocks(src, res, blockstates, models)
-    # Fluessigkeiten haben keine Elemente; Texturen fuer den Sonderfall vormerken.
+    # Fluids have no elements; note the textures for the special case.
     for t in ("block/water_still", "block/lava_still"):
         res.tex_index(t)
 
@@ -174,14 +174,14 @@ def build(src: Source, out_dir: str = OUT):
     cols = int(math.ceil(math.sqrt(n)))
     rows = int(math.ceil(n / cols))
     atlas = Image.new("RGBA", (cols * TILE, rows * TILE), (0, 0, 0, 0))
-    kinds = []   # 0 = deckend, 1 = Ausschnitt (Alpha 0/255), 2 = durchscheinend
+    kinds = []   # 0 = opaque, 1 = cutout (alpha 0/255), 2 = translucent
     colors = []
     for i, name in enumerate(res.tex_list):
         img = res.synthetic.get(name) or src.texture(name)
         if img is None:
             img = Image.new("RGBA", (TILE, TILE), (255, 0, 255, 255))
         w = img.width
-        img = img.crop((0, 0, w, w))                 # erstes Animationsbild
+        img = img.crop((0, 0, w, w))                 # first animation frame
         if w != TILE:
             img = img.resize((TILE, TILE), Image.Resampling.NEAREST)
         a = np.asarray(img)[..., 3]
@@ -211,12 +211,12 @@ def build(src: Source, out_dir: str = OUT):
     print(f"{len(blockstates)} Blockstates, {len(models)} Modelle, {n} Texturen -> {out_dir}")
 
 
-# ---------------------------------------------------------------- Block-Entities
+# ---------------------------------------------------------------- Block entities
 #
-# Truhen, Betten und Shulkerkisten haben im Spiel kein Blockmodell, sie werden
-# als Entity gezeichnet. Fuer den Viewer bauen wir aus den Entity-Texturen
-# einfache Blockmodelle: Flaechen werden ausgeschnitten, in die Welt-Ausrichtung
-# gedreht und als eigene 16x16-Kacheln in den Atlas gelegt.
+# Chests, beds and shulker boxes have no block model in the game; they are
+# drawn as entities. For the viewer we build simple block models from the
+# entity textures: faces are cut out, rotated into world orientation
+# and put into the atlas as separate 16x16 tiles.
 
 _FACING_Y = {"north": 0, "east": 90, "south": 180, "west": 270}
 _COLORS = ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray",
@@ -228,7 +228,7 @@ def _crop(img, x0, y0, x1, y1):
 
 
 def _tile(parts):
-    """parts: [(array HxWx4, col, row)] -> 16x16-Bild."""
+    """parts: [(array HxWx4, col, row)] -> 16x16 image."""
     t = np.zeros((16, 16, 4), np.uint8)
     for a, c, r in parts:
         h, w = a.shape[:2]
@@ -244,10 +244,10 @@ def _box(fr, to, faces, cull=None):
 
 
 def _chest(res, img, name, kind):
-    """kind: single | left | right. Liefert das Modell fuer facing=north."""
+    """kind: single | left | right. Returns the model for facing=north."""
     tex = lambda key, im: (res.synthetic.__setitem__(f"synthetic/{name}_{kind}_{key}", im),
                            res.tex_index(f"synthetic/{name}_{kind}_{key}"))[1]
-    lock = _crop(img, 1, 1, 3, 5)[::-1, ::-1]                       # 2x4, gedreht wie die Front
+    lock = _crop(img, 1, 1, 3, 5)[::-1, ::-1]                       # 2x4, rotated like the front
     if kind == "single":
         w, x0, x1 = 14, 1, 15
         top, bottom = _crop(img, 28, 0, 42, 14), _crop(img, 14, 19, 28, 33)
@@ -266,16 +266,16 @@ def _chest(res, img, name, kind):
     def side(u, wd):
         lid = _crop(img, u, 14, u + wd, 19)
         base = _crop(img, u, 33, u + wd, 42)
-        # Die Streifen liegen in der Textur kopfueber (Entity-Modell ist um X gedreht):
-        # jeden Streifen fuer sich umdrehen, Deckel oben, Unterteil darunter.
+        # The strips are upside down in the texture (the entity model is rotated around X):
+        # flip each strip on its own, lid on top, bottom part below.
         return np.concatenate([lid[::-1], base[::-1]], 0)[:, ::-1]
 
     t = {}
-    # Oben: Spalte = x, Zeile = z (Norden oben); die offene Kante zur Partnerhaelfte passt nach dem Spiegeln.
+    # Top: column = x, row = z (north up); the open edge to the partner half fits after mirroring.
     t["up"] = tex("top", _tile([(top[:, ::-1], x0, 1)]))
     t["down"] = tex("bottom", _tile([(bottom, x0, 1)]))
     front = side(strips["front"], widths["front"])
-    fc = 16 - x1                                                    # Nordseite: u = 16 - x
+    fc = 16 - x1                                                    # north side: u = 16 - x
     parts = [(front, fc, 2)]
     if kind == "single":
         parts.append((lock, 7, 5))
@@ -290,7 +290,7 @@ def _chest(res, img, name, kind):
         t["west"] = t["east"] = s_img
     else:
         s_img = tex("side", _tile([(side(strips["side"], 14), 1, 2)]))
-        # Seitenteil an das geschlossene Ende (die offene Seite stoesst an die Partnerhaelfte)
+        # Side piece at the closed end (the open side meets the partner half)
         t["west" if kind == "left" else "east"] = s_img
     return {"elements": [_box((x0, 0, 1), (x1, 14, 15), t)], "particle": t["up"], "ao": True}
 

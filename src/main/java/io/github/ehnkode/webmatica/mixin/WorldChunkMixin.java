@@ -10,12 +10,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Merkt sich Chunks, in denen sich auf dem Client ein Block geaendert hat.
+ * Remembers chunks in which a block changed on the client.
  *
- * Das faengt alle Wege ab: Block-Updates vom Server, Chunk-Delta-Pakete und
- * die Client-Vorhersage beim eigenen Bauen/Abbauen (fuer die 2b2t oft kein
- * eigenes Paket zurueckschickt). Beim Laden eines Chunks aus dem Paket wird
- * diese Methode nicht benutzt, sie feuert also nur bei echten Aenderungen.
+ * This catches every path: block updates from the server, chunk delta packets and
+ * the client prediction when building/breaking yourself (for which 2b2t often sends
+ * no packet back). Loading a chunk from the packet doesn't use
+ * this method, so it only fires on real changes.
  */
 @Mixin(WorldChunk.class)
 public abstract class WorldChunkMixin {
@@ -24,7 +24,7 @@ public abstract class WorldChunkMixin {
     private void mapper$onSetBlockState(BlockPos pos, BlockState state, int flags,
                                         CallbackInfoReturnable<BlockState> cir) {
         WorldChunk self = (WorldChunk) (Object) this;
-        // null = Block war schon so, nichts geaendert.
+        // null = block was already like this, nothing changed.
         if (cir.getReturnValue() != null && self.getWorld().isClient()) {
             RegionStore.getInstance().markDirty(self.getPos().x, self.getPos().z);
         }

@@ -1,12 +1,12 @@
-"""Kartenkacheln.
+"""Map tiles.
 
-Zoomstufe 0: eine Kachel = eine Region (512 x 512 Bloecke, 1 Pixel pro Block).
-Zoomstufe -k: eine Kachel fasst 2^k x 2^k Regionen zusammen (aus den vier
-Kindkacheln verkleinert). Hineinzoomen ueber 0 hinaus vergroessert der Browser.
+Zoom level 0: one tile = one region (512 x 512 blocks, 1 pixel per block).
+Zoom level -k: one tile combines 2^k x 2^k regions (downscaled from the four
+child tiles). Zooming in beyond 0 is scaled up by the browser.
 
-Alles wird unter ``cache_dir`` auf Platte gehalten. Fuer Zoomstufe 0 liegt
-neben dem PNG ein .npz mit den Chunk-Zeitstempeln der Region; aendern sich
-einzelne Chunks, werden nur diese neu berechnet.
+Everything is kept on disk under ``cache_dir``. For zoom level 0 there is an
+.npz next to the PNG with the region's chunk timestamps; if individual
+chunks change, only those are recomputed.
 """
 
 from __future__ import annotations
@@ -30,11 +30,11 @@ TILE = 512
 
 @dataclass(frozen=True)
 class Layer:
-    """Welche Schicht gezeigt wird.
+    """Which layer is shown.
 
-    mode="surface": oberster Block unterhalb von ``y_max``.
-    mode="cave": ab ``y_max`` abwaerts erst die Decke ueberspringen, dann den
-    ersten Block darunter zeigen (Nether unter dem Bedrock-Dach).
+    mode="surface": topmost block below ``y_max``.
+    mode="cave": from ``y_max`` downwards first skip the ceiling, then show the
+    first block below it (Nether under the bedrock roof).
     """
     mode: str = "surface"
     y_max: int = 320
@@ -61,12 +61,12 @@ def render_chunk(ch: Chunk, layer: Layer):
     if top_rel < 0:
         z = np.zeros((16, 16), np.int32)
         return np.zeros((16, 16, 3), np.float32), z, z.astype(bool)
-    ids = ch.blocks[:top_rel + 1][::-1].astype(np.intp)   # Index 0 = oberste Schicht
+    ids = ch.blocks[:top_rel + 1][::-1].astype(np.intp)   # index 0 = top layer
     solid = ~PALETTE.block_empty[ids]
     rows = np.arange(ids.shape[0])[:, None, None]
 
     if layer.mode == "cave":
-        # Erste Luft unter der Decke suchen; Spalten ohne Luft bleiben leer.
+        # Find the first air below the ceiling; columns without air stay empty.
         air = ~solid
         has_air = air.any(0)
         first_air = np.argmax(air, 0)
@@ -74,11 +74,11 @@ def render_chunk(ch: Chunk, layer: Layer):
         solid &= has_air[None]
 
     has = solid.any(0)
-    top = np.argmax(solid, 0)                                # (16,16) Zeile im ids-Stack
+    top = np.argmax(solid, 0)                                # (16,16) row in the ids stack
     zz, xx = np.meshgrid(np.arange(16), np.arange(16), indexing="ij")
     top_id = ids[top, zz, xx]
 
-    # Durchscheinendes (Wasser, Glas, Pflanzen): mit dem ersten deckenden Block darunter mischen.
+    # Translucent (water, glass, plants): blend with the first opaque block below.
     alpha_top = PALETTE.block_alpha[top_id]
     opaque = solid & (PALETTE.block_alpha[ids] >= 0.99) & ~PALETTE.block_water[ids] & (rows > top[None])
     has_under = opaque.any(0)
@@ -110,7 +110,7 @@ def render_chunk(ch: Chunk, layer: Layer):
 
 
 def shade(rgb: np.ndarray, height: np.ndarray, has: np.ndarray, water: np.ndarray | None = None) -> np.ndarray:
-    """Hoehenschattierung wie auf Vanilla-Karten: heller, wenn hoeher als der Nachbar im Norden."""
+    """Height shading like vanilla maps: lighter if higher than the neighbor to the north."""
     north = np.vstack([height[:1], height[:-1]])
     north_has = np.vstack([has[:1], has[:-1]])
     north = np.where(north_has, north, height)
@@ -124,10 +124,10 @@ def shade(rgb: np.ndarray, height: np.ndarray, has: np.ndarray, water: np.ndarra
 
 
 def _paint(ch: Chunk, layer: Layer, sl, rgb, height, has, water):
-    """Einen Chunk in die Arrays einer Region-Kachel malen."""
+    """Paint one chunk into the arrays of a region tile."""
     c_rgb, c_h, c_has = render_chunk(ch, layer)
     rgb[sl], height[sl], has[sl] = c_rgb, c_h, c_has
-    water[sl] = False  # Wasser flach halten: unten ueber Farbe erkannt
+    water[sl] = False  # keep water flat: detected via color below
     top_rel = min(ch.height - 1, layer.y_max - ch.min_y)
     if top_rel >= 0:
         yi = np.clip(c_h - ch.min_y, 0, ch.height - 1)
@@ -155,10 +155,10 @@ class TileStore:
         os.makedirs(d, exist_ok=True)
         return d
 
-    # ------------------------------------------------------------ Zoomstufe 0
+    # ------------------------------------------------------------ Zoom level 0
 
     def region_tile(self, dim: Dimension, layer: Layer, rx: int, rz: int) -> str | None:
-        """Pfad zum PNG einer Region (aktualisiert bei Bedarf), None wenn leer."""
+        """Path to a region's PNG (updated when needed), None if empty."""
         region = dim.region(rx, rz)
         if region is None:
             return None
@@ -168,7 +168,7 @@ class TileStore:
         d = self._dir(dim, layer, 0)
         png = os.path.join(d, f"{rx}_{rz}.png")
         npz = os.path.join(d, f"{rx}_{rz}.npz")
-        stamp = h.timestamps * (h.offsets > 0) + h.offsets   # aendert sich bei jedem Neuschreiben
+        stamp = h.timestamps * (h.offsets > 0) + h.offsets   # changes on every rewrite
 
         with self._lock(png):
             old = None
@@ -209,7 +209,7 @@ class TileStore:
                 if h.offsets[idx]:
                     try:
                         ch = self.rec.chunk(dim, rx * 32 + lx, rz * 32 + lz)
-                    except Exception as e:  # kaputter Chunk darf die Kachel nicht verhindern
+                    except Exception as e:  # a broken chunk must not prevent the tile
                         print(f"Chunk {rx * 32 + lx},{rz * 32 + lz} defekt: {e}")
                 if ch is None:
                     has[sl] = False
@@ -232,7 +232,7 @@ class TileStore:
             return png
 
     def markers(self, dim: Dimension, layer: Layer) -> dict:
-        """Schilder und Behaelter aller bereits gerenderten Regionen."""
+        """Signs and containers of all regions rendered so far."""
         d = self._dir(dim, layer, 0)
         signs, stashes = [], []
         for r in dim.regions():
@@ -251,11 +251,11 @@ class TileStore:
                                     "types": m["containers"]})
         return {"signs": signs, "stashes": stashes}
 
-    # ------------------------------------------------------------ Zoomstufen < 0
+    # ------------------------------------------------------------ Zoom levels < 0
 
     def raw_region_tile(self, dim: Dimension, layer: Layer, rx: int, rz: int) -> str | None:
-        """Wie ``region_tile``, aber Farben ohne Hoehenschattierung (fuer die 3D-Fernsicht,
-        die ihre Schattierung selbst aus den Hoehen rechnet)."""
+        """Like ``region_tile``, but colors without height shading (for the 3D far view,
+        which computes its shading from the heights itself)."""
         if self.region_tile(dim, layer, rx, rz) is None:
             return None
         d = self._dir(dim, layer, 0)
@@ -317,14 +317,14 @@ class TileStore:
 
 
 class PastTiles(TileStore):
-    """Kacheln "so sah es an Tag X aus" fuer den Zeitraffer.
+    """Tiles "this is how it looked on day X" for the timelapse.
 
-    Enthalten nur Chunks, von denen es einen gesicherten Stand ab Tag X gibt (die
-    sich also seitdem geaendert haben), in diesem alten Stand. Alles andere ist
-    durchsichtig, die Karte darunter zeigt dort den heutigen Stand, der dann ja
-    auch damals galt.
+    Contain only chunks that have a backed-up state from day X onwards (i.e. that
+    have changed since), in that old state. Everything else is
+    transparent; the map below shows today's state there, which was
+    also valid back then.
 
-    ``index()`` liefert {(cx, cz): (Pfad der Region-Datei, Chunk-Index)}.
+    ``index()`` returns {(cx, cz): (path of the region file, chunk index)}.
     """
 
     def __init__(self, rec: Recording, cache_dir: str, index):

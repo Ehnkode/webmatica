@@ -1,8 +1,8 @@
-"""Chunk-Dekodierung: Vanilla-Chunk-NBT -> numpy-Arrays.
+"""Chunk decoding: vanilla chunk NBT -> numpy arrays.
 
-Block-States und Biome bekommen prozessweit eindeutige Ganzzahl-IDs
-(:data:`BLOCKS`, :data:`BIOMES`). Damit lassen sich Farben, Formen usw. als
-Lookup-Tabellen (``lut[ids]``) ueber ganze Chunks anwenden, ohne Python-Schleife.
+Block states and biomes get process-wide unique integer IDs
+(:data:`BLOCKS`, :data:`BIOMES`). This lets colors, shapes etc. be applied as
+lookup tables (``lut[ids]``) over whole chunks without a Python loop.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ AIR_NAMES = frozenset({
 
 
 class Registry:
-    """Thread-sicherer String -> int Interner."""
+    """Thread-safe string -> int interner."""
 
     def __init__(self, first: str):
         self._lock = threading.Lock()
@@ -42,9 +42,9 @@ class Registry:
         return len(self.names)
 
 
-#: Block-States als "minecraft:oak_stairs[facing=north,half=bottom]". ID 0 = Luft.
+#: Block states as "minecraft:oak_stairs[facing=north,half=bottom]". ID 0 = air.
 BLOCKS = Registry("minecraft:air")
-#: Biome als "minecraft:plains". ID 0 = plains (Vanilla-Default).
+#: Biomes as "minecraft:plains". ID 0 = plains (vanilla default).
 BIOMES = Registry("minecraft:plains")
 
 
@@ -73,7 +73,7 @@ def state_props(state: str) -> dict:
 
 
 def unpack(data: np.ndarray, bits: int, count: int) -> np.ndarray:
-    """Vanilla-Bitpacking (seit 1.16: Werte ueberspannen keine Longs)."""
+    """Vanilla bit packing (since 1.16: values don't span longs)."""
     if bits == 0 or data is None or len(data) == 0:
         return np.zeros(count, dtype=np.int32)
     per_long = 64 // bits
@@ -89,11 +89,11 @@ def unpack(data: np.ndarray, bits: int, count: int) -> np.ndarray:
 class Chunk:
     cx: int
     cz: int
-    min_y: int                      # unterste Block-Y (z. B. -64)
-    blocks: np.ndarray              # uint16 (H, 16, 16) [y, z, x], globale BLOCKS-IDs
-    biomes: np.ndarray              # uint16 (H/4, 4, 4) [y, z, x], globale BIOMES-IDs
+    min_y: int                      # lowest block Y (e.g. -64)
+    blocks: np.ndarray              # uint16 (H, 16, 16) [y, z, x], global BLOCKS IDs
+    biomes: np.ndarray              # uint16 (H/4, 4, 4) [y, z, x], global BIOMES IDs
     block_entities: list = field(default_factory=list)
-    #: Licht je Sektion (Index ab unten): (BlockLight, SkyLight) als rohe 2048 Bytes oder None
+    #: Light per section (index from the bottom): (BlockLight, SkyLight) as raw 2048 bytes or None
     light_raw: dict = field(default_factory=dict)
 
     @property
@@ -101,10 +101,10 @@ class Chunk:
         return self.blocks.shape[0]
 
     def light(self) -> tuple[np.ndarray, np.ndarray] | None:
-        """(Blocklicht, Himmelslicht) uint8 (H, 16, 16) [y, z, x], oder None ohne Lichtdaten.
+        """(block light, sky light) uint8 (H, 16, 16) [y, z, x], or None without light data.
 
-        Sektionen ohne Himmelslicht-Daten gelten als ganz hell (so macht es Vanilla
-        ueber freiem Himmel), ohne Blocklicht-Daten als dunkel.
+        Sections without sky light data count as fully lit (as vanilla does
+        under open sky), those without block light data as dark.
         """
         if not self.light_raw:
             return None
@@ -131,7 +131,7 @@ def _raw(arr) -> bytes | None:
 
 
 def _nibbles(raw: bytes) -> np.ndarray:
-    """2048 Bytes Vanilla-Licht (4 Bit je Block, Index y<<8 | z<<4 | x) -> (16, 16, 16)."""
+    """2048 bytes of vanilla light (4 bits per block, index y<<8 | z<<4 | x) -> (16, 16, 16)."""
     b = np.frombuffer(raw, np.uint8)
     out = np.empty(4096, np.uint8)
     out[0::2] = b & 15

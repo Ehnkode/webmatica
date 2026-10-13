@@ -1,8 +1,8 @@
-"""Bloecke in einem Bereich der Aufnahme finden (Farmen, falsche Bloecke).
+"""Find blocks in an area of the recording (farms, wrong blocks).
 
-Ein Bereich ist ``{"x0", "z0", "x1", "z1", "y0", "y1"}`` in Weltkoordinaten,
-alle Grenzen einschliesslich. Gelesen wird aus der Aufnahme, also so, wie die
-Mod die Chunks zuletzt gesehen hat.
+An area is ``{"x0", "z0", "x1", "z1", "y0", "y1"}`` in world coordinates,
+all bounds inclusive. Read from the recording, i.e. as the
+mod last saw the chunks.
 """
 
 from __future__ import annotations
@@ -13,8 +13,8 @@ import numpy as np
 
 from .core.chunk import AIR_NAMES, BLOCKS, base_name
 
-MAX_CHUNKS = 64 * 64      # 1024 x 1024 Bloecke reichen fuer eine Farm
-# kann man nicht abbauen (oder nicht einsammeln): in der Auswahl weglassen
+MAX_CHUNKS = 64 * 64      # 1024 x 1024 blocks are enough for a farm
+# can't be broken (or picked up): leave out of the selection
 UNFARMABLE = frozenset("minecraft:" + n for n in (
     "water", "lava", "bedrock", "barrier", "end_portal", "end_portal_frame", "nether_portal", "end_gateway",
     "bubble_column", "fire", "soul_fire", "command_block", "structure_block", "jigsaw", "reinforced_deepslate"))
@@ -31,7 +31,7 @@ def norm_area(a: dict) -> dict:
     return out
 
 
-#: Platzhalter fuer "alle abbaubaren Bloecke" (Ebnen)
+#: Placeholder for "all breakable blocks" (flattening)
 ANY = "*"
 
 
@@ -40,9 +40,9 @@ def solid(name: str) -> bool:
 
 
 class _Mask:
-    """Block-State-ID -> True, wenn der Blockname passt. Waechst mit, wenn neue States auftauchen.
+    """Block state ID -> True if the block name matches. Grows as new states appear.
 
-    ``names`` ist eine Menge von Blocknamen; enthaelt sie :data:`ANY`, passt jeder abbaubare Block.
+    ``names`` is a set of block names; if it contains :data:`ANY`, every breakable block matches.
     """
 
     def __init__(self, names):
@@ -59,7 +59,7 @@ class _Mask:
 
 
 def _chunks(rec, dim, a: dict):
-    """(Chunk, Ausschnitt [y, z, x], Weltursprung) fuer jeden aufgezeichneten Chunk im Bereich."""
+    """(chunk, slice [y, z, x], world origin) for every recorded chunk in the area."""
     for cz in range(a["z0"] >> 4, (a["z1"] >> 4) + 1):
         for cx in range(a["x0"] >> 4, (a["x1"] >> 4) + 1):
             ch = rec.chunk(dim, cx, cz)
@@ -75,7 +75,7 @@ def _chunks(rec, dim, a: dict):
 
 
 def scan(rec, dim, area: dict, top: int = 60) -> dict:
-    """Welche Bloecke es im Bereich gibt, mit Anzahl (haeufigste zuerst)."""
+    """Which blocks exist in the area, with counts (most common first)."""
     a = norm_area(area)
     counts = np.zeros(len(BLOCKS.names) + 1, np.int64)
     chunks = 0
@@ -95,7 +95,7 @@ def scan(rec, dim, area: dict, top: int = 60) -> dict:
 
 
 def count(rec, dim, area: dict, names: set[str]) -> dict[str, int]:
-    """Wie viele Bloecke je Name noch im Bereich stehen."""
+    """How many blocks per name are still in the area."""
     a = norm_area(area)
     want = _Mask(names)
     out = {n: 0 for n in names}
@@ -110,19 +110,19 @@ def count(rec, dim, area: dict, names: set[str]) -> dict[str, int]:
     return out
 
 
-# zaehlen beim Auffuellen als Loch (werden ersetzt)
+# count as a hole when filling (get replaced)
 _FILLABLE = re.compile(r"^minecraft:(water|lava|bubble_column|short_grass|tall_grass|fern|large_fern|dead_bush|snow|"
                        r"seagrass|tall_seagrass|kelp|kelp_plant|vine|glow_lichen)$")
 
 
 def holes(rec, dim, area: dict, level: int, near: tuple | None = None, limit: int | None = None,
           every: bool = False) -> list[tuple[int, int, int]]:
-    """Leere Stellen unter ``level``, die zum Ebnen aufgefuellt werden muessen.
+    """Empty spots below ``level`` that must be filled for flattening.
 
-    Je Spalte vom obersten festen Block (oder vom Boden des Bereichs, ``y0``) bis
-    ``level`` hinauf. Mit ``every`` jede leere Stelle im Bereich (Bereich fuellen),
-    auch Hoehlen unter festen Bloecken. Unten zuerst, damit Baritone immer auf
-    etwas Festes setzt.
+    Per column from the topmost solid block (or from the bottom of the area, ``y0``) up
+    to ``level``. With ``every``, every empty spot in the area (fill area),
+    including caves under solid blocks. Bottom first, so Baritone always places
+    on something solid.
     """
     a = norm_area(area)
     a["y1"] = min(a["y1"], level)
@@ -133,12 +133,12 @@ def holes(rec, dim, area: dict, level: int, near: tuple | None = None, limit: in
     pts = []
     for part, (ox, oy, oz) in _chunks(rec, dim, a):
         e = empty(part)
-        # Zelle ist ein Loch, wenn sie leer ist und darueber bis level nichts Festes kommt
+        # a cell is a hole if it is empty and nothing solid comes above it up to level
         above_solid = np.cumsum(~e[::-1], 0)[::-1] > 0
         hole = e if every else e & ~above_solid
         ys, zs, xs = np.nonzero(hole)
         pts.extend(zip((xs + ox).tolist(), (ys + oy).tolist(), (zs + oz).tolist()))
-    # Spalten ohne aufgezeichneten Chunk bleiben aussen vor (nicht gesehen)
+    # columns without a recorded chunk are left out (not seen)
     if near is not None:
         pts.sort(key=lambda p: (p[1], (p[0] - near[0]) ** 2 + (p[2] - near[2]) ** 2))
     else:
@@ -148,10 +148,10 @@ def holes(rec, dim, area: dict, level: int, near: tuple | None = None, limit: in
 
 def positions(rec, dim, area: dict, names: set[str], near: tuple, limit: int = 48,
               skip: set | None = None) -> list[tuple[int, int, int]]:
-    """Die ``limit`` naechsten passenden Bloecke zu ``near`` (x, y, z); oben zuerst bei gleichem Abstand.
+    """The ``limit`` nearest matching blocks to ``near`` (x, y, z); top first at equal distance.
 
-    Nimmt bevorzugt Bloecke, die an Luft grenzen (freiliegend), damit Baritone
-    nicht quer durch den Bereich graebt.
+    Prefers blocks adjacent to air (exposed), so Baritone
+    doesn't dig straight through the area.
     """
     a = norm_area(area)
     want = _Mask(names)
@@ -172,7 +172,7 @@ def positions(rec, dim, area: dict, names: set[str], near: tuple, limit: int = 4
         ys, zs, xs = np.nonzero(m)
         wx, wy, wz = xs + ox, ys + oy, zs + oz
         d = (wx - near[0]) ** 2 + (wz - near[2]) ** 2 + 4 * (wy - near[1]) ** 2
-        key = d + np.where(free[ys, zs, xs], 0, 1 << 40)      # freiliegende zuerst
+        key = d + np.where(free[ys, zs, xs], 0, 1 << 40)      # exposed ones first
         k = min(len(key), limit * 4 + (len(skip) if skip else 0))
         sel = np.argpartition(key, k - 1)[:k] if k < len(key) else np.arange(len(key))
         for i in sel:
@@ -182,7 +182,7 @@ def positions(rec, dim, area: dict, names: set[str], near: tuple, limit: int = 4
             cand.append((int(key[i]), -p[1], p))
     cand.sort()
     out = [c[2] for c in cand[:limit * 4]]
-    # um den ersten Treffer herum sammeln, damit ein Auftrag eine Stelle abarbeitet
+    # collect around the first hit, so one job works through one spot
     if out:
         f = out[0]
         out.sort(key=lambda p: (p[0] - f[0]) ** 2 + (p[2] - f[2]) ** 2 + (p[1] - f[1]) ** 2)
@@ -190,7 +190,7 @@ def positions(rec, dim, area: dict, names: set[str], near: tuple, limit: int = 4
 
 
 def boxes(points, cap: int = 1500) -> list[list[int]]:
-    """Einzelne Bloecke zu Reihen entlang x zusammenfassen: [x0, y0, z0, x1, y1, z1]."""
+    """Merge single blocks into runs along x: [x0, y0, z0, x1, y1, z1]."""
     pts = sorted({(int(x), int(y), int(z)) for x, y, z in points}, key=lambda p: (p[1], p[2], p[0]))
     out: list[list[int]] = []
     for x, y, z in pts:

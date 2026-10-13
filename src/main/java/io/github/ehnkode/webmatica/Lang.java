@@ -14,9 +14,9 @@ import java.util.regex.Pattern;
 import net.minecraft.client.MinecraftClient;
 
 /**
- * Meldungen der Mod sind auf Deutsch geschrieben. Ist die Spielsprache nicht
- * Deutsch, werden sie ueber dieselbe Tabelle wie im Viewer (i18n/en.tsv)
- * uebersetzt. In-game messages follow the game language (German or English).
+ * The mod's messages are written in German. If the game language is not
+ * German, they are translated via the same table as in the viewer (i18n/en.tsv).
+ * In-game messages follow the game language (German or English).
  */
 public final class Lang {
     private static final Pattern EDGE = Pattern.compile("^([\\s,:;·–]*)([\\s\\S]*?)([\\s,.:;·–]*)$");
@@ -74,7 +74,7 @@ public final class Lang {
             }
             patterns.sort((a, b) -> (Integer) b[2] - (Integer) a[2]);
         } catch (Exception e) {
-            // ohne Tabelle bleibt es Deutsch
+            // without a table it stays German
         }
     }
 

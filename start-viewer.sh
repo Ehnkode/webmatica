@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
-# Startet den Webmatica-Viewer (Linux/macOS) und oeffnet ihn im Browser.
-# Eigener Ordner: ./start-viewer.sh --recording ~/.minecraft/webmatica_recording
+# Starts the Webmatica viewer (Linux/macOS) and opens it in the browser.
+# Custom folder: ./start-viewer.sh --recording ~/.minecraft/webmatica_recording
 cd "$(dirname "$0")" || exit 1
 PY=python3
 command -v $PY >/dev/null 2>&1 || PY=python

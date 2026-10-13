@@ -1,9 +1,9 @@
-"""Erzeugt eine kleine synthetische Aufnahme fuer Tests und Demos.
+"""Creates a small synthetic recording for tests and demos.
 
     python -m viewer.tests.make_world /tmp/demo_recording
 
-Legt ``demo.server/`` mit Overworld (Huegel, Wasser, Baeume, ein Haus mit
-Schild) und Nether (Decke aus Bedrock/Netherrack, Lava-See) an.
+Creates ``demo.server/`` with an overworld (hills, water, trees, a house with a
+sign) and a Nether (ceiling of bedrock/netherrack, lava lake).
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ def section_nbt(y: int, states: list[str], idx: np.ndarray, biome: str) -> dict:
 
 
 def chunk_nbt(cx: int, cz: int, column, biome: str, min_sy=-4, max_sy=19, extra=None) -> dict:
-    """column(x, y, z) -> state; wird pro Block aufgerufen (klein halten)."""
+    """column(x, y, z) -> state; called per block (keep it small)."""
     sections = []
     solid = np.zeros(((max_sy - min_sy + 1) * 16, 16, 16), bool)
     for sy in range(min_sy, max_sy + 1):
@@ -64,7 +64,7 @@ def chunk_nbt(cx: int, cz: int, column, biome: str, min_sy=-4, max_sy=19, extra=
                             states.append(s)
                         idx[ly, z, x] = i
         sections.append(section_nbt(sy, states, idx, biome))
-    # Licht wie von der Mod: Himmelslicht 15 ueber dem obersten Block, darunter 0; kein Blocklicht
+    # Light as from the mod: sky light 15 above the top block, 0 below; no block light
     sky = np.where(np.cumsum(solid[::-1], 0)[::-1] > 0, 0, 15).astype(np.uint8)
     for i, sec in enumerate(sections):
         v = sky[i * 16:(i + 1) * 16].reshape(-1)
@@ -98,7 +98,7 @@ def write_region(path: str, chunks: dict[tuple[int, int], dict]):
         f.write(header + body)
 
 
-# Schaufenster mit Sonderbloecken auf einer schwebenden Plattform (x 32..63, z 32..47, y 100).
+# Showcase with special blocks on a floating platform (x 32..63, z 32..47, y 100).
 SHOWCASE = [
     "minecraft:oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]",
     "minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]",
@@ -135,7 +135,7 @@ SHOWCASE = [
 ]
 
 
-# Zusammengesetzte Bloecke (Doppeltruhe, Bett) auf der Plattform, (x, z) -> Block
+# Composite blocks (double chest, bed) on the platform, (x, z) -> block
 PAIRS = {
     (40, 44): "minecraft:red_bed[facing=south,occupied=false,part=foot]",
     (40, 45): "minecraft:red_bed[facing=south,occupied=false,part=head]",
@@ -165,7 +165,7 @@ def overworld(x: int, y: int, z: int) -> str:
         return "minecraft:bedrock" if y == -64 else "minecraft:deepslate"
     if y < h - 4:
         return "minecraft:stone"
-    # Haus bei (8..14, 8..14)
+    # House at (8..14, 8..14)
     if 8 <= x <= 14 and 8 <= z <= 14 and h <= y <= h + 4:
         edge = x in (8, 14) or z in (8, 14)
         if y == h + 4:
@@ -177,7 +177,7 @@ def overworld(x: int, y: int, z: int) -> str:
         return "minecraft:sand" if h < 66 else "minecraft:grass_block[snowy=false]"
     if y <= 64:
         return "minecraft:water[level=0]"
-    # Baeume im Raster
+    # Trees in a grid
     if x % 11 == 3 and z % 13 == 5 and h > 66 and y <= h + 4:
         return "minecraft:oak_log[axis=y]"
     if (x - 3) % 11 in (0, 1, 10) and (z - 5) % 13 in (0, 1, 12) and h > 66 and h + 3 <= y <= h + 5:

@@ -1,11 +1,11 @@
-"""Kisten-Inventar, Baritone-Befehle und Zeitleiste (fuer server.py).
+"""Chest inventory, Baritone commands and timeline (for server.py).
 
-- Kisten: die Mod meldet den Inhalt jeder geoeffneten Kiste, gespeichert in
-  ``<aufnahme>/.viewer/containers.json``.
-- Befehle: der Browser legt Baritone-Ziele ab, die Mod holt sie ab.
-- Zeitleiste: die Mod sichert vor dem Ueberschreiben den alten Stand eines Chunks
-  einmal pro Tag nach ``<aufnahme>/<server>/.history/<datum>/...``. Hier wird
-  "Stand an Tag X" gegen den aktuellen Stand verglichen.
+- Chests: the mod reports the contents of every opened chest, stored in
+    ``<recording>/.viewer/containers.json``.
+- Commands: the browser drops Baritone goals, the mod picks them up.
+- Timeline: before overwriting, the mod backs up a chunk's old state
+    once per day to ``<recording>/<server>/.history/<date>/...``. Here
+    "state on day X" is compared against the current state.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from .core.world import DIMENSIONS, Region, _REGION_RE
 AIR = {"minecraft:air", "minecraft:cave_air", "minecraft:void_air"}
 
 
-# ------------------------------------------------------------------ Kisten
+# ------------------------------------------------------------------ Chests
 
 class Containers:
     def __init__(self, rec_root: str):
@@ -67,7 +67,7 @@ class Containers:
         other = req.get("other")
         old_keys = []
         if not ender and isinstance(other, list) and len(other) == 3:
-            # Doppelkiste: immer unter der kleineren Haelfte speichern, egal welche angeklickt wurde
+            # Double chest: always store under the smaller half, regardless of which was clicked
             ox, oy, oz = (int(v) for v in other)
             old_keys = [f"{srv}|{dim}|{x},{y},{z}", f"{srv}|{dim}|{ox},{oy},{oz}"]
             x, y, z = min((x, y, z), (ox, oy, oz))
@@ -92,10 +92,10 @@ class Containers:
             return [e for e in self.data.values() if not server or e["server"] == server]
 
 
-# ------------------------------------------------------------------ Truhen-Deckel (andere Spieler)
+# ------------------------------------------------------------------ Chest lids (other players)
 
 class LidLog:
-    """Kisten, die jemand anderes in Sichtweite geoeffnet hat (Block-Event der Mod)."""
+    """Chests that someone else opened within view distance (block event from the mod)."""
 
     def __init__(self, rec_root: str):
         self.path = os.path.join(rec_root, ".viewer", "chest_lids.json")
@@ -137,20 +137,20 @@ class LidLog:
                     if (not server or e["server"] == server) and (not dim or e["dim"] == dim)]
 
 
-# ------------------------------------------------------------------ Kisten aus der Aufnahme
+# ------------------------------------------------------------------ Chests from the recording
 
-STORAGE = ("chest", "trapped_chest", "barrel", "shulker_box")   # Trichter/Werfer sind meist Farmen
+STORAGE = ("chest", "trapped_chest", "barrel", "shulker_box")   # hoppers/droppers are mostly farms
 _CW = {"north": "east", "east": "south", "south": "west", "west": "north"}
 _CCW = {v: k for k, v in _CW.items()}
 _STEP = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
 
 
 def world_chests(rec, dim, cx0: int, cz0: int, r: int) -> list:
-    """Alle Lager-Bloecke (Truhe, Fass, Shulker ...) in den aufgezeichneten Chunks um (cx0, cz0).
+    """All storage blocks (chest, barrel, shulker ...) in the recorded chunks around (cx0, cz0).
 
-    Die Position kennt die Aufnahme auch ohne Oeffnen (Block-Entities kommen mit dem Chunk),
-    den Inhalt nicht. Doppelkisten werden wie bei ``Containers`` unter der kleineren Haelfte
-    zusammengefasst.
+    The recording knows the position even without opening (block entities come with the chunk),
+    but not the contents. Double chests are merged under the smaller half, as in
+    ``Containers``.
     """
     from .core.chunk import state_props
     out = {}
@@ -191,7 +191,7 @@ def world_chests(rec, dim, cx0: int, cz0: int, r: int) -> list:
     return list(out.values())
 
 
-# ------------------------------------------------------------------ Baritone-Befehle
+# ------------------------------------------------------------------ Baritone commands
 
 class Commands:
     TTL = 15.0
@@ -200,7 +200,7 @@ class Commands:
         self.lock = threading.Lock()
         self.queue: dict[str, list] = {}
         self.last: dict | None = None
-        self.results: dict[str, dict] = {}   # id -> Ergebnis, fuer den Autobau
+        self.results: dict[str, dict] = {}   # id -> result, for auto-build
 
     def push(self, req: dict) -> dict:
         kind = str(req.get("kind"))
@@ -271,15 +271,15 @@ class Commands:
                     self.results.pop(k)
 
 
-# ------------------------------------------------------------------ Printer + Litematica-Schichten
+# ------------------------------------------------------------------ Printer + Litematica layers
 
 class Control:
-    """Gewuenschter Zustand fuer Printer und Litematica-Schichten (je Server).
+    """Desired state for Printer and Litematica layers (per server).
 
-    Der Browser aendert Teile davon, jede Aenderung erhoeht ``seq``; die Mod
-    setzt den Zustand, sobald sie eine neue Nummer sieht, und meldet den echten
-    Zustand im Spiel zurueck. "Schicht fuer Schicht" rechnet der Server selbst:
-    die unterste Schicht der gewaehlten Schematic, in der noch etwas fehlt.
+    The browser changes parts of it, each change increments ``seq``; the mod
+    applies the state as soon as it sees a new number, and reports the real
+    in-game state back. "Layer by layer" is computed by the server itself:
+    the lowest layer of the chosen schematic in which something is still missing.
     """
 
     PRINTER_KEYS = {"on": bool, "range": float, "interval": int, "air": bool, "interact": bool,
@@ -306,7 +306,7 @@ class Control:
                 for k, conv in self.PRINTER_KEYS.items():
                     if k in req["printer"]:
                         pr[k] = conv(req["printer"][k])
-                st["printer"] = pr          # nur das Geaenderte, sonst ueberschreibt man Hotkey-Aenderungen
+                st["printer"] = pr          # only what changed, otherwise hotkey changes get overwritten
                 changed = True
                 st["printer_seq"] = st["seq"] + 1
             if "layer" in req:
@@ -335,7 +335,7 @@ class Control:
     def for_mod(self, srv: str) -> dict:
         with self.lock:
             st = self._st(srv)
-            # Printer-Aenderung nur so lange mitschicken, bis die Mod sie bestaetigt hat
+            # Keep sending the Printer change only until the mod has confirmed it
             done = int((self.status.get(srv) or {}).get("seq", -1)) >= st.get("printer_seq", 0)
             return {"seq": st["seq"], "printer": None if done else (st["printer"] or None), "layer": st["layer"]}
 
@@ -352,7 +352,7 @@ class Control:
                 "online": fresh, "game": self.status.get(srv) if fresh else None}
 
     def auto_step(self, srv: str, verify) -> None:
-        """Schicht fuer Schicht: alle paar Sekunden die unterste offene Schicht einstellen."""
+        """Layer by layer: set the lowest open layer every few seconds."""
         with self.lock:
             st = self._st(srv)
             pid = st["auto"]
@@ -361,7 +361,7 @@ class Control:
             self._auto_ts[srv] = time.monotonic()
         try:
             res = verify(pid)
-        except Exception as e:  # Platzierung weg o.ae.: Automatik aus
+        except Exception as e:  # placement gone or similar: automation off
             with self.lock:
                 st["auto"], st["autoInfo"] = None, f"aus: {e}"
             return
@@ -383,7 +383,7 @@ class Control:
 # ------------------------------------------------------------------ Radar
 
 class Radar:
-    """Andere Spieler in Sichtweite: aktueller Stand plus Logbuch (radar.json)."""
+    """Other players within view distance: current state plus log (radar.json)."""
 
     def __init__(self, rec_root: str):
         self.path = os.path.join(rec_root, ".viewer", "radar.json")
@@ -435,7 +435,7 @@ class Radar:
             return [s for s in self.log if not server or s["server"] == server][-200:][::-1]
 
 
-# ------------------------------------------------------------------ Zeitleiste
+# ------------------------------------------------------------------ Timeline
 
 class History:
     def __init__(self, rec_root: str):
@@ -459,10 +459,10 @@ class History:
         return [d for d in names if os.path.isdir(self._dir(server, d, dim))]
 
     def index(self, server: str, dim: str, date: str) -> dict:
-        """{(cx, cz): (Region-Datei, Index)} des fruehesten gesicherten Stands ab ``date``.
+        """{(cx, cz): (region file, index)} of the earliest backed-up state from ``date`` on.
 
-        Das ist der Stand des Chunks zu Beginn dieses Tages (fuer den Zeitraffer).
-        Kurz zwischengespeichert, die Mod legt hoechstens neue Sicherungen dazu.
+        That is the chunk's state at the start of that day (for the timelapse).
+        Briefly cached; the mod only ever adds new backups.
         """
         key = ("idx", server, dim, date)
         hit = self._cache.get(key)
@@ -497,7 +497,7 @@ class History:
 
     def diff(self, rec, dim, server: str, dim_key: str, date: str, max_points: int = 80000) -> dict:
         dates = [d for d in self.dates(server, dim_key) if d >= date]
-        # Chunk -> (Region-Datei, Index) des fruehesten Stands ab dem gewaehlten Tag
+        # Chunk -> (region file, index) of the earliest state from the chosen day on
         first: dict[tuple, tuple] = {}
         stamp = []
         for d in dates:

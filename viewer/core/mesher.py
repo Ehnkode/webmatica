@@ -1,22 +1,22 @@
-"""Chunk -> Dreiecksnetz fuer die 3D-Ansicht.
+"""Chunk -> triangle mesh for the 3D view.
 
-Pro Block-State werden die vorkompilierten Flaechen (``models.py``) an alle
-Positionen dieses States gelegt, verdeckte Flaechen (``cullface`` gegen einen
-deckenden Nachbarn) fallen weg. Alles vektorisiert mit numpy.
+For each block state, the precompiled faces (``models.py``) are placed at all
+positions of that state; hidden faces (``cullface`` against an opaque
+neighbor) are dropped. Everything vectorized with numpy.
 
-Binaerformat (little endian), eine Antwort pro Chunk:
+Binary format (little endian), one response per chunk:
 
     "MSH3"  int32 cx, int32 cz
-    3x Pass (deckend, Ausschnitt, durchscheinend):
+        3x pass (opaque, cutout, translucent):
         uint32 quads
-        int16  pos[quads*4*3]     Position in 1/16 Block, x/z relativ zur Chunk-Ecke, y absolut
-        uint16 uv[quads*4*2]      Atlas-Pixel * 16
-        uint8  rgb[quads*4*3]     Helligkeit x Biomfarbe x Eckenschatten
-        uint8  light[quads*4*2]   Blocklicht, Himmelslicht (0..15 * 17), weich ueber die Ecke gemittelt
+                int16  pos[quads*4*3]     position in 1/16 block, x/z relative to chunk corner, y absolute
+                uint16 uv[quads*4*2]      atlas pixels * 16
+                uint8  rgb[quads*4*3]     brightness x biome color x corner shading
+                uint8  light[quads*4*2]   block light, sky light (0..15 * 17), smoothed over the corner
 
-Eckenschatten (Ambient Occlusion) und weiches Licht wie in Vanilla: je Ecke einer
-Flaeche zaehlen die zwei Nachbarbloecke an den Seiten und der in der Ecke davor.
-Ohne Lichtdaten (alte Aufnahme) ist alles voll vom Himmel beleuchtet.
+Corner shading (ambient occlusion) and smooth lighting as in vanilla: for each corner
+of a face, the two side neighbors and the one in the corner in front of it count.
+Without light data (old recording) everything is fully lit by the sky.
 """
 
 from __future__ import annotations
@@ -32,19 +32,19 @@ from .models import (DIR_VEC, MODELS, PASS_CUTOUT, PASS_OPAQUE, PASS_TRANSLUCENT
 
 MAGIC = b"MSH3"
 
-# Hoehlen unterhalb dieser Hoehe, in die kein Licht faellt, werden nicht gezeichnet
-# (Oberwelt, nur ohne Schichten-Schnitt). Spart viele Flaechen, die man nie sieht.
+# Caves below this height that get no light are not drawn
+# (overworld, only without layer cut). Saves many faces nobody ever sees.
 CAVE_Y = 55
-# Eckenschatten: 0 (beide Seiten zu) .. 3 (frei) -> Helligkeit
+# Corner shading: 0 (both sides closed) .. 3 (open) -> brightness
 AO_LEVEL = np.array([0.5, 0.65, 0.82, 1.0], np.float32)
 
 
-# Stehen immer im Wasser (ohne "waterlogged"-Eigenschaft)
+# Always stand in water (without a "waterlogged" property)
 _ALWAYS_WET = {"kelp", "kelp_plant", "seagrass", "tall_seagrass", "bubble_column"}
 
 
 class _Lut:
-    """Pro Block-ID: deckt voll ab? / enthaelt Wasser? / Lava? (waechst mit der Registry)."""
+    """Per block ID: fully opaque? / contains water? / lava? (grows with the registry)."""
 
     def __init__(self):
         self.full = np.zeros(0, bool)
@@ -62,7 +62,7 @@ class _Lut:
             m = MODELS.get(i)
             full[i] = m.full_opaque
             state = BLOCKS.names[i]
-            # Wasser auch in Kelp, Seegras und Bloecken mit waterlogged=true
+            # Water also in kelp, seagrass and blocks with waterlogged=true
             water[i] = m.fluid == "water" or base_name(state).split(":")[-1] in _ALWAYS_WET \
                 or state_props(state).get("waterlogged") == "true"
             lava[i] = m.fluid == "lava"
@@ -74,10 +74,10 @@ LUT = _Lut()
 
 def _padded(ch: Chunk, neighbors: dict, y0: int, y1: int, get=lambda c: c.blocks, below=0, above=0,
             missing=0, dtype=np.int64) -> np.ndarray:
-    """Werte fuer y0..y1 (inklusive) mit einem Rand von 1 Block aus den Nachbar-Chunks.
+    """Values for y0..y1 (inclusive) with a 1-block border from the neighbor chunks.
 
-    ``get`` liefert das Feld eines Chunks (Bloecke oder Licht), ``below``/``above``
-    fuellt ausserhalb der Welthoehe, ``missing`` fehlende Nachbarn.
+    ``get`` returns a chunk's field (blocks or light), ``below``/``above``
+    fill outside the world height, ``missing`` fills missing neighbors.
     """
     h = y1 - y0 + 1
 
@@ -107,7 +107,7 @@ def _padded(ch: Chunk, neighbors: dict, y0: int, y1: int, get=lambda c: c.blocks
 
 
 def _padded_light(ch: Chunk, neighbors: dict, y0: int, y1: int):
-    """(Blocklicht, Himmelslicht) mit Rand wie ``_padded``, oder None ohne Lichtdaten."""
+    """(block light, sky light) with border like ``_padded``, or None without light data."""
     cache = {}
 
     def lit(c):
@@ -123,7 +123,7 @@ def _padded_light(ch: Chunk, neighbors: dict, y0: int, y1: int):
 
 
 def _tints(ch: Chunk, ys, zs, xs, kinds, fixed):
-    """Farbe je Quad nach Tint-Art (Biom an der Blockposition)."""
+    """Color per quad by tint type (biome at the block position)."""
     out = np.full((len(kinds), 3), 255.0, np.float32)
     if not len(kinds):
         return out
@@ -151,9 +151,9 @@ def mesh_chunk(ch: Chunk, neighbors: dict, y_min: int | None = None, y_max: int 
 
 def mesh_parts(ch: Chunk, neighbors: dict, y_min: int | None = None, y_max: int | None = None,
                open_bottom: bool = False, caves: bool = False) -> dict:
-    """-> {Pass: (pos (n,4,3), uv (n,4,2), rgb (n,4,3), light (n,4,2))} oder fehlende Passes.
+    """-> {pass: (pos (n,4,3), uv (n,4,2), rgb (n,4,3), light (n,4,2))}, missing passes omitted.
 
-    ``caves=True`` laesst dunkle Hoehlen unter ``CAVE_Y`` weg (nur mit Lichtdaten).
+    ``caves=True`` leaves out dark caves below ``CAVE_Y`` (only with light data).
     """
     if not MODELS.available:
         raise RuntimeError("assets/blocks.json fehlt: python -m viewer.tools.build_assets --jar <client.jar>")
@@ -168,9 +168,9 @@ def mesh_parts(ch: Chunk, neighbors: dict, y_min: int | None = None, y_max: int 
         return {}
     P = _padded(ch, neighbors, y0, y1)
     L = _padded_light(ch, neighbors, y0, y1)
-    # Schichten-Schnitt: oberhalb (und bei "nur Ebene" unterhalb) ist Luft, damit die
-    # Schnittflaechen geschlossen gezeichnet werden statt hohl. Die Schnittflaechen
-    # bekommen volles Licht, sonst waeren sie schwarz.
+    # Layer cut: above (and below for "layer only") is air, so the
+    # cut faces are drawn closed instead of hollow. The cut faces
+    # get full light, otherwise they would be black.
     if y_max is not None:
         P[-1] = 0
         if L is not None:
@@ -185,8 +185,8 @@ def mesh_parts(ch: Chunk, neighbors: dict, y_min: int | None = None, y_max: int 
     bl, sl = L
     core = P[1:-1, 1:-1, 1:-1]
     full = LUT.full
-    occ = full[P]                                   # deckt fuer Eckenschatten
-    cave_below = CAVE_Y - y0 if caves else -1       # lokale y-Zeile
+    occ = full[P]                                   # opaque, for corner shading
+    cave_below = CAVE_Y - y0 if caves else -1       # local y row
 
     passes = {PASS_OPAQUE: [], PASS_CUTOUT: [], PASS_TRANSLUCENT: []}
 
@@ -238,18 +238,18 @@ def mesh_parts(ch: Chunk, neighbors: dict, y_min: int | None = None, y_max: int 
 
 
 def _corners(m, q, axis_n):
-    """Je Ecke einer Flaeche: Richtung (-1/+1) entlang der beiden anderen Achsen."""
+    """Per face corner: direction (-1/+1) along the two other axes."""
     t = [a for a in range(3) if a != axis_n]
     v = m.verts[q]
     return t, np.where(v[:, t] > 0.5, 1, -1)         # (4,2)
 
 
 def _shade(m, q, cd, xs, ys, zs, occ, bl, sl):
-    """-> Eckenschatten (n,4) float 0.5..1 und Licht (n,4,2) uint8 (Block, Himmel)."""
+    """-> corner shading (n,4) float 0.5..1 and light (n,4,2) uint8 (block, sky)."""
     n = len(xs)
     nd = cd if cd >= 0 else int(m.normal[q])
     d = DIR_VEC[nd]
-    # Zelle vor der Flaeche (fuer Flaechen innerhalb des Blocks: der Block selbst und davor)
+    # Cell in front of the face (for faces inside the block: the block itself and in front)
     fy, fz, fx = ys + 1 + d[1], zs + 1 + d[2], xs + 1 + d[0]
     if cd < 0:
         b = np.maximum(bl[fy, fz, fx], bl[ys + 1, zs + 1, xs + 1])
@@ -264,13 +264,13 @@ def _shade(m, q, cd, xs, ys, zs, occ, bl, sl):
     for v in range(4):
         o1 = np.zeros(3, np.int64); o1[t[0]] = sg[v, 0]
         o2 = np.zeros(3, np.int64); o2[t[1]] = sg[v, 1]
-        # Achsen-Reihenfolge der Felder: [y, z, x]
+        # axis order of the fields: [y, z, x]
         def at(arr, o):
             return arr[fy + o[1], fz + o[2], fx + o[0]]
         s1, s2, c = at(occ, o1), at(occ, o2), at(occ, o1 + o2)
         lvl = np.where(s1 & s2, 0, 3 - s1.astype(np.int8) - s2 - c)
         ao[:, v] = AO_LEVEL[lvl]
-        # weiches Licht: Mittel ueber die freien Zellen (die vor der Flaeche zaehlt immer)
+        # smooth light: average over the open cells (the one in front of the face always counts)
         bs, ss, k = b0.copy(), s0.copy(), np.ones(n, np.float32)
         for o, blocked in ((o1, s1), (o2, s2), (o1 + o2, c | (s1 & s2))):
             free = ~blocked
@@ -286,7 +286,7 @@ _ROLL = np.array([1, 2, 3, 0])
 
 
 def _flip(pos, uv, rgb, lt, ao):
-    """Quad um eine Ecke drehen, wo die andere Diagonale die Schatten sauberer teilt."""
+    """Rotate the quad around one corner where the other diagonal splits the shading more cleanly."""
     f = ao[:, 0] + ao[:, 2] < ao[:, 1] + ao[:, 3]
     if f.any():
         pos, uv, rgb, lt = np.array(pos), np.array(uv), np.array(rgb), np.array(lt)
@@ -310,7 +310,7 @@ def serialize(parts: dict, cx: int = 0, cz: int = 0) -> bytes:
     return bytes(out)
 
 
-# Wasseroberflaeche 14/16 hoch, wenn darueber kein Wasser ist.
+# Water surface 14/16 high when there is no water above.
 _FLUID_TOP = 14 / 16
 
 
@@ -327,7 +327,7 @@ def _fluid(kind, sid, ch, P, ys, zs, xs, y0, passes, L):
     above = P[ys + 2, zs + 1, xs + 1]
     top_h = np.where(same[above], 1.0, _FLUID_TOP).astype(np.float32)
     target = PASS_TRANSLUCENT if kind == "water" else PASS_OPAQUE
-    from .models import _face_corners  # gleiche Eckenreihenfolge wie Modelle
+    from .models import _face_corners  # same corner order as models
     for d in range(6):
         dx, dy, dz = DIR_VEC[d]
         nb = P[ys + 1 + dy, zs + 1 + dz, xs + 1 + dx]
@@ -340,7 +340,7 @@ def _fluid(kind, sid, ch, P, ys, zs, xs, y0, passes, L):
         name = ["down", "up", "north", "south", "west", "east"][d]
         corners = np.array(_face_corners((0, 0, 0), (1, 1, 1), name), np.float32)   # (4,3)
         pos = np.stack([kx, ky + y0, kz], -1).astype(np.float32)[:, None, :] + corners[None]
-        # obere Kante auf Fluessigkeitshoehe absenken
+        # lower the top edge to fluid height
         is_top = corners[:, 1] > 0.5
         pos[:, is_top, 1] = (ky + y0).astype(np.float32)[:, None] + h[:, None]
         uv = np.broadcast_to(uv_face[None], (len(kx), 4, 2))
@@ -360,10 +360,10 @@ def _fluid(kind, sid, ch, P, ys, zs, xs, y0, passes, L):
 
 
 def mesh_volume(blocks: np.ndarray) -> bytes:
-    """Freistehender Block-Quader (Schematic), blocks uint16 (H, L, W) [y, z, x].
+    """Standalone block cuboid (schematic), blocks uint16 (H, L, W) [y, z, x].
 
-    Wird in 16x16-Saeulen zerlegt und wie Chunks vermascht; Positionen relativ
-    zur Ecke (0, 0, 0). Kanten bis 2047 Bloecke passen ins int16-Format.
+    Split into 16x16 columns and meshed like chunks; positions relative
+    to corner (0, 0, 0). Edges up to 2047 blocks fit the int16 format.
     """
     from .chunk import BIOMES
     H, L, W = blocks.shape
