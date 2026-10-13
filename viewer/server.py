@@ -43,6 +43,7 @@ Endpoints (all JSON, except images):
         GET  /api/radar?srv=                     log: who was within view distance when
         GET  /editor?file=                       schematic editor (separate page)
         GET  /api/editor/blocks|voxels|mesh|info editor data   POST /api/editor/open|new|cut|edit|undo|redo|save|discard
+        GET  /api/xray/names                     block names for the X-ray search (mesh with ?xray=a,b: only those blocks)
         GET  /api/history/dates?srv=&dim=        timeline: days with a backed-up state
         GET  /api/history/diff?srv=&dim=&date=   changes since that day
 """
@@ -52,6 +53,7 @@ from __future__ import annotations
 import argparse
 import base64
 import gzip
+import hashlib
 import json
 import mimetypes
 import multiprocessing
@@ -66,7 +68,7 @@ from concurrent.futures import ProcessPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
-from .core.chunk import BIOMES
+from .core.chunk import AIR_NAMES, BIOMES, BLOCKS, base_name
 from .core.mesher import MAGIC, mesh_chunk
 from .core.models import MODELS
 from .core.schem import export as schem_export
@@ -74,7 +76,7 @@ from .core.tiles import Layer, PastTiles, TileStore, render_chunk
 from .core.world import ChunkCache
 from .placements import Placements
 from .editor import Editor
-from . import farm, spawn
+from . import farm, spawn, xray
 from .autobuild import AutoBuild
 from .extras import Commands, Containers, Control, History, LidLog, Radar, world_chests
 from .core.world import DIM_LABELS, LEGACY_SERVER, Recording
@@ -274,17 +276,19 @@ class App:
             parts.append(f"{int(h.timestamps[i])}.{int(h.offsets[i])}" if h is not None else "-")
         return "-".join(parts)
 
-    def mesh(self, dim, cx: int, cz: int, full: bool, ylo=None, yhi=None) -> tuple[bytes, str] | None:
+    def mesh(self, dim, cx: int, cz: int, full: bool, ylo=None, yhi=None, names=()) -> tuple[bytes, str] | None:
         stamp = self.chunk_stamp(dim, cx, cz) + ("F" if full else "") + (f"C{ylo}:{yhi}" if yhi is not None else "")
+        if names:
+            stamp += "X" + hashlib.sha1(",".join(names).encode()).hexdigest()[:10]
         key = (dim.id, cx, cz, stamp)
         hit = self.meshes.get(key)
         if hit is not None:
             return hit, stamp
         if self.mesh_pool is not None:
             # Separate processes: otherwise Python computes all chunks one after another because of the GIL
-            data = self.mesh_pool.submit(_mesh_job, dim.server, dim.key, cx, cz, full, ylo, yhi).result()
+            data = self.mesh_pool.submit(_mesh_job, dim.server, dim.key, cx, cz, full, ylo, yhi, names).result()
         else:
-            data = _mesh_compute(self.rec, dim, cx, cz, full, ylo, yhi)
+            data = _mesh_compute(self.rec, dim, cx, cz, full, ylo, yhi, names)
         if data is None:
             return None
         self.meshes.put(key, data)
@@ -501,6 +505,10 @@ def make_handler(app: App):
                     with open(path, "rb") as f:
                         return self.send(200, f.read(), "image/png" if p.endswith(".png") else "application/json",
                                          "no-cache", {"ETag": f'"{int(os.path.getmtime(path))}"'})
+                if p == "/api/xray/names":
+                    # Every block the assets know (for the search suggestions), otherwise what the recording has seen so far
+                    names = MODELS.blockstates if MODELS.available else {base_name(n) for n in BLOCKS.names}
+                    return self.json(sorted(n for n in names if n not in AIR_NAMES))
                 if p == "/api/blocks-info":
                     return self.json({"available": MODELS.available, "version": MODELS.version,
                                       "width": getattr(MODELS, "width", 0), "height": getattr(MODELS, "height", 0)})
@@ -754,7 +762,11 @@ def make_handler(app: App):
                 return self.fail(503, "Blockmodelle fehlen: python -m viewer.tools.build_assets --jar <client.jar>")
             cx, cz = int(parts[2]), int(parts[3])
             opt = lambda k: int(q[k][0]) if k in q else None
-            res = app.mesh(dim, cx, cz, q.get("full", ["0"])[0] == "1", opt("ylo"), opt("yhi"))
+            try:
+                names = xray.parse_names(q.get("xray", [""])[0])
+            except ValueError as e:
+                return self.fail(400, str(e))
+            res = app.mesh(dim, cx, cz, q.get("full", ["0"])[0] == "1", opt("ylo"), opt("yhi"), names)
             if res is None:
                 return self.send(204, b"", "application/octet-stream")
             data, stamp = res
@@ -980,11 +992,22 @@ def make_handler(app: App):
 
 # ------------------------------------------------------------------ 3D meshes in worker processes
 
-def _mesh_compute(rec, dim, cx, cz, full, ylo=None, yhi=None):
+_LOOKUPS: dict = {}
+
+
+def _mesh_compute(rec, dim, cx, cz, full, ylo=None, yhi=None, names=()):
     ch = rec.chunk(dim, cx, cz)
     if ch is None:
         return None
     nb = {(dx, dz): rec.chunk(dim, cx + dx, cz + dz) for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1))}
+    if names:
+        # X-ray: only the searched blocks, the whole height (or the layer cut), with their positions behind it
+        look = _LOOKUPS.get(names)
+        if look is None:
+            look = _LOOKUPS[names] = xray.Lookup(names)
+        nb = {k: xray.only(c, look) for k, c in nb.items()}
+        data = mesh_chunk(xray.only(ch, look), nb, ylo, yhi, open_bottom=ylo is not None)
+        return gzip.compress(data + xray.trailer(ch, look, len(names)), 3)
     if yhi is not None:
         return gzip.compress(mesh_chunk(ch, nb, ylo, yhi, open_bottom=ylo is not None), 3)
     y_min = None
@@ -1002,10 +1025,10 @@ def _mesh_init(recording):
     _WORKER["rec"] = Recording(recording)
 
 
-def _mesh_job(server, dim_key, cx, cz, full, ylo=None, yhi=None):
+def _mesh_job(server, dim_key, cx, cz, full, ylo=None, yhi=None, names=()):
     rec = _WORKER["rec"]
     dim = rec.dimension(server, dim_key)
-    return None if dim is None else _mesh_compute(rec, dim, cx, cz, full, ylo, yhi)
+    return None if dim is None else _mesh_compute(rec, dim, cx, cz, full, ylo, yhi, names)
 
 
 # ------------------------------------------------------------------ Pre-rendering

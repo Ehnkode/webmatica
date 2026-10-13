@@ -15,6 +15,8 @@ document.addEventListener('keydown', (e) => {
   if (mode3d) {
     if ((e.key === 'f' || e.key === 'F') && state.player && state.player.active) view3d.gotoPlayer(state.player);
     else if (e.key === 'e' || e.key === 'E') setSelect(!sel.on);
+    else if (e.key === 'x' || e.key === 'X') xrayToggle();
+    else if (e.key === 'n' || e.key === 'N') xrayNext();
     else if (e.key === 'Escape' && sel.on) setSelect(false);
     return;
   }
