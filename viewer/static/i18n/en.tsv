@@ -595,6 +595,7 @@ Fluggeschwindigkeit {} Blöcke/s	Flight speed {} blocks/s
 Schematic würde zu groß ({}×{}×{}), höchstens {} pro Kante	Schematic would get too big ({}×{}×{}), at most {} per side
 3D braucht die Blockmodelle (build_assets)	3D needs the block models (build_assets)
 3D braucht die Blockmodelle: python -m viewer.tools.build_assets --jar	3D needs the block models: python -m viewer.tools.build_assets --jar
+3D: Blocktexturen nicht geladen ({}), versuche es weiter …	3D: block textures not loaded ({}), still trying …
 3D konnte nicht starten	3D could not start
 Laden fehlgeschlagen	Loading failed
 # --- errors from the server
@@ -986,3 +987,16 @@ Herunterladen	Download
 Bereich als .schem-Datei herunterladen	Download the area as a .schem file
 Suchen: Koordinaten oder Wegpunkt (/)	Search: coordinates or waypoint (/)
 Bauen: Editor und Schematics (1)	Build: editor and schematics (1)
+# --- in-game viewer launcher (mod)
+Viewer startet schon …	Viewer is already starting …
+Viewer-Start fehlgeschlagen: {}	Viewer start failed: {}
+Für den Viewer fehlt Python 3.10 oder neuer. Hier herunterladen, beim Installieren „Add python.exe to PATH“ anhaken:	The viewer needs Python 3.10 or newer. Download it here and tick “Add python.exe to PATH” during setup:
+Viewer: installiere numpy und Pillow …	Viewer: installing numpy and Pillow …
+Viewer: numpy und Pillow ließen sich nicht installieren, Details in {}	Viewer: numpy and Pillow could not be installed, details in {}
+Viewer: erster Start, Blockbilder werden erzeugt (etwa eine Minute) …	Viewer: first start, building block images (about a minute) …
+Viewer startet …	Viewer is starting …
+Viewer wurde beendet, Details in {}	Viewer stopped, details in {}
+Viewer antwortet nicht, Details in {}	Viewer does not respond, details in {}
+Viewer offen: {}	Viewer open: {}
+Viewer ist schon im Browser offen: {}	The viewer is already open in the browser: {}
+Ein alter Viewer läuft noch. Bitte Python im Task-Manager beenden und F10 erneut drücken.	An old viewer is still running. Please end Python in the Task Manager and press F10 again.

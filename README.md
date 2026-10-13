@@ -7,7 +7,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
 
 ![Building a house in the schematic editor](docs/build.gif)
 
-- **Mod** (Fabric 1.21.11, client only): saves every chunk you see as normal region files and
+- **Mod** (Fabric, Minecraft 1.21.11 to 26.3, client only): saves every chunk you see as normal region files and
   remembers chest contents. Sends nothing to the server or the chat.
 - **Viewer** (Python, runs locally at <http://127.0.0.1:8770>): everything below, in your browser.
   English and German (switch under Options).
@@ -38,24 +38,27 @@ Litematica and Baritone. Works on any server or Singleplayer.
 
 ## Requirements
 
-- Minecraft 1.21.11 with Fabric Loader and Fabric API
+- Minecraft 1.21.11, 26.1, 26.2 or 26.3 with Fabric Loader and Fabric API
 - Python 3.10+ (Windows: tick "Add python.exe to PATH")
 - Optional: [Baritone](https://github.com/cabaletta/baritone), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib), Litematica Printer
 
 ## Install
 
-1. Put `webmatica-<version>.jar` from [Releases](https://github.com/Ehnkode/webmatica/releases)
-   into your `mods` folder.
-2. Start Minecraft once with the mod.
-3. Download this repository (Code → Download ZIP), unzip it and run `start-viewer.bat`
-   (Linux/macOS: `./start-viewer.sh`). The first start takes about a minute.
+1. Put the jar for your Minecraft version (`webmatica-<version>+mc<minecraft>.jar`) from Modrinth or
+   [Releases](https://github.com/Ehnkode/webmatica/releases) into your `mods` folder.
+2. Start Minecraft and press **F10**. The viewer starts and opens in your browser. The first
+   start takes about a minute (it installs numpy and Pillow and builds the block images).
 
-**F9** in game toggles recording. **?** in the viewer shows all shortcuts.
+The viewer comes with the mod and lives in `<game folder>/webmatica-viewer/`. It stops when you
+close the game. To use it without the game, run `start-viewer.bat` in that folder
+(Linux/macOS: `./start-viewer.sh`).
+
+**F9** in game toggles recording, **F10** opens the viewer. **?** in the viewer shows all shortcuts.
 
 ## Build the mod
 
 ```bash
-./gradlew build    # jar in build/libs/
+./gradlew buildAll    # one jar per Minecraft version in build/libs/
 ```
 
 ## Notes

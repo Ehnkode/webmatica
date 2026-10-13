@@ -1,19 +1,17 @@
 package io.github.ehnkode.webmatica;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import org.lwjgl.glfw.GLFW;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,8 +21,9 @@ import org.slf4j.LoggerFactory;
 public class MapperClient implements ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("webmatica");
 
-    private static KeyBinding toggleKey;
-    private static ClientWorld lastWorld;
+    private static KeyMapping toggleKey;
+    private static KeyMapping viewerKey;
+    private static ClientLevel lastWorld;
 
     @Override
     public void onInitializeClient() {
@@ -33,11 +32,14 @@ public class MapperClient implements ClientModInitializer {
         ClientChunkEvents.CHUNK_LOAD.register(store::onChunkLoad);
         ClientChunkEvents.CHUNK_UNLOAD.register(store::onChunkUnload);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> store.onDisconnect());
-        ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> store.shutdown());
+        ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> {
+            store.shutdown();
+            ViewerLauncher.shutdown();
+        });
 
-        toggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.webmatica.toggle", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_F9,
-                KeyBinding.Category.create(Identifier.of("webmatica", "main"))));
+        KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("webmatica", "main"));
+        toggleKey = Mc.registerKey("key.webmatica.toggle", InputConstants.KEY_F9, category);
+        viewerKey = Mc.registerKey("key.webmatica.viewer", InputConstants.KEY_F10, category);
 
         ClientTickEvents.END_CLIENT_TICK.register(MapperClient::onEndTick);
 
@@ -50,22 +52,26 @@ public class MapperClient implements ClientModInitializer {
                 PositionReporter.url());
     }
 
-    private static void onEndTick(MinecraftClient mc) {
+    private static void onEndTick(Minecraft mc) {
         RegionStore store = RegionStore.getInstance();
 
         // Dimension change: pending changes belong to the old world.
-        if (mc.world != lastWorld) {
-            lastWorld = mc.world;
+        if (mc.level != lastWorld) {
+            lastWorld = mc.level;
             store.onDisconnect();
         }
 
-        while (toggleKey.wasPressed()) {
+        while (toggleKey.consumeClick()) {
             boolean on = !store.isEnabled();
             store.setEnabled(on);
             if (mc.player != null) {
-                mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr("Aufnahme " + (on ? "AN" : "AUS")))
-                        .formatted(on ? Formatting.GREEN : Formatting.RED), true);
+                Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr("Aufnahme " + (on ? "AN" : "AUS")))
+                        .withStyle(on ? ChatFormatting.GREEN : ChatFormatting.RED));
             }
+        }
+
+        while (viewerKey.consumeClick()) {
+            ViewerLauncher.open(mc);
         }
 
         ClientInfo.write(mc);

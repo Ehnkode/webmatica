@@ -3,11 +3,6 @@ package io.github.ehnkode.webmatica;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Direction;
-
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
@@ -15,6 +10,10 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 
 /**
  * Control the Printer and Litematica layers from the web page.
@@ -115,8 +114,8 @@ public final class BuildControl {
         return w.getAsJsonObject("guard");
     }
 
-    public void tick(MinecraftClient mc) {
-        if (mc.world == null || mc.player == null) {
+    public void tick(Minecraft mc) {
+        if (mc.level == null || mc.player == null) {
             serverId = null;
             return;
         }
@@ -131,7 +130,7 @@ public final class BuildControl {
                 appliedSeq = seq;
                 String msg = apply(w);
                 if (msg != null) {
-                    mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(msg)).formatted(Formatting.AQUA), true);
+                    Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(msg)).withStyle(ChatFormatting.AQUA));
                 }
             }
         }

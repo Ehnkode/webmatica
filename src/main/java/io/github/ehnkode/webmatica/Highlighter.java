@@ -2,12 +2,11 @@ package io.github.ehnkode.webmatica;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.particle.ParticleTypes;
-
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.particles.ParticleTypes;
 
 /**
  * Highlights chests in game ("Show in game" button on the web page): a
@@ -43,8 +42,8 @@ public final class Highlighter {
         return points.size();
     }
 
-    public void tick(MinecraftClient mc) {
-        if (points.isEmpty() || mc.world == null || mc.player == null) {
+    public void tick(Minecraft mc) {
+        if (points.isEmpty() || mc.level == null || mc.player == null) {
             return;
         }
         if (System.currentTimeMillis() > until) {
@@ -54,7 +53,7 @@ public final class Highlighter {
         if (++tick % 3 != 0) {
             return;
         }
-        ClientPlayerEntity p = mc.player;
+        LocalPlayer p = mc.player;
         for (int[] q : points) {
             double dx = q[0] + 0.5 - p.getX(), dz = q[2] + 0.5 - p.getZ();
             if (dx * dx + dz * dz > 160 * 160) {
@@ -63,9 +62,9 @@ public final class Highlighter {
             // pillar upwards so it can be seen from afar, even behind walls
             for (int k = 0; k < 6; k++) {
                 double y = q[1] + 1.0 + k * 1.5 + (tick % 9) / 6.0;
-                mc.world.addParticleClient(ParticleTypes.END_ROD, true, true, q[0] + 0.5, y, q[2] + 0.5, 0.0, 0.02, 0.0);
+                mc.level.addParticle(ParticleTypes.END_ROD, true, true, q[0] + 0.5, y, q[2] + 0.5, 0.0, 0.02, 0.0);
             }
-            mc.world.addParticleClient(ParticleTypes.HAPPY_VILLAGER, true, true,
+            mc.level.addParticle(ParticleTypes.HAPPY_VILLAGER, true, true,
                     q[0] + 0.5 + (Math.random() - 0.5), q[1] + 0.6 + Math.random() * 0.6, q[2] + 0.5 + (Math.random() - 0.5), 0, 0, 0);
         }
     }
