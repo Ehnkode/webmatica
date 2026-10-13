@@ -986,3 +986,14 @@ Herunterladen	Download
 Bereich als .schem-Datei herunterladen	Download the area as a .schem file
 Suchen: Koordinaten oder Wegpunkt (/)	Search: coordinates or waypoint (/)
 Bauen: Editor und Schematics (1)	Build: editor and schematics (1)
+# --- in-game viewer launcher (mod)
+Viewer startet schon …	Viewer is already starting …
+Viewer-Start fehlgeschlagen: {}	Viewer start failed: {}
+Für den Viewer fehlt Python 3.10 oder neuer. Hier herunterladen, beim Installieren „Add python.exe to PATH“ anhaken:	The viewer needs Python 3.10 or newer. Download it here and tick “Add python.exe to PATH” during setup:
+Viewer: installiere numpy und Pillow …	Viewer: installing numpy and Pillow …
+Viewer: numpy und Pillow ließen sich nicht installieren, Details in {}	Viewer: numpy and Pillow could not be installed, details in {}
+Viewer: erster Start, Blockbilder werden erzeugt (etwa eine Minute) …	Viewer: first start, building block images (about a minute) …
+Viewer startet …	Viewer is starting …
+Viewer wurde beendet, Details in {}	Viewer stopped, details in {}
+Viewer antwortet nicht, Details in {}	Viewer does not respond, details in {}
+Viewer offen: {}	Viewer open: {}
