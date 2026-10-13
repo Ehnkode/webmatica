@@ -755,6 +755,9 @@ async function set3d(on) {
   $('#btn-3d').classList.toggle('on', on);
   if (on) showHint3d();
   else $('#set3d').hidden = true;
+  if (farmUi.pick3d) pick3dStop();
+  renderPickLabel();
+  drawFarmArea();
   schedulePlayer();
 }
 
@@ -2548,6 +2551,7 @@ function drawFarmArea() {
   const a = (farmUi.auto && farmUi.auto.farm && FARM_RUN.includes(farmUi.auto.phase)) ? farmUi.auto.farm.area : farmArea();
   const visible = farmRunning() || (!$('#side').hidden && sideTab === 'farm') || sel.on;
   const show = a && visible && (farmUi.dim || state.dim) === state.dim;
+  if (view3d && view3d.setArea && !farmUi.pick3d) view3d.setArea(show ? a : null);
   if (!show) { if (farmUi.rect) { farmUi.rect.remove(); farmUi.rect = null; } return; }
   const bounds = L.latLngBounds(toLatLng(a.x0, a.z0), toLatLng(a.x1 + 1, a.z1 + 1));
   if (farmUi.rect) farmUi.rect.setBounds(bounds);
@@ -2570,7 +2574,7 @@ function farmAreaChanged() {
   fillFarmChests();
   if ($('#fl-level').value === '') $('#fl-level').value = defaultLevel(a);
   clearTimeout(farmScanT);
-  farmScanT = setTimeout(farmUi.mode === 'flat' ? scanFlat : scanFarm, 300);
+  farmScanT = setTimeout(farmUi.mode === 'farm' ? scanFarm : scanFlat, 300);
 }
 async function scanFarm() {
   const a = farmArea();
@@ -2611,26 +2615,38 @@ function fillFarmChests() {
 }
 function farmRunning() { const a = farmUi.auto; return !!(a && (a.mode === 'farm' || a.mode === 'flatten') && FARM_RUN.includes(a.phase)); }
 function flatReady() {
-  const lvl = $('#fl-level').value, fill = $('#fl-fill').checked;
-  return lvl !== '' && ($('#fl-clear').checked || fill) && (!fill || !!$('#fl-block').value.trim());
+  const m = farmUi.mode, block = !!$('#fl-block').value.trim();
+  if (m === 'clear') return true;
+  if (m === 'fill') return block;
+  const fill = $('#fl-fill').checked;
+  return $('#fl-level').value !== '' && ($('#fl-clear').checked || fill) && (!fill || block);
+}
+// Automationen: Name je Modus (Start/Stopp-Knopf, Rueckfragen)
+const AUTO_NAME = { farm: 'Farmen', clear: 'Abbauen', fill: 'Füllen', flat: 'Ebnen' };
+function runningKind() {
+  const a = farmUi.auto;
+  if (!a) return null;
+  return a.mode === 'farm' ? 'farm' : (a.farm && a.farm.flatten && a.farm.flatten.kind) || 'flat';
 }
 function renderFarmGo() {
   const run = farmRunning();
-  const flat = farmUi.mode === 'flat';
-  const ready = farmUi.box && (flat ? flatReady() : Object.values(farmUi.amounts).some((n) => n > 0));
-  const runFlat = run && farmUi.auto.mode === 'flatten';
-  $('#fm-go').textContent = run ? (runFlat ? '■ Ebnen stoppen' : '■ Farmen stoppen') : flat ? '▶ Ebnen starten' : '▶ Farmen starten';
+  const m = farmUi.mode;
+  const ready = farmUi.box && (m === 'farm' ? Object.values(farmUi.amounts).some((n) => n > 0) : flatReady());
+  $('#fm-go').textContent = run ? `■ ${AUTO_NAME[runningKind()]} stoppen` : `▶ ${AUTO_NAME[m]} starten`;
   $('#fm-go').classList.toggle('danger', run);
   $('#fm-go').disabled = !run && !ready;
-  $('#fm-go').title = run || ready ? '' : flat ? 'Erst Bereich wählen, Höhe eintragen und einen Füllblock angeben' : 'Erst Bereich wählen und bei mindestens einem Block eine Menge eintragen';
+  $('#fm-go').title = run || ready ? '' : m === 'farm' ? 'Erst Bereich wählen und bei mindestens einem Block eine Menge eintragen'
+    : m === 'clear' ? 'Erst einen Bereich wählen' : m === 'fill' ? 'Erst Bereich wählen und einen Füllblock angeben' : 'Erst Bereich wählen, Höhe eintragen und einen Füllblock angeben';
 }
 function setFarmMode(m) {
   farmUi.mode = m;
-  const flat = m === 'flat';
+  const farm = m === 'farm';
   $$('.fm-mode button').forEach((b) => b.classList.toggle('on', b.dataset.fmmode === m));
-  $('#fm-hint-farm').hidden = flat; $('#fm-hint-flat').hidden = !flat;
-  $('#fm-card').hidden = flat; $('#fl-card').hidden = !flat;
-  if (flat) { loadFlatInventory(); scanFlat(); } else if (farmUi.box) scanFarm();
+  $$('.fm-hint').forEach((h) => { h.hidden = h.dataset.for !== m; });
+  $('#fm-card').hidden = !farm; $('#fl-card').hidden = farm;
+  $('#fl-card').dataset.mode = m;
+  $('#fl-title').textContent = m === 'clear' ? '2 · Übersicht' : m === 'fill' ? '2 · Füllblock' : '2 · Höhe und Füllblock';
+  if (!farm) { loadFlatInventory(); scanFlat(); } else if (farmUi.box) scanFarm();
   renderFarmGo();
 }
 function defaultLevel(a) {
@@ -2654,9 +2670,10 @@ async function loadFlatInventory() {
 let flatScanT = null;
 async function scanFlat() {
   const a = farmArea();
-  if (!a || $('#fl-level').value === '') { farmUi.flat = null; renderFlatSum(); return; }
+  const kind = farmUi.mode;
+  if (!a || kind === 'farm' || (kind === 'flat' && $('#fl-level').value === '')) { farmUi.flat = null; renderFlatSum(); return; }
   try {
-    farmUi.flat = await api('/api/farm/flatscan?' + new URLSearchParams({ srv: state.server, dim: farmUi.dim || state.dim, ...a, level: $('#fl-level').value }));
+    farmUi.flat = await api('/api/farm/flatscan?' + new URLSearchParams({ srv: state.server, dim: farmUi.dim || state.dim, ...a, kind, level: $('#fl-level').value || 0 }));
   } catch (e) { farmUi.flat = { error: e.message }; }
   renderFlatSum();
 }
@@ -2671,26 +2688,34 @@ function renderFlatSum() {
   } else if (f && f.error) {
     txt = f.error;
   } else if (f) {
+    const m = farmUi.mode;
     const lvl = Number($('#fl-level').value);
     const id = 'minecraft:' + $('#fl-block').value.trim().replace(/^minecraft:/, '');
     const have = (farmUi.invCounts || {})[id] || 0;
+    const doClear = m === 'clear' || (m === 'flat' && $('#fl-clear').checked);
+    const doFill = m === 'fill' || (m === 'flat' && $('#fl-fill').checked);
     const parts = [];
-    if ($('#fl-clear').checked) parts.push(`<span>${fmt(f.clear)} Blöcke abtragen (Y ${lvl + 1} bis ${a.y1})</span>`);
-    if ($('#fl-fill').checked) parts.push(`<span>${fmt(f.fill)} Löcher füllen (ab Y ${a.y0})</span>`, `<span>${fmt(have)} dabei</span>`);
+    if (m === 'clear') parts.push(`<span>${fmt(f.clear)} Blöcke abbauen (Y ${a.y0} bis ${a.y1})</span>`);
+    else if (doClear) parts.push(`<span>${fmt(f.clear)} Blöcke abtragen (Y ${lvl + 1} bis ${a.y1})</span>`);
+    if (m === 'fill') parts.push(`<span>${fmt(f.fill)} leere Stellen füllen (Y ${a.y0} bis ${a.y1})</span>`);
+    else if (doFill) parts.push(`<span>${fmt(f.fill)} Löcher füllen (ab Y ${a.y0})</span>`);
+    if (doFill) parts.push(`<span>${fmt(have)} dabei</span>`);
     txt = parts.join(' · ');
-    if ($('#fl-fill').checked && f.fill > have) txt += `<br><b class="warn">Es fehlen ${fmt(f.fill - have)} Blöcke, nimm mehr mit.</b>`;
+    if (doFill && f.fill > have) txt += `<br><b class="warn">Es fehlen ${fmt(f.fill - have)} Blöcke, nimm mehr mit.</b>`;
   }
   $('#fl-sum').innerHTML = txt;
   renderFarmGo();
 }
 function renderFarm() {
   const a = farmUi.auto;
+  renderPickLabel();
   renderFarmGo();
   drawFarmArea();
-  if (farmUi.mode === 'flat') renderFlatSum();
+  if (farmUi.mode !== 'farm') renderFlatSum();
   if (!a || (a.mode !== 'farm' && a.mode !== 'flatten')) { $('#fm-info').textContent = ''; $('#fm-log').innerHTML = ''; return; }
   const run = farmRunning();
   const filling = a.mode === 'flatten' && a.phase === 'mine' && a.farm && a.farm.flatten && a.farm.flatten.stage === 'fill';
+  if (run && farmUi.mode !== runningKind()) setFarmMode(runningKind());
   $('#fm-info').innerHTML = `<b class="${a.phase === 'error' ? 'bad' : a.phase === 'done' ? 'ok' : a.paused ? 'warn' : ''}">${run && a.paused ? 'pausiert' : filling ? 'füllt auf' : AB_PHASE[a.phase] || a.phase}</b>` +
     (a.info ? ' · ' + esc(a.info) : '') + (a.farm && a.farm.deposits ? ` · ${a.farm.deposits}× eingelagert` : '');
   $('#fm-log').innerHTML = (a.log || []).slice(-8).reverse().map(([t, m]) =>
@@ -2707,8 +2732,40 @@ async function pollFarm() {
 }
 setInterval(pollFarm, 2000);
 
+/* Bereich in 3D: zwei Eckbloecke anklicken (mit gesperrter Maus zaehlt das Fadenkreuz) */
+function pick3dStop() {
+  farmUi.pick3d = null;
+  if (view3d) view3d.setBlockPick(null);
+  $('#fm-pick-hint').hidden = true;
+  renderPickLabel();
+  drawFarmArea();
+}
+function pick3dStart() {
+  farmUi.pick3d = [];
+  $('#fm-pick-hint').hidden = false;
+  $('#fm-pick-hint').textContent = 'Klick in 3D auf den ersten Eckblock.';
+  renderPickLabel();
+  view3d.setBlockPick((b) => {
+    if (!farmUi.pick3d) return;
+    farmUi.pick3d.push(b);
+    if (farmUi.pick3d.length === 1) {
+      view3d.setArea({ x0: b.x, x1: b.x, y0: b.y, y1: b.y, z0: b.z, z1: b.z });
+      $('#fm-pick-hint').textContent = `Erste Ecke ${b.x} ${b.y} ${b.z}. Jetzt auf die gegenüberliegende Ecke klicken.`;
+      return;
+    }
+    const [p, q] = farmUi.pick3d;
+    pick3dStop();
+    $('#fm-snap').checked = false;   // in 3D gewaehlt: genau diese Bloecke
+    setFarmBox({ x0: Math.min(p.x, q.x), z0: Math.min(p.z, q.z), x1: Math.max(p.x, q.x), z1: Math.max(p.z, q.z) },
+      Math.min(p.y, q.y), Math.max(p.y, q.y));
+  });
+}
+function renderPickLabel() {
+  $('#fm-pick').textContent = farmUi.pick3d ? 'Abbrechen' : mode3d ? 'In 3D wählen' : 'Auf der Karte wählen';
+}
 $('#fm-pick').addEventListener('click', () => {
-  if (mode3d) { toast('Bereich wählen geht auf der 2D-Karte'); return; }
+  if (farmUi.pick3d) { pick3dStop(); return; }
+  if (mode3d && view3d) { pick3dStart(); return; }
   setSelect(true);
 });
 $('#sel-farm').addEventListener('click', () => {
@@ -2746,13 +2803,18 @@ $('#fm-go').addEventListener('click', async () => {
       farmUi.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv }) });
     } else {
       const a = farmArea();
-      if (farmUi.mode === 'flat') {
+      if (farmUi.mode !== 'farm') {
+        const kind = farmUi.mode;
         const level = Number($('#fl-level').value), clear = $('#fl-clear').checked, fill = $('#fl-fill').checked;
         const block = $('#fl-block').value.trim();
+        const bname = itemName('minecraft:' + block.replace(/^minecraft:/, ''));
         const chest = $('#fm-chest').value;
-        const what = [clear ? `alles über Y ${level} abtragen` : '', fill ? `Löcher bis Y ${level} mit ${itemName('minecraft:' + block.replace(/^minecraft:/, ''))} füllen` : ''].filter(Boolean).join(' und ');
-        if (!confirm(`Ebnen starten?\n\nBaritone wird ${what}.\n\nVolles Inventar: ${chest ? 'zur gewählten Kiste bringen' : 'Kiste aus dem Inventar aufstellen und einpacken'}.\n\nAbbrechen jederzeit mit „■ Ebnen stoppen“.`)) return;
-        farmUi.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv, farm: { area: a, dim: farmUi.dim || state.dim, chest: chest || null, placeChest: true, flatten: { level, clear, fill, block } } }) });
+        const what = kind === 'clear' ? `alles im Bereich abbauen (Y ${a.y0} bis ${a.y1})`
+          : kind === 'fill' ? `jede leere Stelle im Bereich mit ${bname} füllen (Y ${a.y0} bis ${a.y1})`
+          : [clear ? `alles über Y ${level} abtragen` : '', fill ? `Löcher bis Y ${level} mit ${bname} füllen` : ''].filter(Boolean).join(' und ');
+        const full = kind === 'fill' ? '' : `\n\nVolles Inventar: ${chest ? 'zur gewählten Kiste bringen' : 'Kiste aus dem Inventar aufstellen und einpacken'}.`;
+        if (!confirm(`${AUTO_NAME[kind]} starten?\n\nBaritone wird ${what}.${full}\n\nAbbrechen jederzeit mit „■ ${AUTO_NAME[kind]} stoppen“.`)) return;
+        farmUi.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv, farm: { area: a, dim: farmUi.dim || state.dim, chest: chest || null, placeChest: true, flatten: { kind, level, clear, fill, block } } }) });
         renderFarm();
         return;
       }

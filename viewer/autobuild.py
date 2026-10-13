@@ -828,8 +828,17 @@ class AutoBuild:
         if dim is None:
             raise ValueError("für diese Dimension gibt es keine Aufnahme")
         fl = req.get("flatten") or {}
-        level = int(fl["level"])
-        clear, fill = bool(fl.get("clear", True)), bool(fl.get("fill", True))
+        kind = str(fl.get("kind") or "flat")
+        if kind not in ("flat", "clear", "fill"):
+            raise ValueError("unbekannte Automation")
+        # Abbauen = alles im Bereich weg (Ebene unter dem Bereich), Fuellen = jede leere Stelle bis oben
+        if kind == "clear":
+            level, clear, fill = area["y0"] - 1, True, False
+        elif kind == "fill":
+            level, clear, fill = area["y1"], False, True
+        else:
+            level = int(fl["level"])
+            clear, fill = bool(fl.get("clear", True)), bool(fl.get("fill", True))
         block = _full(str(fl.get("block") or "").strip()) if fill else None
         if fill and not re.fullmatch(r"[a-z0-9_.-]+:[a-z0-9_/.-]+", block or ""):
             raise ValueError("Block zum Auffüllen fehlt")
@@ -846,10 +855,15 @@ class AutoBuild:
                                "ts": time.monotonic(), "next": 0.0, "fetched": 0, "not_before": 0.0,
                                "area": area, "dim": dim_key, "chest": chest, "place": bool(req.get("placeChest", True)),
                                "skip": set(), "fails": 0, "deposits": 0, "batch": None, "last": None,
-                               "flatten": {"level": level, "clear": clear, "fill": fill, "block": block,
+                               "flatten": {"kind": kind, "level": level, "clear": clear, "fill": fill, "block": block,
                                            "stage": "clear" if clear else "fill", "clearLeft": None, "fillLeft": None}}
-        what = " und ".join(x for x in ("abtragen" if clear else "", f"mit {block.split(':')[-1]} auffüllen" if fill else "") if x)
-        self._log(srv, f"Ebnen auf Y {level} gestartet: {what}")
+        if kind == "clear":
+            self._log(srv, f"Abbauen gestartet: Y {area['y0']} bis {area['y1']}")
+        elif kind == "fill":
+            self._log(srv, f"Füllen gestartet: mit {block.split(':')[-1]}, Y {area['y0']} bis {area['y1']}")
+        else:
+            what = " und ".join(x for x in ("abtragen" if clear else "", f"mit {block.split(':')[-1]} auffüllen" if fill else "") if x)
+            self._log(srv, f"Ebnen auf Y {level} gestartet: {what}")
         return self.view(srv)
 
     def _judge(self, srv: str, st: dict, left: int) -> bool:
@@ -888,6 +902,8 @@ class AutoBuild:
             if not pts:
                 self._log(srv, "abgetragen" if left == 0 else f"abgetragen, {left} Blöcke kommen nicht weg")
                 if not fl["fill"]:
+                    if fl.get("kind") == "clear":
+                        return self._end(srv, "done", "fertig: Bereich abgebaut")
                     return self._end(srv, "done", f"fertig: Bereich über Y {fl['level']} abgetragen")
                 with self.lock:
                     fl["stage"] = "fill"
@@ -900,15 +916,17 @@ class AutoBuild:
                 return
             if free < FREE_MIN:
                 return self._farm_deposit(srv, st, now)
-            cid = self._push(srv, {"kind": "breakboxes", "boxes": farm.boxes(pts), "label": "Ebnen", "pickup": True,
+            cid = self._push(srv, {"kind": "breakboxes", "boxes": farm.boxes(pts), "label": "Abbauen" if fl.get("kind") == "clear" else "Ebnen", "pickup": True,
                                    "timeout": int(MINE_TIMEOUT)})
             self._set(srv, phase="mine", cmd=cid, batch=pts)
             return self._log(srv, f"trägt {len(pts)} Blöcke ab bei {pts[0][0]} {pts[0][1]} {pts[0][2]} (noch {left})")
         # Auffuellen
-        every = farm.holes(self.app.rec, dim, st["area"], fl["level"], near)
+        every = farm.holes(self.app.rec, dim, st["area"], fl["level"], near, every=fl.get("kind") == "fill")
         with self.lock:
             fl["fillLeft"] = len(every)
         if not every:
+            if fl.get("kind") == "fill":
+                return self._end(srv, "done", "fertig: Bereich gefüllt")
             return self._end(srv, "done", f"fertig: Bereich ist auf Y {fl['level']} eben")
         if not self._judge(srv, st, len(every)):
             return self._end(srv, "error", f"kommt beim Auffüllen nicht weiter, {len(every)} Löcher offen")
@@ -925,7 +943,7 @@ class AutoBuild:
         if have <= 0:
             return self._end(srv, "error", f"kein {name} mehr im Inventar, es fehlen noch {len(holes)} Blöcke")
         batch = holes[:min(have, FILL_BATCH)]
-        cid = self._push(srv, {"kind": "breakboxes", "boxes": farm.boxes(batch), "label": "Auffüllen", "pickup": False,
+        cid = self._push(srv, {"kind": "breakboxes", "boxes": farm.boxes(batch), "label": "Füllen" if fl.get("kind") == "fill" else "Auffüllen", "pickup": False,
                                "fill": fl["block"], "timeout": int(MINE_TIMEOUT)})
         self._set(srv, phase="mine", cmd=cid, batch=batch)
         self._log(srv, f"füllt {len(batch)} Löcher mit {name} (noch {len(holes)}, {have} dabei)")
