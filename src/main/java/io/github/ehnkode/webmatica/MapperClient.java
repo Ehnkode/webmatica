@@ -5,7 +5,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
@@ -13,7 +12,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,10 +38,10 @@ public class MapperClient implements ClientModInitializer {
         });
 
         KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("webmatica", "main"));
-        toggleKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.webmatica.toggle", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F9, category));
-        viewerKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.webmatica.viewer", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F10, category));
+        toggleKey = Mc.registerKey(new KeyMapping(
+                "key.webmatica.toggle", InputConstants.Type.KEYSYM, InputConstants.KEY_F9, category));
+        viewerKey = Mc.registerKey(new KeyMapping(
+                "key.webmatica.viewer", InputConstants.Type.KEYSYM, InputConstants.KEY_F10, category));
 
         ClientTickEvents.END_CLIENT_TICK.register(MapperClient::onEndTick);
 
@@ -69,8 +67,8 @@ public class MapperClient implements ClientModInitializer {
             boolean on = !store.isEnabled();
             store.setEnabled(on);
             if (mc.player != null) {
-                mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr("Aufnahme " + (on ? "AN" : "AUS")))
-                        .withStyle(on ? ChatFormatting.GREEN : ChatFormatting.RED), true);
+                Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr("Aufnahme " + (on ? "AN" : "AUS")))
+                        .withStyle(on ? ChatFormatting.GREEN : ChatFormatting.RED));
             }
         }
 

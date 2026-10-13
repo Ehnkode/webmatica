@@ -20,7 +20,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -235,7 +234,7 @@ public final class FarmTask {
                     }
                     return;
                 }
-                if (mc.screen != null) {
+                if (Mc.screen(mc) != null) {
                     p.closeContainer();
                     return;
                 }
@@ -261,7 +260,7 @@ public final class FarmTask {
                 phaseStart = System.currentTimeMillis();
             }
             case OPEN -> {
-                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
+                AbstractContainerMenu h = Mc.screen(mc) instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
                 if (h != null && h != p.inventoryMenu) {
                     opened = h;
                     setPhase(Phase.PUT);
@@ -277,7 +276,7 @@ public final class FarmTask {
                 }
             }
             case PUT -> {
-                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
+                AbstractContainerMenu h = Mc.screen(mc) instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
                 if (h != opened) {
                     finish(count > 0, "Kiste wurde geschlossen");
                     return;
@@ -296,7 +295,7 @@ public final class FarmTask {
                         continue;
                     }
                     int n = s.getItem().getCount();
-                    mc.gameMode.handleInventoryMouseClick(h.containerId, s.index, 0, ClickType.QUICK_MOVE, p);
+                    Mc.quickMove(mc, h.containerId, s.index, p);
                     if (s.hasItem() && s.getItem().getCount() == n) {
                         skipped.add(s.index);    // chest full
                     } else {
@@ -355,7 +354,7 @@ public final class FarmTask {
         if (slot < Inventory.getSelectionSize()) {
             return slot;
         }
-        mc.gameMode.handleInventoryMouseClick(p.inventoryMenu.containerId, slot, p.getInventory().getSelectedSlot(), ClickType.SWAP, p);
+        Mc.swap(mc, p.inventoryMenu.containerId, slot, p.getInventory().getSelectedSlot(), p);
         return -1;
     }
 
@@ -448,7 +447,7 @@ public final class FarmTask {
 
     private static void actionbar(Minecraft mc, String s, ChatFormatting f) {
         if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr(s)).withStyle(f), true);
+            Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(s)).withStyle(f));
         }
     }
 }

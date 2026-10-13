@@ -17,7 +17,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.BlockItem;
@@ -143,7 +142,7 @@ public final class UnpackTask {
                     }
                     return;
                 }
-                if (mc.screen != null) {
+                if (Mc.screen(mc) != null) {
                     p.closeContainer();
                     return;
                 }
@@ -171,7 +170,7 @@ public final class UnpackTask {
                 phaseStart = System.currentTimeMillis();
             }
             case OPEN -> {
-                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
+                AbstractContainerMenu h = Mc.screen(mc) instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
                 if (h instanceof ShulkerBoxMenu) {
                     opened = h;
                     setPhase(Phase.TAKE);
@@ -187,7 +186,7 @@ public final class UnpackTask {
                 }
             }
             case TAKE -> {
-                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
+                AbstractContainerMenu h = Mc.screen(mc) instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
                 if (h != opened) {
                     setPhase(Phase.BREAK);
                     return;
@@ -212,12 +211,12 @@ public final class UnpackTask {
                     return;
                 }
                 ItemStack before = next.getItem().copy();
-                mc.gameMode.handleInventoryMouseClick(h.containerId, next.index, 0, ClickType.QUICK_MOVE, p);
+                Mc.quickMove(mc, h.containerId, next.index, p);
                 taken += before.getCount();
                 want.merge(BuiltInRegistries.ITEM.getKey(before.getItem()).toString(), -before.getCount(), Integer::sum);
             }
             case BREAK -> {
-                if (mc.screen != null) {
+                if (Mc.screen(mc) != null) {
                     p.closeContainer();
                     return;
                 }
@@ -239,7 +238,7 @@ public final class UnpackTask {
                 } else {
                     mc.gameMode.continueDestroyBlock(placed, Direction.UP);
                 }
-                p.swing(InteractionHand.MAIN_HAND);
+                Mc.swing(mc, p, InteractionHand.MAIN_HAND);
             }
             case PICKUP -> {
                 boolean back = countItem(p, shulkerId) > shulkersLeft;
@@ -279,7 +278,7 @@ public final class UnpackTask {
                 continue;
             }
             int gain = 0;
-            for (ItemStack in : c.nonEmptyItems()) {
+            for (ItemStack in : Mc.items(c)) {
                 Integer left = want.get(BuiltInRegistries.ITEM.getKey(in.getItem()).toString());
                 if (left != null && left > 0) {
                     gain += Math.min(left, in.getCount());
@@ -300,7 +299,7 @@ public final class UnpackTask {
         }
         int hot = p.getInventory().getSelectedSlot();
         // Player inventory: slot number in the window = index for 9..35, key = hotbar slot
-        mc.gameMode.handleInventoryMouseClick(p.inventoryMenu.containerId, slot, hot, ClickType.SWAP, p);
+        Mc.swap(mc, p.inventoryMenu.containerId, slot, hot, p);
         return -1;
     }
 
@@ -373,7 +372,7 @@ public final class UnpackTask {
         Minecraft mc = Minecraft.getInstance();
         String msg = "Auspacken: " + (taken > 0 ? taken + " Items" : "nichts") + " genommen" + (why != null ? " (" + why + ")" : "");
         if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr(msg)).withStyle(ok ? ChatFormatting.GREEN : ChatFormatting.RED), true);
+            Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(msg)).withStyle(ok ? ChatFormatting.GREEN : ChatFormatting.RED));
         }
         BaritoneBridge.report(id, ok, msg);
         phase = Phase.IDLE;
