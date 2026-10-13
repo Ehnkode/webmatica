@@ -100,6 +100,7 @@ class App:
         self.skin_full: bytes | None = None
         self.wp_lock = threading.Lock()
         self.meshes = ChunkCache(max_items=8192)
+        self.streams = 0        # open /api/player/stream connections = visible viewer tabs
         self.mesh_pool = None   # ProcessPoolExecutor, see main(); without a pool it is computed in the thread
         self.skin_version = 0
         self.skin_fetch_name = None
@@ -458,7 +459,7 @@ def make_handler(app: App):
                 if p == "/editor":
                     return self.static("editor.html")
                 if p == "/api/version":
-                    return self.json({"version": VERSION})
+                    return self.json({"version": VERSION, "tabs": app.streams})
                 if p == "/api/worlds":
                     return self.json({"worlds": app.worlds(), "now": time.time()})
                 if p.startswith("/api/tile/"):
@@ -666,6 +667,8 @@ def make_handler(app: App):
             self.end_headers()
             self.close_connection = True
             seq = -1
+            with app.player_cond:
+                app.streams += 1
             try:
                 while True:
                     with app.player_cond:
@@ -675,6 +678,9 @@ def make_handler(app: App):
                     self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
                 return
+            finally:
+                with app.player_cond:
+                    app.streams -= 1
 
         def skin_by_name(self):
             """No skin from the mod: fetch once by player name (mc-heads.net)."""

@@ -1,6 +1,7 @@
 package io.github.ehnkode.webmatica;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
@@ -85,8 +86,14 @@ final class ViewerLauncher {
         Path src = mod.findPath(BUNDLE).orElseThrow(() -> new IOException("viewer missing from the mod jar"));
         String version = mod.getMetadata().getVersion().getFriendlyString() + " " + fingerprint(src);
         if (listening()) {
-            if (version.equals(runningVersion())) {
-                browse(mc);
+            JsonObject running = runningStatus();
+            if (running != null && version.equals(str(running, "version"))) {
+                if (running.has("tabs") && running.get("tabs").getAsInt() > 0) {
+                    // Each extra tab costs one of the browser's few connections to the viewer.
+                    say(mc, "Viewer ist schon im Browser offen: " + URL, ChatFormatting.GREEN, URL);
+                } else {
+                    browse(mc);
+                }
                 return;
             }
             // A viewer from an older mod build is still running: ask it to quit, then start the new one.
@@ -229,23 +236,26 @@ final class ViewerLauncher {
         return p.exitValue();
     }
 
-    /** Version stamp of the viewer on the port; empty for one that predates /api/version. */
-    private static String runningVersion() {
+    /** Status of the viewer on the port ({@code version}, {@code tabs}); null for one that predates /api/version. */
+    private static JsonObject runningStatus() {
         try {
             HttpURLConnection c = (HttpURLConnection) URI.create(URL + "/api/version").toURL().openConnection();
             c.setConnectTimeout(1000);
             c.setReadTimeout(2000);
             if (c.getResponseCode() != 200) {
-                return "";
+                return null;
             }
             try (InputStream in = c.getInputStream()) {
-                JsonElement v = JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8))
-                        .getAsJsonObject().get("version");
-                return v == null || v.isJsonNull() ? "" : v.getAsString();
+                return JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8)).getAsJsonObject();
             }
         } catch (IOException | RuntimeException e) {
-            return "";
+            return null;
         }
+    }
+
+    private static String str(JsonObject o, String key) {
+        JsonElement v = o.get(key);
+        return v == null || v.isJsonNull() ? "" : v.getAsString();
     }
 
     /** Asks the running viewer to quit and waits until the port is free. */

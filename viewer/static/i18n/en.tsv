@@ -997,4 +997,5 @@ Viewer startet …	Viewer is starting …
 Viewer wurde beendet, Details in {}	Viewer stopped, details in {}
 Viewer antwortet nicht, Details in {}	Viewer does not respond, details in {}
 Viewer offen: {}	Viewer open: {}
+Viewer ist schon im Browser offen: {}	The viewer is already open in the browser: {}
 Ein alter Viewer läuft noch. Bitte Python im Task-Manager beenden und F10 erneut drücken.	An old viewer is still running. Please end Python in the Task Manager and press F10 again.
