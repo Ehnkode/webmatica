@@ -2,32 +2,31 @@ package io.github.ehnkode.webmatica;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShulkerBoxBlock;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ContainerComponent;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.ShulkerBoxScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ShulkerBoxMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Unpack shulkers from the inventory: place briefly next to you, take out the
@@ -58,7 +57,7 @@ public final class UnpackTask {
     private int tick;
     private int taken;
     private int tries;
-    private ScreenHandler opened;
+    private AbstractContainerMenu opened;
     private int shulkersLeft;
     private boolean walked;
 
@@ -105,13 +104,13 @@ public final class UnpackTask {
         phaseStart = System.currentTimeMillis();
     }
 
-    public void tick(MinecraftClient mc) {
+    public void tick(Minecraft mc) {
         if (phase == Phase.IDLE) {
             return;
         }
-        ClientPlayerEntity p = mc.player;
-        ClientWorld w = mc.world;
-        if (p == null || w == null || mc.interactionManager == null) {
+        LocalPlayer p = mc.player;
+        ClientLevel w = mc.level;
+        if (p == null || w == null || mc.gameMode == null) {
             finish(false, "nicht mehr im Spiel");
             return;
         }
@@ -144,8 +143,8 @@ public final class UnpackTask {
                     }
                     return;
                 }
-                if (mc.currentScreen != null) {
-                    p.closeHandledScreen();
+                if (mc.screen != null) {
+                    p.closeContainer();
                     return;
                 }
                 int inv = findShulker(p);
@@ -162,18 +161,18 @@ public final class UnpackTask {
                     finish(false, "kein Platz zum Abstellen (frei, mit Platz darüber)");
                     return;
                 }
-                ItemStack st = p.getInventory().getStack(hot);
-                shulkerId = Registries.ITEM.getId(st.getItem()).toString();
+                ItemStack st = p.getInventory().getItem(hot);
+                shulkerId = BuiltInRegistries.ITEM.getKey(st.getItem()).toString();
                 p.getInventory().setSelectedSlot(hot);
-                BlockPos below = spot.down();
-                BlockHitResult hit = new BlockHitResult(Vec3d.ofCenter(below).add(0, 0.5, 0), Direction.UP, below, false);
-                mc.interactionManager.interactBlock(p, Hand.MAIN_HAND, hit);
+                BlockPos below = spot.below();
+                BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(below).add(0, 0.5, 0), Direction.UP, below, false);
+                mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND, hit);
                 placed = spot;
                 phaseStart = System.currentTimeMillis();
             }
             case OPEN -> {
-                ScreenHandler h = mc.currentScreen instanceof HandledScreen<?> hs ? hs.getScreenHandler() : null;
-                if (h instanceof ShulkerBoxScreenHandler) {
+                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
+                if (h instanceof ShulkerBoxMenu) {
                     opened = h;
                     setPhase(Phase.TAKE);
                     return;
@@ -183,12 +182,12 @@ public final class UnpackTask {
                     return;
                 }
                 if (tick % 20 == 1) {
-                    BlockHitResult hit = new BlockHitResult(Vec3d.ofCenter(placed), Direction.UP, placed, false);
-                    mc.interactionManager.interactBlock(p, Hand.MAIN_HAND, hit);
+                    BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(placed), Direction.UP, placed, false);
+                    mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND, hit);
                 }
             }
             case TAKE -> {
-                ScreenHandler h = mc.currentScreen instanceof HandledScreen<?> hs ? hs.getScreenHandler() : null;
+                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
                 if (h != opened) {
                     setPhase(Phase.BREAK);
                     return;
@@ -198,33 +197,33 @@ public final class UnpackTask {
                 }
                 Slot next = null;
                 for (Slot s : h.slots) {
-                    if (s.inventory instanceof PlayerInventory || !s.hasStack()) {
+                    if (s.container instanceof Inventory || !s.hasItem()) {
                         continue;
                     }
-                    Integer left = want.get(Registries.ITEM.getId(s.getStack().getItem()).toString());
+                    Integer left = want.get(BuiltInRegistries.ITEM.getKey(s.getItem().getItem()).toString());
                     if (left != null && left > 0) {
                         next = s;
                         break;
                     }
                 }
-                if (next == null || p.getInventory().getEmptySlot() < 0) {
-                    p.closeHandledScreen();
+                if (next == null || p.getInventory().getFreeSlot() < 0) {
+                    p.closeContainer();
                     setPhase(Phase.BREAK);
                     return;
                 }
-                ItemStack before = next.getStack().copy();
-                mc.interactionManager.clickSlot(h.syncId, next.id, 0, SlotActionType.QUICK_MOVE, p);
+                ItemStack before = next.getItem().copy();
+                mc.gameMode.handleInventoryMouseClick(h.containerId, next.index, 0, ClickType.QUICK_MOVE, p);
                 taken += before.getCount();
-                want.merge(Registries.ITEM.getId(before.getItem()).toString(), -before.getCount(), Integer::sum);
+                want.merge(BuiltInRegistries.ITEM.getKey(before.getItem()).toString(), -before.getCount(), Integer::sum);
             }
             case BREAK -> {
-                if (mc.currentScreen != null) {
-                    p.closeHandledScreen();
+                if (mc.screen != null) {
+                    p.closeContainer();
                     return;
                 }
                 BlockState bs = w.getBlockState(placed);
                 if (!(bs.getBlock() instanceof ShulkerBoxBlock)) {
-                    mc.interactionManager.cancelBlockBreaking();
+                    mc.gameMode.stopDestroyBlock();
                     walked = false;
                     setPhase(Phase.PICKUP);
                     return;
@@ -236,11 +235,11 @@ public final class UnpackTask {
                 }
                 if (age < 100L) {
                     selectTool(p, bs);
-                    mc.interactionManager.attackBlock(placed, Direction.UP);
+                    mc.gameMode.startDestroyBlock(placed, Direction.UP);
                 } else {
-                    mc.interactionManager.updateBlockBreakingProgress(placed, Direction.UP);
+                    mc.gameMode.continueDestroyBlock(placed, Direction.UP);
                 }
-                p.swingHand(Hand.MAIN_HAND);
+                p.swing(InteractionHand.MAIN_HAND);
             }
             case PICKUP -> {
                 boolean back = countItem(p, shulkerId) > shulkersLeft;
@@ -267,21 +266,21 @@ public final class UnpackTask {
         }
     }
 
-    private int findShulker(ClientPlayerEntity p) {
-        PlayerInventory inv = p.getInventory();
+    private int findShulker(LocalPlayer p) {
+        Inventory inv = p.getInventory();
         int best = -1, bestGain = 0;
-        for (int i = 0; i < PlayerInventory.MAIN_SIZE; i++) {
-            ItemStack st = inv.getStack(i);
+        for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
+            ItemStack st = inv.getItem(i);
             if (!(st.getItem() instanceof BlockItem bi) || !(bi.getBlock() instanceof ShulkerBoxBlock)) {
                 continue;
             }
-            ContainerComponent c = st.get(DataComponentTypes.CONTAINER);
+            ItemContainerContents c = st.get(DataComponents.CONTAINER);
             if (c == null) {
                 continue;
             }
             int gain = 0;
-            for (ItemStack in : c.iterateNonEmpty()) {
-                Integer left = want.get(Registries.ITEM.getId(in.getItem()).toString());
+            for (ItemStack in : c.nonEmptyItems()) {
+                Integer left = want.get(BuiltInRegistries.ITEM.getKey(in.getItem()).toString());
                 if (left != null && left > 0) {
                     gain += Math.min(left, in.getCount());
                 }
@@ -295,22 +294,22 @@ public final class UnpackTask {
     }
 
     /** Is the shulker in the hotbar? Otherwise swap it there and return -1. */
-    private static int toHotbar(MinecraftClient mc, ClientPlayerEntity p, int slot) {
-        if (slot < PlayerInventory.getHotbarSize()) {
+    private static int toHotbar(Minecraft mc, LocalPlayer p, int slot) {
+        if (slot < Inventory.getSelectionSize()) {
             return slot;
         }
         int hot = p.getInventory().getSelectedSlot();
         // Player inventory: slot number in the window = index for 9..35, key = hotbar slot
-        mc.interactionManager.clickSlot(p.playerScreenHandler.syncId, slot, hot, SlotActionType.SWAP, p);
+        mc.gameMode.handleInventoryMouseClick(p.inventoryMenu.containerId, slot, hot, ClickType.SWAP, p);
         return -1;
     }
 
-    private static void selectTool(ClientPlayerEntity p, BlockState bs) {
-        PlayerInventory inv = p.getInventory();
+    private static void selectTool(LocalPlayer p, BlockState bs) {
+        Inventory inv = p.getInventory();
         int best = inv.getSelectedSlot();
-        float speed = inv.getStack(best).getMiningSpeedMultiplier(bs);
-        for (int i = 0; i < PlayerInventory.getHotbarSize(); i++) {
-            float s = inv.getStack(i).getMiningSpeedMultiplier(bs);
+        float speed = inv.getItem(best).getDestroySpeed(bs);
+        for (int i = 0; i < Inventory.getSelectionSize(); i++) {
+            float s = inv.getItem(i).getDestroySpeed(bs);
             if (s > speed) {
                 best = i;
                 speed = s;
@@ -319,8 +318,8 @@ public final class UnpackTask {
         inv.setSelectedSlot(best);
     }
 
-    private BlockPos findSpot(ClientPlayerEntity p, ClientWorld w) {
-        BlockPos feet = p.getBlockPos();
+    private BlockPos findSpot(LocalPlayer p, ClientLevel w) {
+        BlockPos feet = p.blockPosition();
         BlockPos best = null;
         double bestD = Double.MAX_VALUE;
         for (int dy = -1; dy <= 1; dy++) {
@@ -329,17 +328,17 @@ public final class UnpackTask {
                     if (dx == 0 && dz == 0) {
                         continue;   // not under/inside the player
                     }
-                    BlockPos pos = feet.add(dx, dy, dz);
-                    if (inBox(pos) || inBox(pos.up())) {
+                    BlockPos pos = feet.offset(dx, dy, dz);
+                    if (inBox(pos) || inBox(pos.above())) {
                         continue;
                     }
-                    if (!w.getBlockState(pos).isAir() || !w.getBlockState(pos.up()).isAir()) {
+                    if (!w.getBlockState(pos).isAir() || !w.getBlockState(pos.above()).isAir()) {
                         continue;
                     }
-                    if (!w.getBlockState(pos.down()).isSideSolidFullSquare(w, pos.down(), Direction.UP)) {
+                    if (!w.getBlockState(pos.below()).isFaceSturdy(w, pos.below(), Direction.UP)) {
                         continue;
                     }
-                    double d = p.getEyePos().distanceTo(Vec3d.ofCenter(pos));
+                    double d = p.getEyePosition().distanceTo(Vec3.atCenterOf(pos));
                     if (d < 1.2 || d > 4.0) {
                         continue;
                     }
@@ -358,12 +357,12 @@ public final class UnpackTask {
                 && pos.getZ() >= box[2] && pos.getZ() <= box[5];
     }
 
-    private static int countItem(ClientPlayerEntity p, String itemId) {
+    private static int countItem(LocalPlayer p, String itemId) {
         int n = 0;
-        PlayerInventory inv = p.getInventory();
-        for (int i = 0; i < inv.size(); i++) {
-            ItemStack st = inv.getStack(i);
-            if (!st.isEmpty() && Registries.ITEM.getId(st.getItem()).toString().equals(itemId)) {
+        Inventory inv = p.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack st = inv.getItem(i);
+            if (!st.isEmpty() && BuiltInRegistries.ITEM.getKey(st.getItem()).toString().equals(itemId)) {
                 n += st.getCount();
             }
         }
@@ -371,10 +370,10 @@ public final class UnpackTask {
     }
 
     private void finish(boolean ok, String why) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         String msg = "Auspacken: " + (taken > 0 ? taken + " Items" : "nichts") + " genommen" + (why != null ? " (" + why + ")" : "");
         if (mc.player != null) {
-            mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(msg)).formatted(ok ? Formatting.GREEN : Formatting.RED), true);
+            mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr(msg)).withStyle(ok ? ChatFormatting.GREEN : ChatFormatting.RED), true);
         }
         BaritoneBridge.report(id, ok, msg);
         phase = Phase.IDLE;

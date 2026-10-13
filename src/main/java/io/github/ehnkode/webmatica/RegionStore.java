@@ -1,17 +1,16 @@
 package io.github.ehnkode.webmatica;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.World;
-import net.minecraft.world.chunk.ChunkStatus;
-import net.minecraft.world.chunk.WorldChunk;
-import net.minecraft.world.storage.RegionFile;
-import net.minecraft.world.storage.StorageKey;
-
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.storage.RegionFile;
+import net.minecraft.world.level.chunk.storage.RegionStorageInfo;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.nio.file.Files;
@@ -102,14 +101,14 @@ public final class RegionStore {
      * Chunk received from the server. Only written after {@link #DIRTY_DELAY_MS}:
      * light arrives in the same packet but is only applied by the client afterwards.
      */
-    public void onChunkLoad(ClientWorld world, WorldChunk chunk) {
+    public void onChunkLoad(ClientLevel world, LevelChunk chunk) {
         if (enabled) {
             dirty.put(chunk.getPos().toLong(), System.currentTimeMillis());
         }
     }
 
     /** Chunk leaves view distance: save pending changes immediately. */
-    public void onChunkUnload(ClientWorld world, WorldChunk chunk) {
+    public void onChunkUnload(ClientLevel world, LevelChunk chunk) {
         if (enabled && dirty.remove(chunk.getPos().toLong()) != null) {
             submit(world, chunk);
         }
@@ -118,13 +117,13 @@ public final class RegionStore {
     /** A block in this chunk has changed. */
     public void markDirty(int chunkX, int chunkZ) {
         if (enabled) {
-            dirty.put(ChunkPos.toLong(chunkX, chunkZ), System.currentTimeMillis());
+            dirty.put(ChunkPos.asLong(chunkX, chunkZ), System.currentTimeMillis());
         }
     }
 
     /** Every client tick: write settled changes. */
-    public void tick(MinecraftClient mc) {
-        ClientWorld world = mc.world;
+    public void tick(Minecraft mc) {
+        ClientLevel world = mc.level;
         if (world == null || dirty.isEmpty()) {
             return;
         }
@@ -140,7 +139,7 @@ public final class RegionStore {
             // create=false returns null for missing chunks. world.getChunk(x, z)
             // would instead return an empty chunk, which would overwrite real data
             // with air.
-            WorldChunk chunk = world.getChunkManager().getChunk(pos.x, pos.z, ChunkStatus.FULL, false);
+            LevelChunk chunk = world.getChunkSource().getChunk(pos.x, pos.z, ChunkStatus.FULL, false);
             if (chunk != null) {
                 submit(world, chunk);
             }
@@ -153,14 +152,14 @@ public final class RegionStore {
         io.submit(this::closeAll);
     }
 
-    private void submit(ClientWorld world, WorldChunk chunk) {
+    private void submit(ClientLevel world, LevelChunk chunk) {
         final ChunkSnapshot snap;
         final Path regionDir;
         final Path historyDir;
-        final RegistryKey<World> dim = world.getRegistryKey();
+        final ResourceKey<Level> dim = world.dimension();
         try {
             snap = ChunkSnapshot.capture(chunk);
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             regionDir = RecordingTarget.regionDir(mc, dim);
             String sub = RecordingTarget.dimensionDir(dim);
             Path hist = RecordingTarget.root(mc).resolve(RecordingTarget.serverId(mc)).resolve(".history");
@@ -174,11 +173,11 @@ public final class RegionStore {
 
     // ---------------------------------------------------------------- IO thread
 
-    private void write(Path regionDir, Path historyDir, RegistryKey<World> dim, ChunkSnapshot snap) {
+    private void write(Path regionDir, Path historyDir, ResourceKey<Level> dim, ChunkSnapshot snap) {
         try {
-            NbtCompound nbt = snap.toNbt();
+            CompoundTag nbt = snap.toNbt();
             ByteArrayOutputStream buf = new ByteArrayOutputStream(64 * 1024);
-            NbtIo.writeCompound(nbt, new DataOutputStream(buf));
+            NbtIo.write(nbt, new DataOutputStream(buf));
             byte[] bytes = buf.toByteArray();
 
             CRC32 crc = new CRC32();
@@ -191,7 +190,7 @@ public final class RegionStore {
 
             RegionFile region = region(regionDir, dim, snap.pos().getRegionX(), snap.pos().getRegionZ());
             backupOld(region, historyDir, dim, snap, bytes);
-            try (DataOutputStream out = region.getChunkOutputStream(snap.pos())) {
+            try (DataOutputStream out = region.getChunkDataOutputStream(snap.pos())) {
                 out.write(bytes);
             }
             lastWritten.put(key, crc.getValue());
@@ -209,7 +208,7 @@ public final class RegionStore {
      * old state once per day to .history/YYYY-MM-DD/. The viewer uses this to
      * compare "state on day X" with today.
      */
-    private void backupOld(RegionFile region, Path historyDir, RegistryKey<World> dim, ChunkSnapshot snap, byte[] bytes) {
+    private void backupOld(RegionFile region, Path historyDir, ResourceKey<Level> dim, ChunkSnapshot snap, byte[] bytes) {
         String day = LocalDate.now().toString();
         String key = historyDir + "|" + day + "|" + snap.pos().toLong();
         if (historyChecked.contains(key)) {
@@ -217,7 +216,7 @@ public final class RegionStore {
         }
         try {
             byte[] old;
-            try (java.io.DataInputStream in = region.getChunkInputStream(snap.pos())) {
+            try (java.io.DataInputStream in = region.getChunkDataInputStream(snap.pos())) {
                 if (in == null) {
                     historyChecked.add(key);
                     return;     // new chunk, nothing to back up
@@ -231,10 +230,10 @@ public final class RegionStore {
             Path dir = Path.of(historyDir.toString().replace("%DAY%", day));
             Files.createDirectories(dir);
             Path file = dir.resolve("r." + snap.pos().getRegionX() + "." + snap.pos().getRegionZ() + ".mca");
-            RegionFile h = new RegionFile(new StorageKey("webmatica-history", dim, "chunk"), file, dir, false);
+            RegionFile h = new RegionFile(new RegionStorageInfo("webmatica-history", dim, "chunk"), file, dir, false);
             try {
                 if (!h.hasChunk(snap.pos())) {
-                    try (DataOutputStream out = h.getChunkOutputStream(snap.pos())) {
+                    try (DataOutputStream out = h.getChunkDataOutputStream(snap.pos())) {
                         out.write(old);
                     }
                 }
@@ -246,14 +245,14 @@ public final class RegionStore {
         }
     }
 
-    private RegionFile region(Path regionDir, RegistryKey<World> dim, int rx, int rz) throws Exception {
+    private RegionFile region(Path regionDir, ResourceKey<Level> dim, int rx, int rz) throws Exception {
         Path file = regionDir.resolve("r." + rx + "." + rz + ".mca");
         RegionFile rf = openRegions.get(file);
         if (rf != null) {
             return rf;
         }
         Files.createDirectories(regionDir);
-        rf = new RegionFile(new StorageKey("webmatica", dim, "chunk"), file, regionDir, false);
+        rf = new RegionFile(new RegionStorageInfo("webmatica", dim, "chunk"), file, regionDir, false);
         openRegions.put(file, rf);
         if (openRegions.size() > MAX_OPEN_REGIONS) {
             Iterator<Map.Entry<Path, RegionFile>> it = openRegions.entrySet().iterator();

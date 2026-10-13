@@ -3,32 +3,31 @@ package io.github.ehnkode.webmatica;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.minecraft.block.ChestBlock;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Break and collect specific blocks (farms, wrong blocks of a
@@ -56,7 +55,7 @@ public final class FarmTask {
     private String label;
     private final Set<String> ids = new HashSet<>();
     private final Set<Integer> slots = new HashSet<>();    // chest: only these inventory slots
-    private Box area;
+    private AABB area;
     private boolean pickup;
     private String fill;
     private long phaseStart;
@@ -68,7 +67,7 @@ public final class FarmTask {
     private int tries;
     private BlockPos placed;
     private BlockPos walkTarget;
-    private ScreenHandler opened;
+    private AbstractContainerMenu opened;
     private final Set<Integer> skipped = new HashSet<>();
     private final Set<Integer> skippedDrops = new HashSet<>();
 
@@ -105,7 +104,7 @@ public final class FarmTask {
         opened = null;
         skipped.clear();
         skippedDrops.clear();
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) {
             id = cmdId;
             finish(false, "nicht im Spiel");
@@ -130,8 +129,8 @@ public final class FarmTask {
             int x1 = b.get(3).getAsInt(), y1 = b.get(4).getAsInt(), z1 = b.get(5).getAsInt();
             lines.add("sel pos1 " + x0 + " " + y0 + " " + z0);
             lines.add("sel pos2 " + x1 + " " + y1 + " " + z1);
-            Box bb = new Box(x0, y0, z0, x1 + 1, y1 + 1, z1 + 1);
-            area = area == null ? bb : area.union(bb);
+            AABB bb = new AABB(x0, y0, z0, x1 + 1, y1 + 1, z1 + 1);
+            area = area == null ? bb : area.minmax(bb);
         }
         if (area == null) {
             finish(true, "nichts zu tun");
@@ -147,7 +146,7 @@ public final class FarmTask {
         }
         before = countIds(mc.player);
         setPhase(Phase.BREAK);
-        actionbar(mc, label + (fill != null ? ": füllt " : ": baut ") + boxes.size() + " Bereiche" + (fill != null ? " auf" : " ab"), Formatting.AQUA);
+        actionbar(mc, label + (fill != null ? ": füllt " : ": baut ") + boxes.size() + " Bereiche" + (fill != null ? " auf" : " ab"), ChatFormatting.AQUA);
     }
 
     public void cancel() {
@@ -161,13 +160,13 @@ public final class FarmTask {
         phaseStart = System.currentTimeMillis();
     }
 
-    public void tick(MinecraftClient mc) {
+    public void tick(Minecraft mc) {
         if (phase == Phase.IDLE) {
             return;
         }
-        ClientPlayerEntity p = mc.player;
-        ClientWorld w = mc.world;
-        if (p == null || w == null || mc.interactionManager == null) {
+        LocalPlayer p = mc.player;
+        ClientLevel w = mc.level;
+        if (p == null || w == null || mc.gameMode == null) {
             finish(false, "nicht mehr im Spiel");
             return;
         }
@@ -202,12 +201,12 @@ public final class FarmTask {
                     return;
                 }
                 ItemEntity next = nearestDrop(p, w);
-                if (next == null || age > 90_000L || p.getInventory().getEmptySlot() < 0) {
+                if (next == null || age > 90_000L || p.getInventory().getFreeSlot() < 0) {
                     FetchTask.stopBaritone();
-                    finish(true, p.getInventory().getEmptySlot() < 0 ? "Inventar voll" : null);
+                    finish(true, p.getInventory().getFreeSlot() < 0 ? "Inventar voll" : null);
                     return;
                 }
-                BlockPos at = next.getBlockPos();
+                BlockPos at = next.blockPosition();
                 if (!at.equals(walkTarget) || !goalActive()) {
                     if (at.equals(walkTarget)) {
                         skippedDrops.add(next.getId());   // couldn't reach it twice
@@ -236,8 +235,8 @@ public final class FarmTask {
                     }
                     return;
                 }
-                if (mc.currentScreen != null) {
-                    p.closeHandledScreen();
+                if (mc.screen != null) {
+                    p.closeContainer();
                     return;
                 }
                 int inv = findChest(p);
@@ -255,15 +254,15 @@ public final class FarmTask {
                     return;
                 }
                 p.getInventory().setSelectedSlot(hot);
-                BlockPos below = spot.down();
-                mc.interactionManager.interactBlock(p, Hand.MAIN_HAND,
-                        new BlockHitResult(Vec3d.ofCenter(below).add(0, 0.5, 0), Direction.UP, below, false));
+                BlockPos below = spot.below();
+                mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND,
+                        new BlockHitResult(Vec3.atCenterOf(below).add(0, 0.5, 0), Direction.UP, below, false));
                 placed = spot;
                 phaseStart = System.currentTimeMillis();
             }
             case OPEN -> {
-                ScreenHandler h = mc.currentScreen instanceof HandledScreen<?> hs ? hs.getScreenHandler() : null;
-                if (h != null && h != p.playerScreenHandler) {
+                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
+                if (h != null && h != p.inventoryMenu) {
                     opened = h;
                     setPhase(Phase.PUT);
                     return;
@@ -273,12 +272,12 @@ public final class FarmTask {
                     return;
                 }
                 if (tick % 20 == 1) {
-                    mc.interactionManager.interactBlock(p, Hand.MAIN_HAND,
-                            new BlockHitResult(Vec3d.ofCenter(placed).add(0, 0.5, 0), Direction.UP, placed, false));
+                    mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND,
+                            new BlockHitResult(Vec3.atCenterOf(placed).add(0, 0.5, 0), Direction.UP, placed, false));
                 }
             }
             case PUT -> {
-                ScreenHandler h = mc.currentScreen instanceof HandledScreen<?> hs ? hs.getScreenHandler() : null;
+                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
                 if (h != opened) {
                     finish(count > 0, "Kiste wurde geschlossen");
                     return;
@@ -287,25 +286,25 @@ public final class FarmTask {
                     return;
                 }
                 for (Slot s : h.slots) {
-                    if (!(s.inventory instanceof PlayerInventory) || !s.hasStack() || skipped.contains(s.id)) {
+                    if (!(s.container instanceof Inventory) || !s.hasItem() || skipped.contains(s.index)) {
                         continue;
                     }
                     boolean want = slots.isEmpty()
-                            ? ids.contains(Registries.ITEM.getId(s.getStack().getItem()).toString())
-                            : slots.contains(s.getIndex());
+                            ? ids.contains(BuiltInRegistries.ITEM.getKey(s.getItem().getItem()).toString())
+                            : slots.contains(s.getContainerSlot());
                     if (!want) {
                         continue;
                     }
-                    int n = s.getStack().getCount();
-                    mc.interactionManager.clickSlot(h.syncId, s.id, 0, SlotActionType.QUICK_MOVE, p);
-                    if (s.hasStack() && s.getStack().getCount() == n) {
-                        skipped.add(s.id);    // chest full
+                    int n = s.getItem().getCount();
+                    mc.gameMode.handleInventoryMouseClick(h.containerId, s.index, 0, ClickType.QUICK_MOVE, p);
+                    if (s.hasItem() && s.getItem().getCount() == n) {
+                        skipped.add(s.index);    // chest full
                     } else {
                         count += n;
                     }
                     return;
                 }
-                p.closeHandledScreen();
+                p.closeContainer();
                 finish(true, null);
             }
             default -> {
@@ -313,15 +312,15 @@ public final class FarmTask {
         }
     }
 
-    private ItemEntity nearestDrop(ClientPlayerEntity p, ClientWorld w) {
-        Box b = area.expand(4.0);
+    private ItemEntity nearestDrop(LocalPlayer p, ClientLevel w) {
+        AABB b = area.inflate(4.0);
         ItemEntity best = null;
         double bestD = Double.MAX_VALUE;
-        for (ItemEntity e : w.getEntitiesByClass(ItemEntity.class, b, e -> !skippedDrops.contains(e.getId()))) {
-            if (!ids.isEmpty() && !ids.contains(Registries.ITEM.getId(e.getStack().getItem()).toString())) {
+        for (ItemEntity e : w.getEntitiesOfClass(ItemEntity.class, b, e -> !skippedDrops.contains(e.getId()))) {
+            if (!ids.isEmpty() && !ids.contains(BuiltInRegistries.ITEM.getKey(e.getItem().getItem()).toString())) {
                 continue;
             }
-            double d = e.squaredDistanceTo(p);
+            double d = e.distanceToSqr(p);
             if (d < bestD) {
                 bestD = d;
                 best = e;
@@ -330,39 +329,39 @@ public final class FarmTask {
         return best;
     }
 
-    private int countIds(ClientPlayerEntity p) {
+    private int countIds(LocalPlayer p) {
         int n = 0;
-        PlayerInventory inv = p.getInventory();
-        for (int i = 0; i < PlayerInventory.MAIN_SIZE; i++) {
-            ItemStack st = inv.getStack(i);
-            if (!st.isEmpty() && (ids.isEmpty() || ids.contains(Registries.ITEM.getId(st.getItem()).toString()))) {
+        Inventory inv = p.getInventory();
+        for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
+            ItemStack st = inv.getItem(i);
+            if (!st.isEmpty() && (ids.isEmpty() || ids.contains(BuiltInRegistries.ITEM.getKey(st.getItem()).toString()))) {
                 n += st.getCount();
             }
         }
         return n;
     }
 
-    private static int findChest(ClientPlayerEntity p) {
-        PlayerInventory inv = p.getInventory();
-        for (int i = 0; i < PlayerInventory.MAIN_SIZE; i++) {
-            if (inv.getStack(i).isOf(Items.CHEST)) {
+    private static int findChest(LocalPlayer p) {
+        Inventory inv = p.getInventory();
+        for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
+            if (inv.getItem(i).is(Items.CHEST)) {
                 return i;
             }
         }
         return -1;
     }
 
-    private static int toHotbar(MinecraftClient mc, ClientPlayerEntity p, int slot) {
-        if (slot < PlayerInventory.getHotbarSize()) {
+    private static int toHotbar(Minecraft mc, LocalPlayer p, int slot) {
+        if (slot < Inventory.getSelectionSize()) {
             return slot;
         }
-        mc.interactionManager.clickSlot(p.playerScreenHandler.syncId, slot, p.getInventory().getSelectedSlot(), SlotActionType.SWAP, p);
+        mc.gameMode.handleInventoryMouseClick(p.inventoryMenu.containerId, slot, p.getInventory().getSelectedSlot(), ClickType.SWAP, p);
         return -1;
     }
 
     /** Free spot next to you, with solid ground and air above (to open), no chest adjacent. */
-    private static BlockPos findSpot(ClientPlayerEntity p, ClientWorld w) {
-        BlockPos feet = p.getBlockPos();
+    private static BlockPos findSpot(LocalPlayer p, ClientLevel w) {
+        BlockPos feet = p.blockPosition();
         BlockPos best = null;
         double bestD = Double.MAX_VALUE;
         for (int dy = -1; dy <= 1; dy++) {
@@ -371,18 +370,18 @@ public final class FarmTask {
                     if (dx == 0 && dz == 0) {
                         continue;
                     }
-                    BlockPos pos = feet.add(dx, dy, dz);
-                    if (!w.getBlockState(pos).isAir() || !w.getBlockState(pos.up()).isAir()
-                            || !w.getBlockState(pos.down()).isSideSolidFullSquare(w, pos.down(), Direction.UP)) {
+                    BlockPos pos = feet.offset(dx, dy, dz);
+                    if (!w.getBlockState(pos).isAir() || !w.getBlockState(pos.above()).isAir()
+                            || !w.getBlockState(pos.below()).isFaceSturdy(w, pos.below(), Direction.UP)) {
                         continue;
                     }
                     boolean chestNext = false;
-                    for (Direction d : Direction.Type.HORIZONTAL) {
-                        if (w.getBlockState(pos.offset(d)).getBlock() instanceof ChestBlock) {
+                    for (Direction d : Direction.Plane.HORIZONTAL) {
+                        if (w.getBlockState(pos.relative(d)).getBlock() instanceof ChestBlock) {
                             chestNext = true;   // otherwise it becomes a double chest with foreign contents
                         }
                     }
-                    double d = p.getEyePos().distanceTo(Vec3d.ofCenter(pos));
+                    double d = p.getEyePosition().distanceTo(Vec3.atCenterOf(pos));
                     if (chestNext || d < 1.2 || d > 4.0) {
                         continue;
                     }
@@ -428,7 +427,7 @@ public final class FarmTask {
     }
 
     private void finish(boolean ok, String why) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         String msg;
         if (label != null && label.equals("Kiste")) {
             msg = "Kiste: " + count + " Items eingelagert" + (placed != null ? " bei " + placed.getX() + " " + placed.getY() + " " + placed.getZ() : "");
@@ -441,15 +440,15 @@ public final class FarmTask {
         if (why != null) {
             msg += " (" + why + ")";
         }
-        actionbar(mc, msg, ok ? Formatting.GREEN : Formatting.RED);
+        actionbar(mc, msg, ok ? ChatFormatting.GREEN : ChatFormatting.RED);
         BaritoneBridge.report(id, ok, msg);
         phase = Phase.IDLE;
         opened = null;
     }
 
-    private static void actionbar(MinecraftClient mc, String s, Formatting f) {
+    private static void actionbar(Minecraft mc, String s, ChatFormatting f) {
         if (mc.player != null) {
-            mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(s)).formatted(f), true);
+            mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr(s)).withStyle(f), true);
         }
     }
 }
