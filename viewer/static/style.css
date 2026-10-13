@@ -106,7 +106,7 @@ select { padding-right: 6px; }
 #toast.show { opacity: 1; }
 
 /* Schematic-Auswahl */
-#sel-panel { position: fixed; z-index: 1001; top: 64px; left: 12px; width: 300px; padding: 10px 12px; }
+#sel-panel { position: fixed; z-index: 1001; top: 64px; left: 12px; width: 330px; padding: 10px 12px; }
 #sel-panel[hidden] { display: none; }
 .sel-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .sel-row { display: flex; gap: 8px; margin: 6px 0; }
@@ -518,16 +518,12 @@ body.mode3d .tl-badge { display: none; }
 .side-sub[hidden] { display: none; }
 .side-sub button { flex: 1; }
 
-/* Suche oben in der Mitte */
-.search { position: fixed; z-index: 1000; top: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px;
-  padding: 4px 8px 4px 10px; width: 330px; max-width: calc(100vw - 24px); }
-.search svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; flex: none; }
-.search input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 5px 2px; }
-.search input:focus-visible { outline: none; }
-.search:focus-within { border-color: var(--accent); }
-.search kbd { color: var(--muted); }
-.search:focus-within kbd { display: none; }
-@media (max-width: 1250px) { #sel-panel, #schem-panel { top: 112px; } .search { top: 64px; left: 12px; transform: none; } .activity { top: 112px; } .hint3d { top: 112px; } }
+/* Suche: Lupe in der Leiste, Feld klappt beim Klick auf */
+.search { display: flex; align-items: center; }
+.search input { width: 0; min-width: 0; padding: 5px 0; border: 0; background: transparent; opacity: 0; transition: width .18s, opacity .18s, padding .18s; }
+.search.open input { width: 220px; padding: 5px 8px; opacity: 1; background: rgba(0,0,0,.25); border: 1px solid var(--line-strong); }
+.search input:focus-visible { outline: none; border-color: var(--accent); }
+@media (max-width: 1250px) { #sel-panel, #schem-panel { top: 112px; } .dock { top: 64px !important; left: 12px !important; transform: none !important; } .pop { top: 112px !important; } .activity { top: 112px; } .hint3d { top: 112px; } #cam-panel { top: 156px; } }
 
 /* Spieler unten rechts */
 .player-chip { position: fixed; z-index: 1000; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 2px; padding: 3px; max-width: calc(50vw - 160px); }
@@ -542,12 +538,12 @@ body.mode3d .tl-badge { display: none; }
 .icon-btn:hover { color: var(--fg); }
 .icon-btn.open { color: var(--fg); background: rgba(255,255,255,.1); }
 .icon-btn .mono:empty { display: none; }
-.dock { position: fixed; z-index: 1000; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 4px; }
+.dock { position: fixed; z-index: 1000; left: 50%; top: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 4px; }
 .dock-sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
 .view-seg button { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px; font-weight: 600; }
 .view-seg svg { width: 16px; height: 16px; }
 body:not(.mode3d) .only3d { display: none !important; }
-.pop { position: fixed; z-index: 1001; bottom: 60px; padding: 10px 14px; width: 400px; max-width: calc(100vw - 24px); }
+.pop { position: fixed; z-index: 1001; top: 60px; padding: 10px 14px; width: 400px; max-width: calc(100vw - 24px); }
 .pop[hidden] { display: none; }
 .pop-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 2px 0 6px; }
 .pop .only3d { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; }
@@ -557,13 +553,14 @@ body:not(.mode3d) .only3d { display: none !important; }
 .pop .cut.off input { display: none; }
 .pop .hint { margin: 8px 0 0; }
 @media (max-width: 720px) {
-  .dock { bottom: 70px; }
-  .pop { bottom: 116px; }
+  .search.open input { width: 140px; }
   .player-chip { bottom: auto; top: 112px; max-width: calc(100vw - 24px); }
-  .search { right: 12px; width: auto; }
   .rail-head { display: none; }
   .leaflet-control-zoom { display: none; }
 }
 /* Optionen: Schutz-Einstellungen im Panel */
 .pane .guard .gd-dist { width: 58px; margin: 0 2px; padding: 2px 4px; }
 .pane .guard .gd-row input { margin: 0; }
+/* Auswahl: Aktionen als 2x2-Raster, jede Beschriftung in einer Zeile */
+.sel-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.sel-actions button { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 7px 8px; }
