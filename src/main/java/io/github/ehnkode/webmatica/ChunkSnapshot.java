@@ -3,12 +3,16 @@ package io.github.ehnkode.webmatica;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.SectionPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.chunk.DataLayer;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
@@ -118,7 +122,7 @@ public final class ChunkSnapshot {
             sec.putByte("Y", (byte) (bottomSectionY + i));
             palettes.blockStatesContainerCodec()
                     .encodeStart(NbtOps.INSTANCE, section.getStates())
-                    .result().ifPresent(nbt -> sec.put("block_states", nbt));
+                    .result().ifPresent(nbt -> sec.put("block_states", classicPalette(nbt)));
             palettes.biomeContainerCodec()
                     .encodeStart(NbtOps.INSTANCE, section.getBiomes())
                     .result().ifPresent(nbt -> sec.put("biomes", nbt));
@@ -136,5 +140,39 @@ public final class ChunkSnapshot {
         beList.addAll(blockEntities);
         root.put("block_entities", beList);
         return root;
+    }
+
+    /**
+     * Palette entries as {Name, Properties} with every property spelled out. Since 26.1
+     * the game writes default states as a bare name and others as {id, properties};
+     * the viewer and other tools expect the classic form.
+     */
+    private static Tag classicPalette(Tag nbt) {
+        if (!(nbt instanceof CompoundTag container) || !(container.get("palette") instanceof ListTag palette)) {
+            return nbt;
+        }
+        ListTag out = new ListTag();
+        for (Tag entry : palette) {
+            BlockState state = BlockState.CODEC.parse(NbtOps.INSTANCE, entry).result().orElse(null);
+            if (state == null) {
+                return nbt;
+            }
+            CompoundTag e = new CompoundTag();
+            e.putString("Name", BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
+            CompoundTag props = new CompoundTag();
+            for (Property<?> p : state.getProperties()) {
+                props.putString(p.getName(), valueName(state, p));
+            }
+            if (!props.isEmpty()) {
+                e.put("Properties", props);
+            }
+            out.add(e);
+        }
+        container.put("palette", out);
+        return container;
+    }
+
+    private static <T extends Comparable<T>> String valueName(BlockState state, Property<T> p) {
+        return p.getName(state.getValue(p));
     }
 }
