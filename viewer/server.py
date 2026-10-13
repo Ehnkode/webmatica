@@ -454,6 +454,8 @@ def make_handler(app: App):
                     return self.static("index.html" if p == "/" else p[len("/static/"):])
                 if p == "/editor":
                     return self.static("editor.html")
+                if p == "/api/version":
+                    return self.json({"version": VERSION})
                 if p == "/api/worlds":
                     return self.json({"worlds": app.worlds(), "now": time.time()})
                 if p.startswith("/api/tile/"):
@@ -845,6 +847,11 @@ def make_handler(app: App):
                     return self.fail(404, f"unbekannt: {e}")
                 except ValueError as e:
                     return self.fail(400, str(e))
+            if u.path == "/api/quit":
+                # The mod asks an outdated viewer to make room for the new one.
+                self.json({"ok": True})
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                return
             if u.path == "/api/position":
                 return self.position(req)
             if u.path == "/api/containers":
@@ -1032,6 +1039,19 @@ def prerender_loop(app: App, recording: str, workers: int, interval: float = 10.
             time.sleep(interval)
 
 
+def _bundle_version() -> str:
+    """Stamp the mod wrote when it unpacked this copy; empty when started by hand."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".webmatica-version"),
+                  encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+VERSION = _bundle_version()
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m viewer", description="Webmatica Viewer")
     ap.add_argument("--recording", "-r", default=os.environ.get("MAPPER_RECORDING", ""),
@@ -1064,6 +1084,12 @@ def main(argv=None):
         srv.serve_forever()
     except KeyboardInterrupt:
         print("\nstopped")
+        return
+    # Ended through /api/quit: stop the worker processes and leave right away.
+    print("stopped for an update")
+    if app.mesh_pool is not None:
+        app.mesh_pool.shutdown(wait=False, cancel_futures=True)
+    os._exit(0)
 
 
 if __name__ == "__main__":
