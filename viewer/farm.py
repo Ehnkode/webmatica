@@ -146,6 +146,44 @@ def holes(rec, dim, area: dict, level: int, near: tuple | None = None, limit: in
     return pts[:limit] if limit else pts
 
 
+def flat_preview(rec, dim, area: dict, kind: str, level: int) -> dict:
+    """Preview for flattening: how many blocks get broken and filled, per chunk, and what gets mined.
+
+    ``kind``: flat (break above ``level``, fill up to it), clear (break everything), fill (fill every gap).
+    """
+    a = norm_area(area)
+    if kind == "clear":
+        level = a["y0"] - 1
+    elif kind == "fill":
+        level = a["y1"]
+    per: dict = {}
+    mined = np.zeros(len(BLOCKS.names) + 1, np.int64)
+    above = dict(a, y0=level + 1)
+    solid_mask = _Mask({ANY})
+    if above["y0"] <= above["y1"]:
+        for part, (ox, _oy, oz) in _chunks(rec, dim, above):
+            m = solid_mask(part)
+            n = int(m.sum())
+            if n:
+                per.setdefault((ox >> 4, oz >> 4), [0, 0])[0] += n
+                c = np.bincount(part[m].reshape(-1), minlength=len(mined))
+                if len(c) > len(mined):
+                    mined = np.pad(mined, (0, len(c) - len(mined)))
+                mined[:len(c)] += c
+    for x, _y, z in holes(rec, dim, a, level, every=kind == "fill"):
+        per.setdefault((x >> 4, z >> 4), [0, 0])[1] += 1
+    by: dict[str, int] = {}
+    for sid in np.nonzero(mined)[0]:
+        name = base_name(BLOCKS.names[int(sid)])
+        by[name] = by.get(name, 0) + int(mined[sid])
+    return {
+        "clear": sum(v[0] for v in per.values()),
+        "fill": sum(v[1] for v in per.values()),
+        "chunks": [[cx, cz, c, f] for (cx, cz), (c, f) in sorted(per.items())],
+        "mined": sorted(by.items(), key=lambda kv: -kv[1])[:12],
+    }
+
+
 def positions(rec, dim, area: dict, names: set[str], near: tuple, limit: int = 48,
               skip: set | None = None) -> list[tuple[int, int, int]]:
     """The ``limit`` nearest matching blocks to ``near`` (x, y, z); top first at equal distance.

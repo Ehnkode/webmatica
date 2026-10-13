@@ -124,6 +124,7 @@ function rebuildTiles() {
   tiles.addTo(map);
   tiles.bringToBack();
   if (tl && tl.layer) tlShow(tl.idx);   // Switch the timelapse to the new layer
+  if (typeof spawn2dSync === 'function') spawn2dSync();
 }
 
 // ------------------------------------------------------------------ Server / dimension / layer selection

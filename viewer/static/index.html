@@ -40,6 +40,11 @@
 </header>
 
 
+<div id="fl-float" class="panel fl-float" hidden>
+  <div class="fl-float-head"><b id="fl-float-title"></b><span id="fl-float-pct" class="mono"></span><button id="fl-float-close" class="icon" title="Ausblenden (kommt beim nächsten Start wieder)">✕</button></div>
+  <div class="fl-bar"><span id="fl-float-bar"></span></div>
+  <div id="fl-float-sub" class="muted"></div>
+</div>
 <div id="activity" class="panel activity" hidden>
   <span id="act-dot" class="act-dot"></span>
   <button id="act-text" class="act-text" title="Öffnen"></button>
@@ -123,11 +128,12 @@
     <ul id="ct-list" class="list"></ul>
   </section>
   <section data-pane="farm" class="pane">
-    <div class="seg fm-mode"><button data-fmmode="farm" class="on">Farmen</button><button data-fmmode="clear">Abbauen</button><button data-fmmode="fill">Füllen</button><button data-fmmode="flat">Ebnen</button></div>
+    <div class="seg fm-mode"><button data-fmmode="farm" class="on">Farmen</button><button data-fmmode="clear">Abbauen</button><button data-fmmode="fill">Füllen</button><button data-fmmode="flat">Ebnen</button><button data-fmmode="light">Ausleuchten</button></div>
     <p class="hint fm-hint" data-for="farm">Baritone baut in einem Bereich bestimmte Blöcke ab, bis die Menge erreicht ist, und sammelt alles ein.</p>
     <p class="hint fm-hint" data-for="clear" hidden>Baritone baut alles im Bereich ab und sammelt es ein.</p>
     <p class="hint fm-hint" data-for="fill" hidden>Baritone füllt jede leere Stelle im Bereich mit einem Block aus deinem Inventar.</p>
     <p class="hint fm-hint" data-for="flat" hidden>Baritone trägt im Bereich alles über einer Höhe ab und füllt Löcher bis zu dieser Höhe auf. So entsteht eine ebene Baufläche.</p>
+    <p class="hint fm-hint" data-for="light" hidden>Baritone setzt Fackeln auf die Stellen, an denen Monster spawnen können, bis im Bereich alles hell genug ist. Braucht eine Aufnahme mit Licht.</p>
     <div class="card">
       <div class="card-title">1 · Bereich</div>
       <div class="sp-row"><button id="fm-pick" class="primary">Auf der Karte wählen</button></div>
@@ -143,9 +149,13 @@
         <label class="check"><input type="checkbox" id="fl-clear" checked> Alles darüber abtragen</label>
       </div>
       <div class="sp-row fl-blockrow"><label class="check fl-flat"><input type="checkbox" id="fl-fill" checked> Löcher auffüllen mit</label>
-        <label class="fl-fillonly">Füllen mit</label>
+        <label class="fl-fillonly" id="fl-with">Füllen mit</label>
         <input id="fl-block" list="fl-blocks" placeholder="z. B. dirt"><datalist id="fl-blocks"></datalist></div>
-      <p id="fl-sum" class="hint"></p>
+      <details id="fl-prev" class="fl-prev" open>
+        <summary>Vorschau <span id="fl-prev-short" class="muted"></span></summary>
+        <div id="fl-sum"></div>
+        <label class="check"><input type="checkbox" id="fl-map" checked> <span id="fl-map-text">Auf der Karte zeigen (rot abbauen, blau füllen)</span></label>
+      </details>
     </div>
     <div class="card" id="fm-card">
       <div class="card-title">2 · Blöcke und Menge <span id="fm-sum" class="muted"></span></div>
@@ -409,10 +419,13 @@
 <div id="pop-view" class="panel pop" hidden>
   <div class="pop-title">Auf der Karte</div>
   <div class="pop-checks">
-    <label class="check"><input type="checkbox" id="show-signs" checked> Schilder</label>
-    <label class="check"><input type="checkbox" id="show-stashes" checked> Stashes</label>
-    <label class="check"><input type="checkbox" id="show-chests" checked> Kisten</label>
+    <label class="check"><input type="checkbox" id="show-signs" checked> <span data-icon="minecraft:oak_sign"></span>Schilder</label>
+    <label class="check"><input type="checkbox" id="show-stashes" checked> <span data-icon="minecraft:shulker_box"></span>Stashes</label>
+    <label class="check"><input type="checkbox" id="show-chests" checked> <span data-icon="minecraft:chest"></span>Kisten</label>
+    <label class="check" title="Wo Monster spawnen können: rot jederzeit, orange nur nachts. Auf der Karte die oberste offene Stelle jeder Spalte, ab mittlerer Zoomstufe."><input type="checkbox" id="spawn3d"> <span data-icon="minecraft:zombie_head"></span>Mob-Spawns</label>
   </div>
+  <div id="spawn3d-legend" class="spawn-legend" hidden><span class="sw sw-red"></span> jederzeit <span class="sw sw-orange"></span> nur nachts
+    <button type="button" id="spawn-light" class="btn small" title="Bereich auf der Karte aufziehen, dann setzt Baritone Fackeln auf die Spawnstellen">Bereich ausleuchten</button></div>
   <div class="only3d">
     <div class="pop-title">3D</div>
     <div id="set3d" class="set3d">
@@ -422,9 +435,7 @@
       <label class="check"><input type="checkbox" id="fog3d"> Nebel</label>
       <label class="check" title="Höhlen und Inneres mitladen (langsamer)"><input type="checkbox" id="full3d"> Höhlen</label>
       <label class="check" title="Sonne, Schatten, Himmel und Lichtstimmung"><input type="checkbox" id="fancy3d"> Shader</label>
-      <label class="check" title="Wo Monster spawnen können: rot jederzeit, orange nur nachts"><input type="checkbox" id="spawn3d"> Mob-Spawns</label>
     </div>
-    <div id="spawn3d-legend" class="spawn-legend" hidden><span class="sw sw-red"></span> jederzeit <span class="sw sw-orange"></span> nur nachts</div>
     </div>
   </div>
 </div>
