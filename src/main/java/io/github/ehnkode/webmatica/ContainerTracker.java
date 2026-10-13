@@ -29,16 +29,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Kisten-Inventar: merkt sich den Inhalt jeder Kiste (Shulker, Fass, Trichter,
- * Spender, Enderkiste ...), die du oeffnest, und schickt ihn an den Viewer.
+ * Chest inventory: remembers the contents of every container (shulker, barrel,
+ * hopper, dispenser, ender chest ...) you open and sends it to the viewer.
  *
- * Rein lesend: es wird nur angeschaut, was der Server ohnehin zum Anzeigen
- * schickt. Welche Kiste es ist, kommt vom letzten Rechtsklick auf einen Block.
+ * Read-only: it only looks at what the server sends for display anyway.
+ * Which container it is comes from the last right-click on a block.
  */
 public final class ContainerTracker {
 
     private static final ContainerTracker INSTANCE = new ContainerTracker();
-    private static final long OPEN_WINDOW_MS = 15000L;   // 2b2t laggt: Fenster kann spaet aufgehen
+    private static final long OPEN_WINDOW_MS = 15000L;   // 2b2t lags: the window may open late
     private static final int SETTLE_TICKS = 6;
 
     public static ContainerTracker getInstance() {
@@ -74,7 +74,7 @@ public final class ContainerTracker {
                 usePos = hit.getBlockPos().toImmutable();
                 net.minecraft.block.BlockState bs = world.getBlockState(usePos);
                 useBlock = Registries.BLOCK.getId(bs.getBlock()).toString();
-                // Doppelkiste: die andere Haelfte genau bestimmen (nicht raten, Kisten stehen oft dicht an dicht)
+                // double chest: determine the other half exactly (don't guess, chests are often packed tightly)
                 useOther = null;
                 try {
                     if (bs.getBlock() instanceof net.minecraft.block.ChestBlock
@@ -94,7 +94,7 @@ public final class ContainerTracker {
 
     public void tick(MinecraftClient mc) {
         if (UnpackTask.getInstance().busy()) {
-            usePos = null;      // kurz abgestellter Shulker ist keine Kiste
+            usePos = null;      // a briefly placed shulker is not a chest
             return;
         }
         ScreenHandler h = mc.currentScreen instanceof HandledScreen<?> hs ? hs.getScreenHandler() : null;
@@ -126,14 +126,14 @@ public final class ContainerTracker {
             pending = body;
             stableTicks = 0;
         }
-        // Inhalt kommt einen Tick nach dem Oeffnen; erst senden, wenn er sich beruhigt hat
+        // contents arrive a tick after opening; only send once they have settled
         if (stableTicks == SETTLE_TICKS && !body.equals(lastSent)) {
             send(body);
             lastSent = body;
         }
     }
 
-    /** Kiste, die du selbst gerade benutzt (oder eben noch benutzt hast)? */
+    /** A chest you are using yourself right now (or just used)? */
     public boolean isOwn(BlockPos p) {
         if (System.currentTimeMillis() - ownTime > OPEN_WINDOW_MS) {
             return false;
@@ -205,7 +205,7 @@ public final class ContainerTracker {
         return o.toString();
     }
 
-    /** Ein Stack als JSON, Shulker mit Inhalt (auch fuer das Spieler-Inventar). */
+    /** A stack as JSON, shulkers with contents (also for the player inventory). */
     static JsonObject itemWithContents(ItemStack st) {
         JsonObject it = item(st);
         ContainerComponent inner = st.get(DataComponentTypes.CONTAINER);
@@ -241,7 +241,7 @@ public final class ContainerTracker {
     }
 
     private void send(String body) {
-        // Zeitstempel erst beim Senden, damit gleicher Inhalt gleich vergleicht
+        // timestamp only when sending, so identical contents compare equal
         String withT = body.substring(0, body.length() - 1) + ",\"t\":" + System.currentTimeMillis() + "}";
         sender.submit(() -> {
             try {
@@ -272,7 +272,7 @@ public final class ContainerTracker {
                     });
                 }
             } catch (Throwable ignored) {
-                // Viewer aus: Kiste beim naechsten Oeffnen erneut
+                // viewer off: resend the chest on next open
             }
         });
     }

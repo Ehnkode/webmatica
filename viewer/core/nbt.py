@@ -1,10 +1,10 @@
-"""Minimaler NBT-Leser und -Schreiber.
+"""Minimal NBT reader and writer.
 
-Leser: Compounds -> dict, Listen -> list, Long-/Int-/Byte-Arrays -> numpy-Arrays
-(das ist der teure Teil eines Chunks, daher ohne Python-Schleife).
+Reader: compounds -> dict, lists -> list, long/int/byte arrays -> numpy arrays
+(that is the expensive part of a chunk, hence no Python loop).
 
-Schreiber: nur fuer Tests und den Schematic-Export. Typen werden ueber die
-Wrapper-Klassen unten festgelegt, weil Python-int mehrdeutig ist.
+Writer: only for tests and the schematic export. Types are set via the
+wrapper classes below, because a Python int is ambiguous.
 """
 
 from __future__ import annotations
@@ -77,10 +77,10 @@ class _Reader:
 
 
 def read(buf: bytes, typed: bool = False) -> dict:
-    """Liest einen unkomprimierten NBT-Datensatz mit Compound als Wurzel.
+    """Reads an uncompressed NBT record with a compound as root.
 
-    ``typed=True`` liefert die Wrapper-Typen unten, damit sich Daten
-    verlustfrei wieder schreiben lassen (Block-Entities im Schematic-Export).
+    ``typed=True`` returns the wrapper types below, so data can be
+    written back losslessly (block entities in the schematic export).
     """
     if not buf or buf[0] != TAG_COMPOUND:
         raise ValueError("NBT-Wurzel ist kein Compound")
@@ -90,7 +90,7 @@ def read(buf: bytes, typed: bool = False) -> dict:
     return root
 
 
-# --------------------------------------------------------------------------- Schreiben
+# --------------------------------------------------------------------------- Writing
 
 class Byte(int): tag = TAG_BYTE
 class Short(int): tag = TAG_SHORT
@@ -116,7 +116,7 @@ def _tag_of(v) -> int:
     if isinstance(v, bool):
         return TAG_BYTE
     if isinstance(v, int):
-        # ungetypte Zahlen (z. B. LootTableSeed aus Kisten) passen nicht immer in 32 Bit
+        # untyped numbers (e.g. LootTableSeed from chests) don't always fit in 32 bits
         return TAG_INT if -2**31 <= v < 2**31 else TAG_LONG
     if isinstance(v, float):
         return TAG_DOUBLE

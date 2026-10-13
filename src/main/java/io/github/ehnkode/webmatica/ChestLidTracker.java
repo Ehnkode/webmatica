@@ -22,11 +22,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Truhen-Deckel: Der Server schickt ein Block-Event (Typ 1, Daten = Anzahl der
- * Spieler, die die Kiste gerade offen haben), sobald sich diese Anzahl aendert.
- * Damit sieht man, wenn jemand anderes in Sichtweite eine Kiste benutzt.
+ * Chest lids: the server sends a block event (type 1, data = number of players
+ * who currently have the chest open) whenever this number changes.
+ * This shows when someone else within view distance uses a chest.
  *
- * Eigene Kisten (gerade selbst angeklickt) werden nicht gemeldet.
+ * Own chests (just clicked by yourself) are not reported.
  */
 public final class ChestLidTracker {
 
@@ -37,7 +37,7 @@ public final class ChestLidTracker {
         return INSTANCE;
     }
 
-    /** Ein beobachtetes Oeffnen/Schliessen, fuer HUD oder Overlay. */
+    /** An observed open/close, for HUD or overlay. */
     public record LidEvent(BlockPos pos, String block, boolean open, int viewers, long time) {
     }
 
@@ -48,7 +48,7 @@ public final class ChestLidTracker {
         return t;
     });
 
-    /** Client-Thread (aus dem Mixin am Ende von onBlockEvent). */
+    /** Client thread (from the mixin at the end of onBlockEvent). */
     public void onBlockEvent(BlockPos pos, Block block, int type, int data) {
         if (type != 1 || !(block instanceof ChestBlock || block instanceof EnderChestBlock || block instanceof ShulkerBoxBlock)) {
             return;
@@ -70,7 +70,7 @@ public final class ChestLidTracker {
         send(e);
     }
 
-    /** Die letzten Ereignisse, neuestes zuerst. */
+    /** The latest events, newest first. */
     public List<LidEvent> recent() {
         synchronized (recent) {
             return new ArrayList<>(recent);
@@ -113,7 +113,7 @@ public final class ChestLidTracker {
                 c.getResponseCode();
                 c.disconnect();
             } catch (Throwable ignored) {
-                // Viewer aus: Ereignis geht nur ins Log
+                // viewer off: event only goes to the log
             }
         });
     }

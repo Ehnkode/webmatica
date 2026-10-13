@@ -1,11 +1,11 @@
-"""Block-State -> Liste von Flaechen (Quads), so wie Minecraft sie rendert.
+"""Block state -> list of faces (quads), the way Minecraft renders them.
 
-Grundlage ist ``assets/blocks.json`` (siehe ``viewer.tools.build_assets``):
-Blockstate-Varianten bzw. Multipart-Regeln waehlen Modelle aus, deren
-Elemente (Quader mit Flaechen) hier in Bloeckkoordinaten 0..1 umgerechnet
-werden, inklusive Element-Rotation und Varianten-Rotation (x/y).
+Based on ``assets/blocks.json`` (see ``viewer.tools.build_assets``):
+blockstate variants or multipart rules select models whose
+elements (cuboids with faces) are converted here to block coordinates 0..1,
+including element rotation and variant rotation (x/y).
 
-Das Ergebnis wird je globaler Block-ID zwischengespeichert.
+The result is cached per global block ID.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ _FIXED = {"spruce_leaves": (0x61, 0x99, 0x61), "birch_leaves": (0x80, 0xa7, 0x55
           "attached_pumpkin_stem": (0xe0, 0xc7, 0x1c), "melon_stem": (0x80, 0xb0, 0x30),
           "pumpkin_stem": (0x80, 0xb0, 0x30)}
 
-# Block-Entities ohne Modell-Elemente: grobe Ersatzquader (in 1/16).
+# Block entities without model elements: rough substitute cuboids (in 1/16).
 _ENTITY_BOXES = {
     "chest": [(1, 0, 1, 15, 14, 15)], "trapped_chest": [(1, 0, 1, 15, 14, 15)],
     "ender_chest": [(1, 0, 1, 15, 14, 15)], "shulker_box": [(0, 0, 0, 16, 16, 16)],
@@ -59,7 +59,7 @@ _ROT_X = {0: lambda c: c, 90: lambda c: np.stack([c[..., 0], c[..., 2], -c[..., 
 
 
 def _face_corners(f, t, d):
-    """Ecken (oben links, unten links, unten rechts, oben rechts) von aussen gesehen."""
+    """Corners (top left, bottom left, bottom right, top right) seen from outside."""
     fx, fy, fz = f
     tx, ty, tz = t
     return {
@@ -92,17 +92,17 @@ def _dir_index(vec) -> int:
 
 @dataclass
 class Compiled:
-    verts: np.ndarray        # (Q,4,3) float32, Block-Koordinaten 0..1
-    uv: np.ndarray           # (Q,4,2) float32, Atlas-Pixel
-    normal: np.ndarray       # (Q,) int8 Richtung 0..5 (fuer Schattierung)
-    cull: np.ndarray         # (Q,) int8 Richtung oder -1
+    verts: np.ndarray        # (Q,4,3) float32, block coordinates 0..1
+    uv: np.ndarray           # (Q,4,2) float32, atlas pixels
+    normal: np.ndarray       # (Q,) int8 direction 0..5 (for shading)
+    cull: np.ndarray         # (Q,) int8 direction or -1
     tint: np.ndarray         # (Q,) uint8
-    shade: np.ndarray        # (Q,) float32 Helligkeit
+    shade: np.ndarray        # (Q,) float32 brightness
     passes: np.ndarray       # (Q,) uint8
-    full_opaque: bool        # verdeckt Nachbarflaechen vollstaendig
-    self_cull: bool          # gleiche Bloecke nebeneinander: Zwischenflaechen weglassen
-    fixed_tint: tuple        # Farbe fuer TINT_FIXED
-    fluid: str = ""          # "water" / "lava" -> Sonderbehandlung im Mesher
+    full_opaque: bool        # fully hides neighbor faces
+    self_cull: bool          # identical blocks side by side: omit faces between them
+    fixed_tint: tuple        # color for TINT_FIXED
+    fluid: str = ""          # "water" / "lava" -> special handling in the mesher
     map_rgb: tuple = (110, 110, 110)
     map_alpha: float = 1.0
 
@@ -124,7 +124,7 @@ class BlockModels:
         if not self.available:
             return
         st = os.stat(path)
-        self.version = f"{int(st.st_mtime)}-{st.st_size}"   # aendert sich mit jedem Neubau der Assets
+        self.version = f"{int(st.st_mtime)}-{st.st_size}"   # changes with every rebuild of the assets
         with open(path) as f:
             meta = json.load(f)
         self.tile = meta["tile"]
@@ -138,7 +138,7 @@ class BlockModels:
         self.blockstates = meta["blockstates"]
         self.models = meta["models"]
 
-    # ------------------------------------------------------------------ Auswahl
+    # ------------------------------------------------------------------ Selection
 
     def _select(self, name: str, props: dict) -> list:
         bs = self.blockstates.get(name)
@@ -166,7 +166,7 @@ class BlockModels:
             return all(self._when(c, props) for c in cond["AND"])
         return all(props.get(k) in str(v).split("|") for k, v in cond.items())
 
-    # ------------------------------------------------------------------ Kompilieren
+    # ------------------------------------------------------------------ Compiling
 
     def get(self, sid: int) -> Compiled:
         c = self._cache
@@ -212,7 +212,7 @@ class BlockModels:
             xr, yr = int(entry.get("x", 0)) % 360, int(entry.get("y", 0)) % 360
             els = model["elements"]
             if not els:
-                # Block-Entity (Truhe, Schild, ...): Ersatzquader mit Partikeltextur.
+                # Block entity (chest, sign, ...): substitute cuboid with particle texture.
                 boxes = _ENTITY_BOXES.get(short)
                 if boxes is None:
                     for suffix, b in _ENTITY_BOXES.items():
@@ -249,7 +249,7 @@ class BlockModels:
                         normal = normal @ R.T
                     cull = face.get("cullface")
                     cull_vec = DIR_VEC[DIRS.index(cull)].astype(np.float32) if cull in DIRS else None
-                    # Varianten-Rotation um die Blockmitte
+                    # variant rotation around the block center
                     c = corners - 0.5
                     c = _ROT_Y[yr](_ROT_X[xr](c))
                     corners = c + 0.5
@@ -290,10 +290,10 @@ class BlockModels:
             full = len(covered) == 6 and np.allclose(lo, 0) and np.allclose(hi, 1)
         self_cull = (not full) and (short.endswith("glass") or short.endswith("leaves") or short in ("ice", "slime_block", "honey_block"))
 
-        # Kartenfarbe: Textur der obersten Flaeche nach oben.
+        # Map color: texture of the topmost face pointing up.
         ups = [i for i in range(len(V)) if N[i] == 1]
         pick = max(ups, key=lambda i: verts[i][:, 1].mean()) if ups else 0
-        # Atlas-Index zurueckrechnen aus den UVs
+        # recover the atlas index from the UVs
         u0, v0 = np.array(UV[pick]).min(0)
         tidx = int(v0 // self.tile) * self.cols + int(u0 // self.tile)
         col = self.colors[tidx] if 0 <= tidx < len(self.colors) else [110, 110, 110, 1.0]
@@ -302,7 +302,7 @@ class BlockModels:
             rgb = tuple(a * b / 255.0 for a, b in zip(rgb, _FIXED[short]))
         alpha = col[3]
         if not full:
-            # Kleine Dinge (Fackeln, Blumen) nur halb deckend auf der Karte.
+            # Small things (torches, flowers) only half opaque on the map.
             alpha = min(alpha, 0.999 if len(V) >= 5 else 0.6)
 
         return Compiled(verts, np.array(UV, np.float32), np.array(N, np.int8), np.array(C, np.int8),

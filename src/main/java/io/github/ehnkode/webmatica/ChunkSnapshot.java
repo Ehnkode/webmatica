@@ -19,15 +19,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Unveraenderliche Kopie eines Client-Chunks.
+ * Immutable copy of a client chunk.
  *
- * {@link #capture} laeuft auf dem Client-Thread und kopiert nur die Sektionen
- * und Block-Entities (billig). {@link #toNbt} laeuft danach auf dem IO-Thread
- * und fasst den lebenden Chunk nicht mehr an, sodass das Spiel ihn
- * gleichzeitig weiter veraendern darf.
+ * {@link #capture} runs on the client thread and only copies the sections
+ * and block entities (cheap). {@link #toNbt} then runs on the IO thread
+ * and no longer touches the live chunk, so the game may keep modifying
+ * it at the same time.
  *
- * Das Licht (Block- und Himmelslicht, wie es der Server schickt) kommt mit,
- * damit der Viewer genau zeigen kann, wo Monster spawnen koennen.
+ * Light (block and sky light, as sent by the server) is included so the
+ * viewer can show exactly where mobs can spawn.
  */
 public final class ChunkSnapshot {
 
@@ -55,7 +55,7 @@ public final class ChunkSnapshot {
         return pos;
     }
 
-    /** Muss auf dem Client-Thread aufgerufen werden. */
+    /** Must be called on the client thread. */
     public static ChunkSnapshot capture(WorldChunk chunk) {
         DynamicRegistryManager registries = chunk.getWorld().getRegistryManager();
         ChunkSection[] live = chunk.getSectionArray();
@@ -63,14 +63,14 @@ public final class ChunkSnapshot {
         for (int i = 0; i < live.length; i++) {
             copy[i] = live[i] == null ? null : live[i].copy();
         }
-        // Block-Entities: Schildtexte, Banner, Koepfe, Spawner-Typ ... was der
-        // Server dem Client eben mitschickt. Truheninhalte kommen nicht mit.
+        // Block entities: sign texts, banners, heads, spawner type ... whatever the
+        // server sends to the client. Chest contents are not included.
         List<NbtCompound> bes = new ArrayList<>();
         for (BlockEntity be : chunk.getBlockEntities().values()) {
             try {
                 bes.add(be.createNbtWithIdentifyingData(registries));
             } catch (Throwable t) {
-                // Einzelne kaputte Block-Entity ueberspringen, Rest weiter speichern.
+                // Skip a single broken block entity, keep saving the rest.
             }
         }
         LightingProvider light = chunk.getWorld().getLightingProvider();
@@ -85,19 +85,19 @@ public final class ChunkSnapshot {
                 PalettesFactory.fromRegistryManager(registries), block, sky);
     }
 
-    /** Lichtwerte einer Sektion (2048 Bytes, 4 Bit je Block) oder null, wenn der Client keine hat. */
+    /** Light values of a section (2048 bytes, 4 bits per block) or null if the client has none. */
     private static byte[] lightBytes(LightingProvider light, LightType type, ChunkSectionPos sp) {
         try {
             ChunkNibbleArray arr = light.get(type).getLightSection(sp);
-            // copy(): eine "leere" Sektion traegt nur einen Standardwert (z. B. 0 im
-            // Dunkeln); asByteArray() der Kopie fuellt ihn aus, ohne das Original anzufassen.
+            // copy(): an "empty" section only carries a default value (e.g. 0 in the
+            // dark); asByteArray() on the copy fills it in without touching the original.
             return arr == null ? null : arr.copy().asByteArray();
         } catch (Throwable t) {
             return null;
         }
     }
 
-    /** Vanilla-Chunk-NBT (wie SerializedChunk), lesbar von Amulet, MCA Selector, BlueMap. */
+    /** Vanilla chunk NBT (like SerializedChunk), readable by Amulet, MCA Selector, BlueMap. */
     public NbtCompound toNbt() {
         NbtCompound root = new NbtCompound();
         root.putInt("DataVersion", SharedConstants.getGameVersion().dataVersion().id());

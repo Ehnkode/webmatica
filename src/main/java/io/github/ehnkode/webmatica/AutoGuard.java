@@ -16,17 +16,17 @@ import net.minecraft.util.Hand;
 import java.util.Set;
 
 /**
- * Schutz waehrend des Autobaus, vom Viewer ein- und ausgeschaltet (/api/control "guard"):
+ * Protection during auto-build, toggled by the viewer (/api/control "guard"):
  * <ul>
- *   <li>tools: Baritones itemSaver an, damit kein Werkzeug kaputtgeht (eigene Werte kommen danach zurueck)</li>
- *   <li>eat: bei Hunger Baritone kurz anhalten, Essen in die Hand nehmen, essen, weiter</li>
+ *   <li>tools: Baritone's itemSaver on so no tool breaks (own settings are restored afterwards)</li>
+ *   <li>eat: when hungry, pause Baritone briefly, take food in hand, eat, continue</li>
  * </ul>
- * Ausserdem merkt sich die Klasse, ob der Viewer Baritone wegen eines Spielers pausiert hat;
- * Holen und Auspacken warten dann, statt in ihre Zeitgrenzen zu laufen.
+ * The class also remembers whether the viewer paused Baritone because of a player;
+ * fetching and unpacking then wait instead of running into their time limits.
  */
 public final class AutoGuard {
 
-    private static final int HUNGRY = 14;               // ab 14 von 20 Hungerpunkten essen
+    private static final int HUNGRY = 14;               // eat at 14 of 20 hunger points
     private static final long EAT_TIMEOUT = 4000L;
     private static final Set<String> NO_EAT = Set.of(
             "minecraft:rotten_flesh", "minecraft:spider_eye", "minecraft:poisonous_potato", "minecraft:pufferfish",
@@ -45,7 +45,7 @@ public final class AutoGuard {
     private AutoGuard() {
     }
 
-    /** Viewer hat Baritone wegen eines Spielers angehalten (#pause) bzw. laufen lassen. */
+    /** Viewer paused Baritone because of a player (#pause) or let it run again. */
     public static void setPaused(boolean p) {
         paused = p;
     }
@@ -58,7 +58,7 @@ public final class AutoGuard {
         return eating;
     }
 
-    /** Client-Thread. */
+    /** Client thread. */
     public static void tick(MinecraftClient mc) {
         JsonObject g = BuildControl.getInstance().guard();
         boolean eat = g != null && g.has("eat") && g.get("eat").getAsBoolean();
@@ -78,7 +78,7 @@ public final class AutoGuard {
         }
     }
 
-    // ------------------------------------------------------------ Werkzeug
+    // ------------------------------------------------------------ Tools
 
     private static void tools(boolean on) {
         try {
@@ -92,11 +92,11 @@ public final class AutoGuard {
                 savedTools = null;
             }
         } catch (Throwable t) {
-            savedTools = on ? new Object[0] : null;     // kein Baritone oder zu alt: nicht jeden Tick neu versuchen
+            savedTools = on ? new Object[0] : null;     // no Baritone or too old: don't retry every tick
         }
     }
 
-    // ------------------------------------------------------------ Essen
+    // ------------------------------------------------------------ Eating
 
     private static void maybeEat(MinecraftClient mc, ClientPlayerEntity p) {
         long now = System.currentTimeMillis();
@@ -128,7 +128,7 @@ public final class AutoGuard {
         prevSlot = inv.getSelectedSlot();
         int hot = best;
         if (best >= 9) {
-            // ins Hotbar-Fach tauschen: ein leeres, sonst das gerade gewaehlte
+            // swap into a hotbar slot: an empty one, else the currently selected one
             hot = prevSlot;
             for (int i = 0; i < 9; i++) {
                 if (inv.getStack(i).isEmpty()) {

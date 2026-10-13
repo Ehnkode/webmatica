@@ -1,29 +1,29 @@
-"""Autobau: Material holen und bauen, bis die Schematic steht.
+"""Auto-build: fetch material and build until the schematic is done.
 
-Ablauf je Server, alle paar Sekunden (angestossen vom Abfragen der Mod):
+Flow per server, every few seconds (triggered by the mod's polling):
 
-    planen  ->  holen (Baritone laeuft zur besten Kiste, Mod nimmt die Items)
-            ->  bauen (Baritone #litematica)
-            ->  sobald das passende Material im Inventar alle ist oder nichts
-                mehr vorangeht: Baritone anhalten und wieder planen
+        plan    ->  fetch (Baritone walks to the best chest, the mod takes the items)
+                        ->  build (Baritone #litematica)
+                        ->  once the matching material in the inventory runs out or nothing
+                                progresses any more: stop Baritone and plan again
 
-Gerechnet wird nur mit losen Items im Inventar und in den Kisten: Baritone kann
-aus Shulkern nicht bauen. Abbrechen mit "Stopp" auf der Webseite.
+Only loose items in the inventory and chests are counted: Baritone can't
+build from shulkers. Abort with "Stop" on the web page.
 
-Schutz (einzeln abschaltbar, gespeichert in .viewer/autobuild.json):
-  radar      Spieler in der Naehe -> Baritone #pause, nach RADAR_CLEAR s ohne Spieler #resume
-  eat/tools  gehen per /api/control an die Mod (AutoGuard): essen bei Hunger, Werkzeug schonen
-  leftovers  nach "fertig" uebrige Baumaterialien in passende Kisten zurueckbringen
-  fix        am Ende falsch gedrehte und ueberfluessige Bloecke abbauen und neu setzen
+Protection (each can be turned off, stored in .viewer/autobuild.json):
+    radar      player nearby -> Baritone #pause, #resume after RADAR_CLEAR s without players
+    eat/tools  go to the mod via /api/control (AutoGuard): eat when hungry, spare tools
+    leftovers  after "done", bring leftover building materials back to matching chests
+    fix        at the end, break and re-place wrongly rotated and extra blocks
 
-Warteschlange: nach "fertig" startet die naechste Schematic von selbst.
+Queue: after "done" the next schematic starts by itself.
 
-Farmen (mode "farm"): in einem Bereich der Karte bestimmte Bloecke abbauen, bis
-die gewuenschte Anzahl erreicht ist. Volles Inventar -> in die gewaehlte Kiste
-bringen oder eine Kiste aus dem Inventar aufstellen und hineinpacken.
+Farming (mode "farm"): break specific blocks in an area of the map until the
+requested amount is reached. Full inventory -> bring it to the chosen chest
+or place a chest from the inventory and fill it.
 
-Ebnen (mode "flatten"): im Bereich alles ueber Hoehe Y abbauen (wie Farmen, mit
-Einlagern) und danach Loecher bis Y mit einem Block aus dem Inventar auffuellen.
+Flattening (mode "flatten"): break everything above height Y in the area (like
+farming, with storing) and then fill holes up to Y with a block from the inventory.
 """
 
 from __future__ import annotations
@@ -37,23 +37,23 @@ import time
 
 from . import farm
 
-FRESH_PLAYER = 6.0       # s: so alt darf die letzte Position sein
+FRESH_PLAYER = 6.0       # s: max age of the last position
 STEP_EVERY = 2.0         # s
 FETCH_TIMEOUT = 240.0    # s
-SETTLE = 2.5             # s nach dem Holen, bis das Inventar gemeldet ist
-STALL = 45.0             # s ohne Fortschritt beim Bauen
-BAD_CHEST = 600.0        # s: Kiste, die nicht ging, so lange auslassen
+SETTLE = 2.5             # s after fetching until the inventory is reported
+STALL = 45.0             # s without progress while building
+BAD_CHEST = 600.0        # s: skip a chest that failed for this long
 MAIN_SLOTS = 36
-NEAR = 20.0              # Bloecke: ab hier darf Baritone fuer den Bau selbst laufen
-RADAR_CLEAR = 15.0       # s ohne Spieler in der Naehe, dann geht es weiter
+NEAR = 20.0              # blocks: from here on Baritone may walk on its own for building
+RADAR_CLEAR = 15.0       # s without players nearby, then it continues
 RUNNING = ("plan", "fetch", "build", "approach", "unpack", "return", "fix", "fplan", "mine", "deposit")
 DEFAULTS = {"radar": True, "radarDist": 64, "friends": [], "eat": False, "tools": True, "leftovers": True, "fix": True}
 FIX_ROUNDS = 2
 MINE_BATCH = 48
-MINE_TIMEOUT = 360.0     # s fuer einen Abbau-Auftrag
-FREE_MIN = 3             # so viele freie Plaetze, sonst erst einlagern
-FILL_BATCH = 128         # Loecher je Auffuell-Auftrag
-# bleibt beim Einlagern im Inventar
+MINE_TIMEOUT = 360.0     # s for one mining job
+FREE_MIN = 3             # this many free slots, otherwise store items first
+FILL_BATCH = 128         # holes per fill job
+# stays in the inventory when storing
 KEEP = re.compile(r"pickaxe|_axe|shovel|_hoe|sword|shears|chest$|shulker_box|totem|elytra|helmet|chestplate|leggings|boots|"
                   r"flint_and_steel|bucket|ender_pearl|golden_apple|golden_carrot|bread|cooked_|steak|baked_potato|firework")
 
@@ -83,7 +83,7 @@ class AutoBuild:
         except (OSError, ValueError, TypeError):
             pass
 
-    # ------------------------------------------------------------ Einstellungen
+    # ------------------------------------------------------------ Settings
 
     def get_settings(self) -> dict:
         with self.lock:
@@ -113,13 +113,13 @@ class AutoBuild:
         return out
 
     def guard(self, srv: str) -> dict:
-        """Fuer die Mod: Essen/Werkzeugschutz nur, solange der Autobau laeuft."""
+        """For the mod: eating/tool protection only while auto-build is running."""
         with self.lock:
             st = self.state.get(srv)
             on = bool(st and st["phase"] in RUNNING + ("store",))
             return {"eat": on and self.settings["eat"], "tools": on and self.settings["tools"]}
 
-    # ------------------------------------------------------------ Warteschlange
+    # ------------------------------------------------------------ Queue
 
     def set_queue(self, srv: str, pids: list) -> dict:
         with self.lock:
@@ -136,7 +136,7 @@ class AutoBuild:
         return self.view(srv)
 
     def _next_in_queue(self, srv: str) -> bool:
-        """Naechste Schematic aus der Warteschlange starten (True, wenn eine lief an)."""
+        """Start the next schematic from the queue (True if one was started)."""
         while True:
             with self.lock:
                 q = list(self.queue.get(srv) or [])
@@ -145,7 +145,7 @@ class AutoBuild:
             pid = q.pop(0)
             self.set_queue(srv, q)
             try:
-                self.app.placements.update({"id": pid, "ingame": True})   # Baritone baut aus Litematica
+                self.app.placements.update({"id": pid, "ingame": True})   # Baritone builds from Litematica
                 name = self.app.placements.get(pid).get("name") or "Schematic"
             except LookupError:
                 continue
@@ -153,10 +153,10 @@ class AutoBuild:
             self._log(srv, f"Warteschlange: als Nächstes {name}")
             return True
 
-    # ------------------------------------------------------------ Bedienung
+    # ------------------------------------------------------------ Controls
 
     def start(self, srv: str, pid: str) -> dict:
-        self.app.placements.get(pid)          # wirft, wenn es die Platzierung nicht gibt
+        self.app.placements.get(pid)          # raises if the placement doesn't exist
         with self.lock:
             self.state[srv] = {"pid": pid, "phase": "plan", "info": "startet …", "log": [],
                                "cmd": None, "ts": time.monotonic(), "not_before": 0.0, "fails": 0,
@@ -166,7 +166,7 @@ class AutoBuild:
         return self.view(srv)
 
     def start_store(self, srv: str, hotbar: bool = False) -> dict:
-        """Einlagern: jeden Stack aus dem Inventar in eine Kiste, in der dieses Item schon liegt."""
+        """Storing: each stack from the inventory into a chest that already holds this item."""
         p = self._player(srv)
         inv = self.app.inventory or {}
         if p is None or inv.get("server") not in (None, srv):
@@ -214,7 +214,7 @@ class AutoBuild:
                 continue
             best["put"].append({"slot": slot, "id": it["id"]})
             best["free"] -= 1
-        # naechste Kiste zuerst, dann jeweils die naechste
+        # nearest chest first, then the next nearest each time
         todo = [ch for ch in chests if ch["put"]]
         stops, cur = [], (p["x"], p["z"])
         while todo:
@@ -278,7 +278,7 @@ class AutoBuild:
                                "chest": st.get("chest"), "deposits": st.get("deposits", 0)}
             return out
 
-    # ------------------------------------------------------------ intern
+    # ------------------------------------------------------------ internal
 
     def _log(self, srv: str, msg: str):
         with self.lock:
@@ -307,7 +307,7 @@ class AutoBuild:
         return self.app.commands.push({"srv": srv, **cmd})["id"]
 
     def _inventory(self, srv: str, inner: dict | None = None):
-        """Lose Items im Inventar und freie Plaetze; ``inner`` bekommt den Inhalt der Shulker."""
+        """Loose items in the inventory and free slots; ``inner`` gets the shulker contents."""
         inv = self.app.inventory or {}
         if inv.get("server") not in (None, srv):
             return None, 0
@@ -316,7 +316,7 @@ class AutoBuild:
         for it in inv.get("items") or []:
             slot = it.get("slot")
             if slot is not None and slot >= MAIN_SLOTS:
-                continue                       # Ruestung/Zweithand zaehlen nicht
+                continue                       # armor/offhand don't count
             used += 1
             counts[it["id"]] = counts.get(it["id"], 0) + it["count"]
             if inner is not None:
@@ -330,7 +330,7 @@ class AutoBuild:
             return None
         return p
 
-    # ------------------------------------------------------------ Schritt
+    # ------------------------------------------------------------ Step
 
     def step(self, srv: str) -> None:
         now = time.monotonic()
@@ -352,7 +352,7 @@ class AutoBuild:
             self._busy.add(srv)
         try:
             self._step(srv, st, now)
-        except Exception as e:  # nie die Mod-Abfrage kaputt machen
+        except Exception as e:  # never break the mod's polling
             self._end(srv, "error", f"Fehler: {e}")
         finally:
             with self.lock:
@@ -395,10 +395,10 @@ class AutoBuild:
         elif phase == "fix":
             self._watch_fix(srv, st, now)
 
-    # ------------------------------------------------------------ Schutz
+    # ------------------------------------------------------------ Protection
 
     def _radar(self, srv: str, st: dict, p: dict, now: float) -> bool:
-        """True, solange wegen eines Spielers pausiert ist (dann kein weiterer Schritt)."""
+        """True while paused because of a player (then no further step)."""
         cfg = self.get_settings()
         friends = {f.lower() for f in cfg["friends"]}
         near = [o for o in p.get("others") or []
@@ -424,7 +424,7 @@ class AutoBuild:
                 if wait > 0:
                     st["info"] = f"pausiert: niemand mehr da, weiter in {int(wait) + 1} s"
                     return True
-        # weiter: Wartezeit nicht als "haengt" zaehlen
+        # continue: don't count the wait as "stuck"
         self.app.commands.push({"srv": srv, "kind": "resume"})
         took = now - paused["since"]
         with self.lock:
@@ -436,7 +436,7 @@ class AutoBuild:
         return False
 
     def _finish(self, srv: str, st: dict, p, msg: str) -> None:
-        """Fertig gebaut: uebrige Baumaterialien zurueck in die Kisten (wenn eingeschaltet)."""
+        """Finished building: leftover materials back into the chests (if enabled)."""
         if not self.get_settings()["leftovers"] or p is None:
             return self._end(srv, "done", msg)
         try:
@@ -477,7 +477,7 @@ class AutoBuild:
                 st["info"] = "wartet auf dein Inventar …"
             return
         need = {k: n - inv.get(k, 0) for k, n in miss.items() if n - inv.get(k, 0) > 0}
-        # Letztes Holen hat nichts gebracht (Kiste anders als gemerkt)? Dann die Kiste auslassen
+        # Last fetch brought nothing (chest differs from what was remembered)? Then skip the chest
         open_need = sum(need.values()) - sum(min(n, inner.get(k, 0)) for k, n in need.items())
         chk = st.pop("check", None)
         if chk and open_need >= chk[1]:
@@ -490,7 +490,7 @@ class AutoBuild:
         elif chk:
             st["fails"] = 0
         have_some = any(inv.get(k, 0) > 0 for k in miss)
-        # Shulker im Inventar mit passendem Inhalt: zuerst auspacken (kein Weg noetig)
+        # Shulker in the inventory with matching contents: unpack it first (no walking needed)
         unpack = [(k, min(n, inner[k])) for k, n in need.items() if inner.get(k)]
         if unpack and free > 0 and not st.get("unpack_off"):
             w, h, l = pl.get("size") or (1, 1, 1)
@@ -499,7 +499,7 @@ class AutoBuild:
             self._set(srv, phase="unpack", cmd=cid)
             desc = ", ".join(f"{n}× {k.split(':')[-1]}" for k, n in unpack[:4]) + (" …" if len(unpack) > 4 else "")
             return self._log(srv, f"packt Shulker aus ({desc})")
-        # Erst holen (solange Platz ist), dann bauen
+        # Fetch first (while there is room), then build
         if need and free > 0:
             stop = self._best_chest(srv, pl, p, need, free, now=time.monotonic(), bad=st["bad"])
             if stop:
@@ -510,7 +510,7 @@ class AutoBuild:
                 desc = ", ".join(f"{n}× {k.split(':')[-1]}" for k, n in take[:4]) + (" …" if len(take) > 4 else "")
                 return self._log(srv, f"holt {desc} aus {chest['x']} {chest['y']} {chest['z']}")
         if have_some:
-            # Weit weg: erst nur laufen (ohne Abbauen), sonst graebt sich Baritone zur Baustelle durch
+            # Far away: only walk first (without breaking), otherwise Baritone digs its way to the site
             tx, tz, d = self._near_box(pl, p)
             if d > NEAR:
                 self._push(srv, {"kind": "goto", "x": tx, "z": tz})
@@ -532,7 +532,7 @@ class AutoBuild:
             have: dict[str, int] = {}
             for it in c.get("items") or []:
                 have[it["id"]] = have.get(it["id"], 0) + it["count"]
-                for inner in it.get("contents") or []:      # Shulker: werden mitgenommen und ausgepackt
+                for inner in it.get("contents") or []:      # shulkers: taken along and unpacked
                     have[inner["id"]] = have.get(inner["id"], 0) + inner["count"]
             take, slots = [], free
             for k, n in sorted(need.items(), key=lambda kv: -kv[1]):
@@ -553,7 +553,7 @@ class AutoBuild:
 
     @staticmethod
     def _near_box(pl: dict, p: dict):
-        """Naechster Punkt knapp ausserhalb des Schematic-Rahmens (x/z) und Abstand dorthin."""
+        """Nearest point just outside the schematic frame (x/z) and the distance to it."""
         w, _h, l = pl.get("size") or (1, 1, 1)
         x0, z0, x1, z1 = pl["x"] - 2, pl["z"] - 2, pl["x"] + w + 1, pl["z"] + l + 1
         tx = min(max(int(p["x"]), x0), x1)
@@ -627,7 +627,7 @@ class AutoBuild:
         inv, _free = self._inventory(srv)
         inv = inv or {}
         carried = sum(inv.get(k, 0) for k in miss)
-        score = sum(miss.values()) + carried     # sinkt bei jedem gesetzten Block
+        score = sum(miss.values()) + carried     # drops with every placed block
         if st["score"] is None or score < st["score"]:
             self._set(srv, score=score, progress_ts=now, stalls=0)
             with self.lock:
@@ -645,7 +645,7 @@ class AutoBuild:
             self._log(srv, "geht nicht voran, plant neu (fehlt evtl. ein anderes Material)")
             self._set(srv, phase="plan", not_before=now + SETTLE, progress_ts=now)
 
-    # ------------------------------------------------------------ falsche Bloecke
+    # ------------------------------------------------------------ wrong blocks
 
     @staticmethod
     def fix_points(res: dict, extra: bool = True) -> list:
@@ -656,7 +656,7 @@ class AutoBuild:
         return out
 
     def _start_fix(self, srv: str, st: dict, res: dict) -> bool:
-        """Am Ende: verdrehte/ueberfluessige Bloecke abbauen lassen, danach normal weiter."""
+        """At the end: have rotated/extra blocks broken, then continue normally."""
         if not self.get_settings()["fix"] or st.get("fix_rounds", 0) >= FIX_ROUNDS:
             return False
         pts = self.fix_points(res)
@@ -680,7 +680,7 @@ class AutoBuild:
         self._log(srv, r["msg"])
         self._set(srv, phase="plan", not_before=now + SETTLE + 1.0)
 
-    # ------------------------------------------------------------ Farmen
+    # ------------------------------------------------------------ Farming
 
     def start_farm(self, srv: str, req: dict) -> dict:
         p = self._player(srv)
@@ -746,7 +746,7 @@ class AutoBuild:
                 st["chest"] = {"x": x, "y": y, "z": z, "name": f"neue Kiste {x} {y} {z}", "own": True}
             if not r["ok"] or "Kiste voll" in r["msg"]:
                 if st.get("chest") and "Kiste voll" in r["msg"]:
-                    st["chest"] = None                     # naechstes Mal eine neue aufstellen
+                    st["chest"] = None                     # place a new one next time
                 if not r["ok"] and not st.get("place"):
                     return self._end(srv, "error", "Einlagern ging nicht: " + r["msg"])
                 st["deposit_fails"] = st.get("deposit_fails", 0) + 1
@@ -759,7 +759,7 @@ class AutoBuild:
             return
         if now < st["not_before"]:
             return
-        # fplan: Stand zaehlen
+        # fplan: count progress
         left = farm.count(self.app.rec, dim, st["area"], set(st["targets"]))
         mined = {k: max(0, st["start"].get(k, 0) - left.get(k, 0)) for k in st["targets"]}
         open_ = {k: n - mined[k] for k, n in st["targets"].items() if n - mined[k] > 0 and left.get(k, 0) > 0}
@@ -816,7 +816,7 @@ class AutoBuild:
         self._set(srv, phase="deposit", cmd=cid)
         self._log(srv, f"Inventar voll: stellt eine Kiste auf und packt {len(put)} Stacks hinein")
 
-    # ------------------------------------------------------------ Ebnen
+    # ------------------------------------------------------------ Flattening
 
     def start_flatten(self, srv: str, req: dict) -> dict:
         p = self._player(srv)
@@ -831,7 +831,7 @@ class AutoBuild:
         kind = str(fl.get("kind") or "flat")
         if kind not in ("flat", "clear", "fill"):
             raise ValueError("unbekannte Automation")
-        # Abbauen = alles im Bereich weg (Ebene unter dem Bereich), Fuellen = jede leere Stelle bis oben
+        # Breaking = clear everything in the area (layer below the area), filling = every empty spot up to the top
         if kind == "clear":
             level, clear, fill = area["y0"] - 1, True, False
         elif kind == "fill":
@@ -867,7 +867,7 @@ class AutoBuild:
         return self.view(srv)
 
     def _judge(self, srv: str, st: dict, left: int) -> bool:
-        """Nach einem Auftrag: ging etwas voran? False nach 4 Fehlschlaegen hintereinander."""
+        """After a job: did anything progress? False after 4 failures in a row."""
         if st.pop("judge", False) and st.get("last") is not None:
             if left >= st["last"]:
                 st["skip"].update(st["batch"] or [])
@@ -882,7 +882,7 @@ class AutoBuild:
 
     def _step_flatten(self, srv: str, st: dict, p: dict, now: float) -> None:
         if st["phase"] in ("mine", "deposit"):
-            return self._step_farm(srv, st, p, now)       # gleiche Auftragsverfolgung wie beim Farmen
+            return self._step_farm(srv, st, p, now)       # same job tracking as for farming
         if p.get("dim") != st["dim"]:
             with self.lock:
                 st["info"] = "du bist in einer anderen Dimension als der Bereich"
@@ -920,7 +920,7 @@ class AutoBuild:
                                    "timeout": int(MINE_TIMEOUT)})
             self._set(srv, phase="mine", cmd=cid, batch=pts)
             return self._log(srv, f"trägt {len(pts)} Blöcke ab bei {pts[0][0]} {pts[0][1]} {pts[0][2]} (noch {left})")
-        # Auffuellen
+        # Filling
         every = farm.holes(self.app.rec, dim, st["area"], fl["level"], near, every=fl.get("kind") == "fill")
         with self.lock:
             fl["fillLeft"] = len(every)

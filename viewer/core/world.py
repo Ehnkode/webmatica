@@ -1,17 +1,17 @@
-"""Aufnahme-Ordner lesen: Server -> Dimensionen -> Regionen -> Chunks.
+"""Read the recording folder: server -> dimensions -> regions -> chunks.
 
-Layout (so schreibt es die Mod):
+Layout (as written by the mod):
 
     webmatica_recording/
       2b2t.org/
         region/           Overworld
         DIM-1/region/     Nether
         DIM1/region/      End
-      region/             Alt-Aufnahme der ersten Mod-Version (gemischt)
+            region/             old recording from the first mod version (mixed)
 
-Region-Dateien werden nicht im Speicher gehalten. Der Header (Positionen und
-Zeitstempel je Chunk) wird bei geaenderter mtime neu gelesen, damit der
-Viewer neue und geaenderte Chunks sieht, ohne neu zu starten.
+Region files are not kept in memory. The header (positions and
+timestamps per chunk) is reread when the mtime changes, so the
+viewer sees new and changed chunks without restarting.
 """
 
 from __future__ import annotations
@@ -44,9 +44,9 @@ _REGION_RE = re.compile(r"^r\.(-?\d+)\.(-?\d+)\.mca$")
 class RegionHeader:
     mtime_ns: int
     size: int
-    offsets: np.ndarray      # (1024,) Sektor-Offset, 0 = Chunk fehlt
-    sectors: np.ndarray      # (1024,) Sektoranzahl
-    timestamps: np.ndarray   # (1024,) Unix-Sekunden der letzten Aenderung
+    offsets: np.ndarray      # (1024,) sector offset, 0 = chunk missing
+    sectors: np.ndarray      # (1024,) sector count
+    timestamps: np.ndarray   # (1024,) Unix seconds of the last change
 
 
 class Region:
@@ -96,7 +96,7 @@ class Region:
             comp = head[4]
             payload = f.read(length - 1) if length > 1 else b""
         if comp & 0x80:
-            # Uebergrosser Chunk liegt extern in c.<x>.<z>.mcc neben der Region.
+            # An oversized chunk is stored externally in c.<x>.<z>.mcc next to the region.
             cx = self.rx * 32 + (idx & 31)
             cz = self.rz * 32 + (idx >> 5)
             ext = os.path.join(os.path.dirname(self.path), f"c.{cx}.{cz}.mcc")
@@ -113,12 +113,12 @@ class Region:
         elif comp == 3:
             raw = payload
         else:
-            return None  # LZ4 o. ae. schreibt die Mod nicht
+            return None  # the mod doesn't write LZ4 etc.
         return nbt.read(raw, typed)
 
 
 class Dimension:
-    """Ein region/-Ordner (eine Dimension eines Servers)."""
+    """A region/ folder (one dimension of a server)."""
 
     def __init__(self, server: str, key: str, region_dir: str):
         self.server = server
@@ -132,7 +132,7 @@ class Dimension:
         return f"{self.server}/{self.key}"
 
     def regions(self) -> list[Region]:
-        """Aktuelle Regionen (neue Dateien werden bei jedem Aufruf erkannt)."""
+        """Current regions (new files are detected on every call)."""
         with self._scan_lock:
             try:
                 names = os.listdir(self.region_dir)
@@ -163,7 +163,7 @@ class Dimension:
 
 
 class ChunkCache:
-    """LRU fuer dekodierte Chunks, Schluessel enthaelt den Chunk-Zeitstempel."""
+    """LRU for decoded chunks; the key contains the chunk timestamp."""
 
     def __init__(self, max_items: int = 768):
         self.max_items = max_items
@@ -193,7 +193,7 @@ class Recording:
         self._lock = threading.Lock()
 
     def dimensions(self) -> list[Dimension]:
-        """Alle Server/Dimensionen mit region/-Ordner. Neu angelegte werden erkannt."""
+        """All servers/dimensions with a region/ folder. Newly created ones are detected."""
         found: dict[str, tuple[str, str, str]] = {}
         legacy = os.path.join(self.root, "region")
         if os.path.isdir(legacy):
@@ -236,7 +236,7 @@ class Recording:
         return d
 
     def raw_chunk(self, dim: Dimension, cx: int, cz: int, typed: bool = True) -> dict | None:
-        """Ungecachtes Chunk-NBT (fuer den Export der Block-Entities)."""
+        """Uncached chunk NBT (for exporting the block entities)."""
         region = dim.region(cx >> 5, cz >> 5)
         return region.read_nbt((cx & 31) | ((cz & 31) << 5), typed) if region else None
 

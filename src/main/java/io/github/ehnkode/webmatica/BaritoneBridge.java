@@ -16,11 +16,11 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Baritone von der Webseite: holt Befehle vom Viewer (Ziel per Klick auf die
- * Karte, Stopp) und gibt sie an Baritones Befehls-Verwaltung, als haettest du
- * "#goto x z" getippt. Es wird nie etwas in den Server-Chat geschickt.
+ * Baritone from the web page: fetches commands from the viewer (goal by clicking
+ * the map, stop) and hands them to Baritone's command manager, as if you had
+ * typed "#goto x z". Nothing is ever sent to the server chat.
  *
- * Baritone nur per Reflection: ohne Baritone meldet der Viewer das, mehr nicht.
+ * Baritone only via reflection: without Baritone the viewer reports that, nothing more.
  */
 public final class BaritoneBridge {
 
@@ -83,7 +83,7 @@ public final class BaritoneBridge {
         }
     }
 
-    /** Client-Thread. */
+    /** Client thread. */
     private void run(JsonObject cmd) {
         MinecraftClient mc = MinecraftClient.getInstance();
         String id = cmd.has("id") ? cmd.get("id").getAsString() : "";
@@ -114,7 +114,7 @@ public final class BaritoneBridge {
             BaritoneSafety.restore();
         }
         if ("highlight".equals(kind)) {
-            // Kisten im Spiel markieren: kein Baritone, nur Partikel
+            // highlight chests in game: no Baritone, just particles
             int n = Highlighter.getInstance().set(cmd.getAsJsonArray("pts"), cmd.has("label") ? cmd.get("label").getAsString() : "");
             if (mc.player != null) {
                 mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(n + " Kiste" + (n == 1 ? "" : "n") + " markiert"))
@@ -130,7 +130,7 @@ public final class BaritoneBridge {
         } else if ("stop".equals(kind) || "pause".equals(kind) || "resume".equals(kind)) {
             lines.add(kind);
         } else if ("clear".equals(kind)) {
-            // Bauplatz freiraeumen: Auswahl setzen und von Baritone leer machen lassen
+            // clear build site: set selection and let Baritone empty it
             BaritoneSafety.restore();
             lines.add("sel clear");
             lines.add("sel pos1 " + cmd.get("x0").getAsInt() + " " + cmd.get("y0").getAsInt() + " " + cmd.get("z0").getAsInt());
@@ -152,7 +152,7 @@ public final class BaritoneBridge {
         String line = String.join(" · #", lines);
         try {
             Object provider = Class.forName("baritone.api.BaritoneAPI").getMethod("getProvider").invoke(null);
-            // ueber die API-Interfaces aufrufen: die Implementierungen sind nicht oeffentlich
+            // call through the API interfaces: the implementations are not public
             Object baritone = Class.forName("baritone.api.IBaritoneProvider").getMethod("getPrimaryBaritone").invoke(provider);
             Object cm = Class.forName("baritone.api.IBaritone").getMethod("getCommandManager").invoke(baritone);
             java.lang.reflect.Method exec = Class.forName("baritone.api.command.manager.ICommandManager").getMethod("execute", String.class);
@@ -176,7 +176,7 @@ public final class BaritoneBridge {
         report(id, err == null, err == null ? "#" + line : err);
     }
 
-    /** Client-Thread: eine Baritone-Befehlszeile ohne "#" ausfuehren, ohne Meldung. */
+    /** Client thread: run a Baritone command line without "#", silently. */
     static boolean exec(String line) {
         try {
             Object provider = Class.forName("baritone.api.BaritoneAPI").getMethod("getProvider").invoke(null);

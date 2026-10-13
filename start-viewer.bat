@@ -1,7 +1,7 @@
 @echo off
-rem Startet den Webmatica-Viewer und oeffnet ihn im Browser.
-rem Aufnahme und Minecraft-Jar findet der Viewer selbst, sobald Minecraft einmal mit der Mod lief.
-rem Eigener Ordner: start-viewer.bat --recording "D:\...\webmatica_recording"
+rem Starts the Webmatica viewer and opens it in the browser.
+rem The viewer finds the recording and Minecraft jar itself once Minecraft has run with the mod.
+rem Custom folder: start-viewer.bat --recording "D:\...\webmatica_recording"
 setlocal
 cd /d "%~dp0"
 
