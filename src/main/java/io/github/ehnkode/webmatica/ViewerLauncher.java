@@ -22,6 +22,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import java.util.zip.CRC32;
 
 /**
  * Starts the browser viewer from inside the game. The viewer ships in the mod jar
@@ -129,16 +130,15 @@ final class ViewerLauncher {
         say(mc, "Viewer antwortet nicht, Details in " + log, ChatFormatting.RED, null);
     }
 
-    /** Copies the bundled viewer next to the game, once per mod version. Built block images stay. */
+    /** Copies the bundled viewer next to the game whenever it changed. Built block images stay. */
     private static void unpack(Path app) throws IOException {
         ModContainer mod = FabricLoader.getInstance().getModContainer("webmatica").orElseThrow();
-        String version = mod.getMetadata().getVersion().getFriendlyString();
+        Path src = mod.findPath(BUNDLE).orElseThrow(() -> new IOException("viewer missing from the mod jar"));
+        String version = mod.getMetadata().getVersion().getFriendlyString() + " " + fingerprint(src);
         Path stamp = app.resolve(STAMP);
-        if (Files.isRegularFile(stamp) && version.equals(Files.readString(stamp, StandardCharsets.UTF_8).trim())
-                && !version.contains("SNAPSHOT")) {
+        if (Files.isRegularFile(stamp) && version.equals(Files.readString(stamp, StandardCharsets.UTF_8).trim())) {
             return;
         }
-        Path src = mod.findPath(BUNDLE).orElseThrow(() -> new IOException("viewer missing from the mod jar"));
         Path code = app.resolve("viewer");
         Path assets = code.resolve("assets");
         if (Files.isDirectory(code)) {
@@ -165,6 +165,18 @@ final class ViewerLauncher {
         Files.createDirectories(assets);
         app.resolve("start-viewer.sh").toFile().setExecutable(true);
         Files.writeString(stamp, version, StandardCharsets.UTF_8);
+    }
+
+    /** Checksum over the bundled files, so a rebuilt jar with the same version also updates the copy. */
+    private static String fingerprint(Path src) throws IOException {
+        CRC32 crc = new CRC32();
+        try (Stream<Path> files = Files.walk(src)) {
+            for (Path p : files.filter(Files::isRegularFile).sorted().toList()) {
+                crc.update(src.relativize(p).toString().getBytes(StandardCharsets.UTF_8));
+                crc.update(Files.readAllBytes(p));
+            }
+        }
+        return Long.toHexString(crc.getValue());
     }
 
     /** The first Python 3.10+ found, as a command line. The Windows Store stub fails the check. */
