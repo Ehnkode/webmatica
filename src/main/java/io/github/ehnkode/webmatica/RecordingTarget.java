@@ -4,9 +4,11 @@ import java.nio.file.Path;
 import java.util.Locale;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.LevelResource;
 
 /**
  * Where a chunk is written: a separate world folder per server, containing
@@ -19,6 +21,7 @@ import net.minecraft.world.level.Level;
  *     region/        Overworld
  *     DIM-1/region/  Nether
  *     DIM1/region/   End
+ *   singleplayer-My World/   one folder per singleplayer save
  * </pre>
  */
 public final class RecordingTarget {
@@ -29,10 +32,14 @@ public final class RecordingTarget {
         return mc.gameDirectory.toPath().resolve("webmatica_recording");
     }
 
-    /** Folder name for the current server (address without port, safe characters only). */
+    /** Folder name for the current server (address without port, safe characters only),
+     *  in singleplayer "singleplayer-" + the save folder, so every world keeps its own map,
+     *  history, chests and waypoints. */
     public static String serverId(Minecraft mc) {
         if (mc.isLocalServer()) {
-            return "singleplayer";
+            IntegratedServer local = mc.getSingleplayerServer();
+            Path save = local == null ? null : local.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize().getFileName();
+            return save == null ? "singleplayer" : "singleplayer-" + sanitize(save.toString());
         }
         ServerData info = mc.getCurrentServer();
         if (info == null || info.ip == null || info.ip.isBlank()) {
