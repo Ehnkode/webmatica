@@ -18,10 +18,18 @@ jobs:
       - uses: gradle/actions/wrapper-validation@v6
       - uses: actions/setup-java@v5
         with:
-          java-version: '25'
+          java-version: |
+            21
+            25
           distribution: 'temurin'
       - run: chmod +x ./gradlew
-      - run: ./gradlew build
+      - name: Build all Minecraft versions
+        run: |
+          set -o pipefail
+          ./gradlew buildAll --continue 2>&1 | tee build.log || {
+            echo "::group::Compile errors (summary)"; echo
+            grep -E "error:|symbol:|What went wrong" build.log | sed -E 's#^.*/versions/([^/]+)/.*/webmatica/#[\1] #' | head -200
+            echo "::endgroup::"; exit 1; }
       - uses: actions/upload-artifact@v7
         with:
           name: webmatica-mod
@@ -30,7 +38,7 @@ jobs:
         if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: build/libs/webmatica-*[0-9].jar
+          files: build/libs/webmatica-*.jar
 
   viewer-tests:
     runs-on: ubuntu-24.04
@@ -41,3 +49,25 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s viewer/tests -t . -v
+
+  # Block and item images are built from the player's game jar on first start;
+  # make sure that still works for every supported Minecraft version.
+  viewer-assets:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        minecraft: ['1.21.11', '26.1.2', '26.2', '26.3']
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Download the Minecraft ${{ matrix.minecraft }} client jar
+        run: |
+          url=$(curl -s https://piston-meta.mojang.com/mc/game/version_manifest_v2.json \
+            | jq -r --arg v '${{ matrix.minecraft }}' '.versions[] | select(.id==$v) | .url')
+          curl -s -o client.jar "$(curl -s "$url" | jq -r '.downloads.client.url')"
+      - run: python -m viewer.tools.build_assets --jar client.jar
+      - run: python -m viewer.tools.build_items --jar client.jar

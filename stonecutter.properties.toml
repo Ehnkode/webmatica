@@ -1,0 +1,24 @@
+mod.version = "0.6.0"
+mod.group = "io.github.ehnkode"
+deps.fabric_loader = "0.19.5"
+
+# Range written into fabric.mod.json per jar
+["1.21.11"]
+java.version = 21
+mc.range = "~1.21.11"
+deps.fabric_api = "0.141.3+1.21.11"
+
+["26.1.2"]
+java.version = 25
+mc.range = ">=26.1 <26.2"
+deps.fabric_api = "0.155.3+26.1.2"
+
+["26.2"]
+java.version = 25
+mc.range = "~26.2"
+deps.fabric_api = "0.161.0+26.2"
+
+["26.3"]
+java.version = 25
+mc.range = "~26.3"
+deps.fabric_api = "0.162.0+26.3"
