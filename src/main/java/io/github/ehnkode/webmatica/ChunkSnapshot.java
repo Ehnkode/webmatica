@@ -1,20 +1,23 @@
 package io.github.ehnkode.webmatica;
 
 import net.minecraft.SharedConstants;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.SectionPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.world.LightType;
-import net.minecraft.world.chunk.ChunkNibbleArray;
-import net.minecraft.world.chunk.ChunkSection;
-import net.minecraft.world.chunk.light.LightingProvider;
-import net.minecraft.world.chunk.PalettesFactory;
-import net.minecraft.world.chunk.WorldChunk;
-
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.chunk.DataLayer;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.minecraft.world.level.chunk.PalettedContainerFactory;
+import net.minecraft.world.level.lighting.LevelLightEngine;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,14 +36,14 @@ public final class ChunkSnapshot {
 
     private final ChunkPos pos;
     private final int bottomSectionY;
-    private final ChunkSection[] sections;
-    private final List<NbtCompound> blockEntities;
-    private final PalettesFactory palettes;
+    private final LevelChunkSection[] sections;
+    private final List<CompoundTag> blockEntities;
+    private final PalettedContainerFactory palettes;
     private final byte[][] blockLight;
     private final byte[][] skyLight;
 
-    private ChunkSnapshot(ChunkPos pos, int bottomSectionY, ChunkSection[] sections,
-                          List<NbtCompound> blockEntities, PalettesFactory palettes,
+    private ChunkSnapshot(ChunkPos pos, int bottomSectionY, LevelChunkSection[] sections,
+                          List<CompoundTag> blockEntities, PalettedContainerFactory palettes,
                           byte[][] blockLight, byte[][] skyLight) {
         this.pos = pos;
         this.bottomSectionY = bottomSectionY;
@@ -56,72 +59,72 @@ public final class ChunkSnapshot {
     }
 
     /** Must be called on the client thread. */
-    public static ChunkSnapshot capture(WorldChunk chunk) {
-        DynamicRegistryManager registries = chunk.getWorld().getRegistryManager();
-        ChunkSection[] live = chunk.getSectionArray();
-        ChunkSection[] copy = new ChunkSection[live.length];
+    public static ChunkSnapshot capture(LevelChunk chunk) {
+        RegistryAccess registries = chunk.getLevel().registryAccess();
+        LevelChunkSection[] live = chunk.getSections();
+        LevelChunkSection[] copy = new LevelChunkSection[live.length];
         for (int i = 0; i < live.length; i++) {
             copy[i] = live[i] == null ? null : live[i].copy();
         }
         // Block entities: sign texts, banners, heads, spawner type ... whatever the
         // server sends to the client. Chest contents are not included.
-        List<NbtCompound> bes = new ArrayList<>();
+        List<CompoundTag> bes = new ArrayList<>();
         for (BlockEntity be : chunk.getBlockEntities().values()) {
             try {
-                bes.add(be.createNbtWithIdentifyingData(registries));
+                bes.add(be.saveWithFullMetadata(registries));
             } catch (Throwable t) {
                 // Skip a single broken block entity, keep saving the rest.
             }
         }
-        LightingProvider light = chunk.getWorld().getLightingProvider();
+        LevelLightEngine light = chunk.getLevel().getLightEngine();
         byte[][] block = new byte[live.length][];
         byte[][] sky = new byte[live.length][];
         for (int i = 0; i < live.length; i++) {
-            ChunkSectionPos sp = ChunkSectionPos.from(chunk.getPos(), chunk.getBottomSectionCoord() + i);
-            block[i] = lightBytes(light, LightType.BLOCK, sp);
-            sky[i] = lightBytes(light, LightType.SKY, sp);
+            SectionPos sp = SectionPos.of(chunk.getPos(), chunk.getMinSectionY() + i);
+            block[i] = lightBytes(light, LightLayer.BLOCK, sp);
+            sky[i] = lightBytes(light, LightLayer.SKY, sp);
         }
-        return new ChunkSnapshot(chunk.getPos(), chunk.getBottomSectionCoord(), copy, bes,
-                PalettesFactory.fromRegistryManager(registries), block, sky);
+        return new ChunkSnapshot(chunk.getPos(), chunk.getMinSectionY(), copy, bes,
+                PalettedContainerFactory.create(registries), block, sky);
     }
 
     /** Light values of a section (2048 bytes, 4 bits per block) or null if the client has none. */
-    private static byte[] lightBytes(LightingProvider light, LightType type, ChunkSectionPos sp) {
+    private static byte[] lightBytes(LevelLightEngine light, LightLayer type, SectionPos sp) {
         try {
-            ChunkNibbleArray arr = light.get(type).getLightSection(sp);
+            DataLayer arr = light.getLayerListener(type).getDataLayerData(sp);
             // copy(): an "empty" section only carries a default value (e.g. 0 in the
             // dark); asByteArray() on the copy fills it in without touching the original.
-            return arr == null ? null : arr.copy().asByteArray();
+            return arr == null ? null : arr.copy().getData();
         } catch (Throwable t) {
             return null;
         }
     }
 
     /** Vanilla chunk NBT (like SerializedChunk), readable by Amulet, MCA Selector, BlueMap. */
-    public NbtCompound toNbt() {
-        NbtCompound root = new NbtCompound();
-        root.putInt("DataVersion", SharedConstants.getGameVersion().dataVersion().id());
-        root.putInt("xPos", pos.x);
+    public CompoundTag toNbt() {
+        CompoundTag root = new CompoundTag();
+        root.putInt("DataVersion", SharedConstants.getCurrentVersion().dataVersion().version());
+        root.putInt("xPos", Mc.x(pos));
         root.putInt("yPos", bottomSectionY);
-        root.putInt("zPos", pos.z);
+        root.putInt("zPos", Mc.z(pos));
         root.putString("Status", "minecraft:full");
         root.putLong("LastUpdate", 0L);
         root.putLong("InhabitedTime", 0L);
         root.putBoolean("isLightOn", true);
 
-        NbtList sectionList = new NbtList();
+        ListTag sectionList = new ListTag();
         for (int i = 0; i < sections.length; i++) {
-            ChunkSection section = sections[i];
+            LevelChunkSection section = sections[i];
             if (section == null) {
                 continue;
             }
-            NbtCompound sec = new NbtCompound();
+            CompoundTag sec = new CompoundTag();
             sec.putByte("Y", (byte) (bottomSectionY + i));
             palettes.blockStatesContainerCodec()
-                    .encodeStart(NbtOps.INSTANCE, section.getBlockStateContainer())
-                    .result().ifPresent(nbt -> sec.put("block_states", nbt));
+                    .encodeStart(NbtOps.INSTANCE, section.getStates())
+                    .result().ifPresent(nbt -> sec.put("block_states", classicPalette(nbt)));
             palettes.biomeContainerCodec()
-                    .encodeStart(NbtOps.INSTANCE, section.getBiomeContainer())
+                    .encodeStart(NbtOps.INSTANCE, section.getBiomes())
                     .result().ifPresent(nbt -> sec.put("biomes", nbt));
             if (blockLight[i] != null) {
                 sec.putByteArray("BlockLight", blockLight[i]);
@@ -133,9 +136,43 @@ public final class ChunkSnapshot {
         }
         root.put("sections", sectionList);
 
-        NbtList beList = new NbtList();
+        ListTag beList = new ListTag();
         beList.addAll(blockEntities);
         root.put("block_entities", beList);
         return root;
+    }
+
+    /**
+     * Palette entries as {Name, Properties} with every property spelled out. Since 26.1
+     * the game writes default states as a bare name and others as {id, properties};
+     * the viewer and other tools expect the classic form.
+     */
+    private static Tag classicPalette(Tag nbt) {
+        if (!(nbt instanceof CompoundTag container) || !(container.get("palette") instanceof ListTag palette)) {
+            return nbt;
+        }
+        ListTag out = new ListTag();
+        for (Tag entry : palette) {
+            BlockState state = BlockState.CODEC.parse(NbtOps.INSTANCE, entry).result().orElse(null);
+            if (state == null) {
+                return nbt;
+            }
+            CompoundTag e = new CompoundTag();
+            e.putString("Name", BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
+            CompoundTag props = new CompoundTag();
+            for (Property<?> p : state.getProperties()) {
+                props.putString(p.getName(), valueName(state, p));
+            }
+            if (!props.isEmpty()) {
+                e.put("Properties", props);
+            }
+            out.add(e);
+        }
+        container.put("palette", out);
+        return container;
+    }
+
+    private static <T extends Comparable<T>> String valueName(BlockState state, Property<T> p) {
+        return p.getName(state.getValue(p));
     }
 }

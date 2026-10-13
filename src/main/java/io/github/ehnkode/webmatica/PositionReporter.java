@@ -2,16 +2,7 @@ package io.github.ehnkode.webmatica;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.texture.PlayerSkinProvider;
-import net.minecraft.entity.player.SkinTextures;
-import net.minecraft.util.Identifier;
-
+import com.mojang.blaze3d.platform.NativeImage;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -21,6 +12,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.resources.SkinManager;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.PlayerSkin;
 
 /**
  * Reports the live player position (and view direction) to the local
@@ -94,12 +93,12 @@ public final class PositionReporter {
      * Called every client tick. Only builds the JSON when something
      * has changed, and hands it to the sender thread.
      */
-    public void tick(MinecraftClient mc) {
+    public void tick(Minecraft mc) {
         if (!enabled || mc == null) {
             return;
         }
-        ClientPlayerEntity p = mc.player;
-        if (p == null || mc.world == null) {
+        LocalPlayer p = mc.player;
+        if (p == null || mc.level == null) {
             return;
         }
 
@@ -108,25 +107,25 @@ public final class PositionReporter {
             o.addProperty("x", p.getX());
             o.addProperty("y", p.getY());
             o.addProperty("z", p.getZ());
-            o.addProperty("yaw", p.getYaw());
-            o.addProperty("pitch", p.getPitch());
-            o.addProperty("dim", mc.world.getRegistryKey().getValue().toString());
+            o.addProperty("yaw", p.getYRot());
+            o.addProperty("pitch", p.getXRot());
+            o.addProperty("dim", mc.level.dimension().identifier().toString());
             o.addProperty("t", System.currentTimeMillis());
 
             try {
-                o.addProperty("name", mc.getSession().getUsername());
-                o.addProperty("uuid", mc.getSession().getUuidOrNull() != null
-                        ? mc.getSession().getUuidOrNull().toString() : "");
+                o.addProperty("name", mc.getUser().getName());
+                o.addProperty("uuid", mc.getUser().getProfileId() != null
+                        ? mc.getUser().getProfileId().toString() : "");
             } catch (Throwable ignored) {
             }
 
             // Skin URL from the tab list entry (contains the signed
             // textures property). Fallback: no URL -> server uses the username API.
             try {
-                if (mc.getNetworkHandler() != null) {
-                    PlayerListEntry entry = mc.getNetworkHandler().getPlayerListEntry(p.getUuid());
+                if (mc.getConnection() != null) {
+                    PlayerInfo entry = mc.getConnection().getPlayerInfo(p.getUUID());
                     if (entry != null) {
-                        SkinTextures skin = entry.getSkinTextures();
+                        PlayerSkin skin = entry.getSkin();
                         if (skin != null) {
                             // Yarn 1.21.11: SkinTextures is a record with
                             // body/cape/elytra/model. body() -> AssetInfo.TextureAsset,
@@ -135,7 +134,7 @@ public final class PositionReporter {
                                 o.addProperty("skin", skin.body().texturePath().toString());
                             }
                             if (skin.model() != null) {
-                                o.addProperty("skinModel", skin.model().asString());
+                                o.addProperty("skinModel", skin.model().getSerializedName());
                             }
                         }
                     }
@@ -160,9 +159,9 @@ public final class PositionReporter {
             // Inventory: only send on change or every 5 s (the pack list subtracts it)
             try {
                 JsonArray inv = new JsonArray();
-                net.minecraft.entity.player.PlayerInventory pi = p.getInventory();
-                for (int i = 0; i < pi.size(); i++) {
-                    net.minecraft.item.ItemStack st = pi.getStack(i);
+                net.minecraft.world.entity.player.Inventory pi = p.getInventory();
+                for (int i = 0; i < pi.getContainerSize(); i++) {
+                    net.minecraft.world.item.ItemStack st = pi.getItem(i);
                     if (!st.isEmpty()) {
                         JsonObject it = ContainerTracker.itemWithContents(st);
                         it.addProperty("slot", i);
@@ -180,17 +179,17 @@ public final class PositionReporter {
             // Radar: other players the client currently sees (only what the server sends anyway)
             try {
                 JsonArray others = new JsonArray();
-                for (net.minecraft.client.network.AbstractClientPlayerEntity e : mc.world.getPlayers()) {
+                for (net.minecraft.client.player.AbstractClientPlayer e : mc.level.players()) {
                     if (e == p) {
                         continue;
                     }
                     JsonObject q = new JsonObject();
                     q.addProperty("name", e.getName().getString());
-                    q.addProperty("uuid", e.getUuidAsString());
+                    q.addProperty("uuid", e.getStringUUID());
                     q.addProperty("x", e.getX());
                     q.addProperty("y", e.getY());
                     q.addProperty("z", e.getZ());
-                    q.addProperty("yaw", e.getYaw());
+                    q.addProperty("yaw", e.getYRot());
                     others.add(q);
                 }
                 o.add("others", others);
@@ -234,7 +233,7 @@ public final class PositionReporter {
      * Retried every SKIN_RETRY_MS as long as there is no face yet
      * (the skin texture may only be registered shortly after joining the world).
      */
-    private String ensureSkinFace(MinecraftClient mc, ClientPlayerEntity p) {
+    private String ensureSkinFace(Minecraft mc, LocalPlayer p) {
         if (skinFaceB64 != null) {
             return skinFaceB64;
         }
@@ -248,10 +247,10 @@ public final class PositionReporter {
 
             // 1) Directly from the own player's tab list entry.
             try {
-                if (mc.getNetworkHandler() != null) {
-                    PlayerListEntry entry = mc.getNetworkHandler().getPlayerListEntry(p.getUuid());
+                if (mc.getConnection() != null) {
+                    PlayerInfo entry = mc.getConnection().getPlayerInfo(p.getUUID());
                     if (entry != null) {
-                        SkinTextures st = entry.getSkinTextures();
+                        PlayerSkin st = entry.getSkin();
                         if (st != null && st.body() != null) {
                             tex = st.body().texturePath();
                         }
@@ -265,11 +264,11 @@ public final class PositionReporter {
             //    in Yarn 1.21.11).
             if (tex == null) {
                 try {
-                    PlayerSkinProvider provider = mc.getSkinProvider();
-                    if (provider != null && mc.getSession() != null) {
+                    SkinManager provider = mc.getSkinManager();
+                    if (provider != null && mc.getUser() != null) {
                         var profile = new com.mojang.authlib.GameProfile(
-                                mc.getSession().getUuidOrNull(), mc.getSession().getUsername());
-                        SkinTextures st = provider.supplySkinTextures(profile, false).get();
+                                mc.getUser().getProfileId(), mc.getUser().getName());
+                        PlayerSkin st = provider.createLookup(profile, false).get();
                         if (st != null && st.body() != null) {
                             tex = st.body().texturePath();
                         }
@@ -283,10 +282,10 @@ public final class PositionReporter {
             }
 
             AbstractTexture at = mc.getTextureManager().getTexture(tex);
-            if (!(at instanceof NativeImageBackedTexture nibt)) {
+            if (!(at instanceof DynamicTexture nibt)) {
                 return null;
             }
-            NativeImage img = nibt.getImage();
+            NativeImage img = nibt.getPixels();
             if (img == null || img.getWidth() < 64 || img.getHeight() < 64) {
                 return null;
             }
@@ -296,7 +295,7 @@ public final class PositionReporter {
                 try {
                     Path tmpFull = Files.createTempFile("mapper-skinfull", ".png");
                     try {
-                        img.writeTo(tmpFull);
+                        img.writeToFile(tmpFull);
                         byte[] full = Files.readAllBytes(tmpFull);
                         skinFullB64 = Base64.getEncoder().encodeToString(full);
                         MapperClient.LOGGER.info("[webmatica] Voll-Skin extrahiert ({} Bytes)", full.length);
@@ -313,13 +312,13 @@ public final class PositionReporter {
             try {
                 for (int y = 0; y < 8; y++) {
                     for (int x = 0; x < 8; x++) {
-                        face.setColorArgb(x, y, img.getColorArgb(8 + x, 8 + y));
+                        face.setPixel(x, y, img.getPixel(8 + x, 8 + y));
                     }
                 }
                 // NativeImage.writeTo(Path) writes PNG; read it back via a temp file.
                 Path tmp = Files.createTempFile("mapper-skin", ".png");
                 try {
-                    face.writeTo(tmp);
+                    face.writeToFile(tmp);
                     byte[] png = Files.readAllBytes(tmp);
                     skinFaceB64 = Base64.getEncoder().encodeToString(png);
                     MapperClient.LOGGER.info("[webmatica] Skin-Gesicht extrahiert ({} Bytes)", png.length);
