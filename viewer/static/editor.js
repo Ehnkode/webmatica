@@ -109,6 +109,7 @@ function parseMesh(buf) {
     const pos16 = new Int16Array(buf.slice(o, o + n * 24)); o += n * 24;
     const uv16 = new Uint16Array(buf.slice(o, o + n * 16)); o += n * 16;
     const rgb = new Uint8Array(buf.slice(o, o + n * 12)); o += n * 12;
+    o += n * 8;   // Licht (MSH3), im Editor ungenutzt
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos16, 3));
     g.setAttribute('uv', new THREE.BufferAttribute(uv16, 2));
