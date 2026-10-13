@@ -229,13 +229,37 @@ async function columnInfo(x, z) {
 
 $('#goto').addEventListener('submit', (e) => {
   e.preventDefault();
-  const nums = ($('#goto-input').value.match(/-?\d+(\.\d+)?/g) || []).map(Number);
-  if (nums.length < 2) { toast('Bitte X und Z eingeben, z. B. „1200 -340“'); return; }
-  const [x, z] = nums.length >= 3 ? [nums[0], nums[2]] : nums;
+  const q = $('#goto-input').value.trim();
+  const nums = (q.match(/-?\d+(\.\d+)?/g) || []).map(Number);
+  let x, y = null, z;
+  const w = findWaypoint(q);
+  if (w) {
+    if (w.server !== state.server || w.dim !== state.dim) select(w.server, w.dim, null, true);
+    ({ x, y, z } = w);
+  } else if (nums.length >= 2) {
+    [x, z] = nums.length >= 3 ? [nums[0], nums[2]] : nums;
+    if (nums.length >= 3) y = nums[1];
+  } else {
+    toast(q ? `Kein Wegpunkt „${q}“. Koordinaten gehen auch: „1200 -340“` : 'X und Z oder einen Wegpunkt eingeben, z. B. „1200 -340“');
+    return;
+  }
   setFollow(false);
-  map.setView(toLatLng(x, z), Math.max(map.getZoom(), 0));
+  $('#goto-input').blur();
+  if (mode3d && view3d) view3d.flyTo(x + 0.5, Math.max((y ?? view3d.position().y) + 12, 70), z + 0.5);
+  else map.setView(toLatLng(x, z), Math.max(map.getZoom(), 0));
   flash(x, z);
 });
+/* Wegpunkt per Name: erst genau, dann Anfang, dann irgendwo im Namen */
+function findWaypoint(q) {
+  const n = q.toLowerCase();
+  if (!n || /^[-\d\s.,]+$/.test(n)) return null;
+  const all = state.waypoints;
+  return all.find((w) => w.name.toLowerCase() === n) || all.find((w) => w.name.toLowerCase().startsWith(n))
+    || all.find((w) => w.name.toLowerCase().includes(n)) || null;
+}
+function fillGotoList() {
+  $('#goto-list').innerHTML = state.waypoints.map((w) => `<option value="${esc(w.name)}">`).join('');
+}
 
 function flash(x, z) {
   const c = L.circleMarker(toLatLng(x + 0.5, z + 0.5), { radius: 14, color: '#fff', weight: 2, fill: false }).addTo(map);
@@ -244,19 +268,49 @@ function flash(x, z) {
 
 // ------------------------------------------------------------------ Seitenleiste
 
-/* Seitenleiste: Symbolleiste rechts waehlt den Bereich, nochmal klicken schliesst */
-let sideTab = (() => { try { return localStorage.getItem('sideTab') || 'waypoints'; } catch (_) { return 'waypoints'; } })();
+/* Seitenleiste: die Leiste rechts waehlt einen Bereich, nochmal klicken schliesst.
+ * Ein Bereich kann mehrere Unterseiten haben (Reiter oben im Panel). sideTab ist immer
+ * die Unterseite (= data-pane), der Bereich ergibt sich daraus.
+ * Neuer Bereich: Knopf in #rail, <section data-pane> in #side, hier eintragen. */
+const AREAS = {
+  build: { title: 'Bauen', pages: [['schematics', 'Schematics'], ['editor', 'Editor']] },
+  farm: { title: 'Automationen', pages: [['farm', '']] },
+  chests: { title: 'Lager', pages: [['chests', 'Kisten und Items'], ['stashes', 'Stashes']] },
+  places: { title: 'Orte', pages: [['waypoints', 'Wegpunkte'], ['signs', 'Schilder']] },
+  history: { title: 'Verlauf', pages: [['history', '']] },
+  radar: { title: 'Radar', pages: [['radar', '']] },
+  settings: { title: 'Optionen', pages: [['settings', '']] },
+};
+const AREA_ORDER = ['build', 'farm', 'chests', 'places', 'history', 'radar', 'settings'];
+const areaOf = (page) => Object.keys(AREAS).find((a) => AREAS[a].pages.some(([p]) => p === page)) || 'places';
+const lastPage = {};
+try { Object.assign(lastPage, JSON.parse(localStorage.getItem('areaPages') || '{}')); } catch (_) { /* egal */ }
+let sideTab = (() => { try { return localStorage.getItem('sideTab') || 'schematics'; } catch (_) { return 'schematics'; } })();
+if (!$(`#side [data-pane="${sideTab}"]`)) sideTab = 'schematics';
 function showTab(tab) {
+  // Bereich angegeben: dessen zuletzt offene Unterseite
+  if (AREAS[tab] && !AREAS[tab].pages.some(([p]) => p === tab)) tab = lastPage[tab] || AREAS[tab].pages[0][0];
   sideTab = tab;
-  try { localStorage.setItem('sideTab', tab); } catch (_) { /* egal */ }
-  const btn = $(`#rail [data-tab="${tab}"]`);
-  $('#side-title').textContent = btn ? btn.querySelector('span').textContent : '';
+  const area = areaOf(tab);
+  lastPage[area] = tab;
+  try { localStorage.setItem('sideTab', tab); localStorage.setItem('areaPages', JSON.stringify(lastPage)); } catch (_) { /* egal */ }
+  const a = AREAS[area];
+  $('#side-title').textContent = a.title;
+  const sub = $('#side-sub');
+  sub.hidden = a.pages.length < 2;
+  sub.innerHTML = a.pages.length < 2 ? '' : a.pages.map(([p, label]) =>
+    `<button data-page="${p}" class="${p === tab ? 'on' : ''}">${esc(label)}</button>`).join('');
   $$('#side .pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === tab));
   railState();
 }
+$('#side-sub').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-page]');
+  if (b) showTab(b.dataset.page);
+});
 function railState() {
   const open = !$('#side').hidden;
-  $$('#rail [data-tab]').forEach((b) => b.classList.toggle('active', open && b.dataset.tab === sideTab));
+  const area = areaOf(sideTab);
+  $$('#rail [data-tab]').forEach((b) => b.classList.toggle('active', open && b.dataset.tab === area));
 }
 function toggleSide(force, tab) {
   const side = $('#side');
@@ -267,13 +321,22 @@ function toggleSide(force, tab) {
 }
 $$('#rail [data-tab]').forEach((b) => b.addEventListener('click', () => {
   const open = !$('#side').hidden;
-  if (open && sideTab === b.dataset.tab) toggleSide(false);
+  if (open && areaOf(sideTab) === b.dataset.tab) toggleSide(false);
   else toggleSide(true, b.dataset.tab);
 }));
 $('#side-close').addEventListener('click', () => toggleSide(false));
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('[data-goto-tab]');
+  if (a) { e.preventDefault(); toggleSide(true, a.dataset.gotoTab); }
+});
 showTab(sideTab);
 
 /* Tastenkuerzel-Hilfe */
+$$('#opt-lang [data-lang]').forEach((b) => {
+  b.classList.toggle('on', b.dataset.lang === (window.I18N ? I18N.lang : 'de'));
+  b.addEventListener('click', () => { if (window.I18N && I18N.lang !== b.dataset.lang) I18N.set(b.dataset.lang); });
+});
+$('#opt-keys').addEventListener('click', () => toggleHelp(true));
 function toggleHelp(force) { $('#help').hidden = force === undefined ? !$('#help').hidden : !force; }
 $('#btn-help').addEventListener('click', () => toggleHelp());
 $('#help-close').addEventListener('click', () => toggleHelp(false));
@@ -300,6 +363,7 @@ async function saveWaypoints() {
 }
 
 function drawWaypoints() {
+  fillGotoList();
   overlay.waypoints.clearLayers();
   if (view3d) view3d.setWaypoints(state.waypoints);
   const here = state.waypoints.filter((w) => w.server === state.server && w.dim === state.dim);
@@ -404,6 +468,12 @@ async function pollActivity() {
   if (act.manual && Date.now() - act.manual.since > 180000) act.manual = null;
   renderActivity();
 }
+/* Punkt am Automation-Knopf, solange irgendetwas fuer dich spielt */
+function autoBadge() {
+  let on = autoRunning(act.auto) || !!act.manual;
+  try { on = on || farmRunning(); } catch (_) { /* noch nicht geladen */ }
+  $('#auto-badge').hidden = !on;
+}
 const autoRunning = (a) => a && ['plan', 'fetch', 'approach', 'build', 'unpack', 'store', 'return'].includes(a.phase);
 /* Nur zeigen, wenn wirklich etwas laeuft oder gerade fertig/abgebrochen ist; sonst unsichtbar */
 function renderActivity() {
@@ -423,6 +493,7 @@ function renderActivity() {
     }
   }
   el.hidden = !text;
+  autoBadge();
   if (!text) return;
   el.className = `panel activity ${kind}`;
   $('#act-text').innerHTML = text;
@@ -609,6 +680,8 @@ function updateHead(p) {
 }
 function setHead(url) {
   head.url = url;
+  $('#pc-head').hidden = !url;
+  if (url) $('#pc-head').src = url;
   const img = playerMarker && playerMarker.getElement() && playerMarker.getElement().querySelector('img');
   if (img && url) { img.src = url; img.style.visibility = ''; }
 }
@@ -646,9 +719,16 @@ function schedulePlayer() {
   playerStream.onopen = () => { clearInterval(playerTimer); playerTimer = null; };
 }
 
+/* Mitlaufen: in 2D folgt die Karte, in 3D die Kamera (Verfolgen-Modus) */
 function setFollow(on) {
   state.follow = on;
   $('#btn-follow').classList.toggle('on', on);
+  if (mode3d && view3d) {
+    if (on && state.player && state.player.active) { view3d.select({ type: 'player' }); view3d.setCam('follow'); }
+    else if (on) { state.follow = false; $('#btn-follow').classList.remove('on'); toast('Kein Spieler online – startet Minecraft mit der Mod?'); }
+    else view3d.setCam('free');
+    return;
+  }
   if (on && state.player && state.player.active) {
     const p = state.player;
     if (p.server && p.server !== state.server || p.dim !== state.dim) {
@@ -660,6 +740,17 @@ function setFollow(on) {
   }
 }
 $('#btn-follow').addEventListener('click', () => setFollow(!state.follow));
+/* Klick auf den Spieler-Chip: einmal hinspringen, ohne Mitlaufen */
+$('#pc-jump').addEventListener('click', () => {
+  const p = state.player;
+  if (!p || !p.active) { toast('Kein Spieler online – startet Minecraft mit der Mod?'); return; }
+  if (mode3d && view3d) { view3d.flyTo(p.x, p.y + 12, p.z); return; }
+  if (p.server && p.server !== state.server || p.dim !== state.dim) {
+    if (state.worlds.some((w) => w.id === p.server && w.dims.some((d) => d.key === p.dim))) select(p.server, p.dim, null, true);
+  }
+  map.setView(toLatLng(p.x, p.z), Math.max(map.getZoom(), 1));
+  flash(Math.floor(p.x), Math.floor(p.z));
+});
 map.on('dragstart', () => state.follow && setFollow(false));
 
 // ------------------------------------------------------------------ Live-Aktualisierung
@@ -752,8 +843,9 @@ async function set3d(on) {
   }
   mode3d = on;
   $('#btn-3d').classList.toggle('on', on);
+  $('#btn-2d').classList.toggle('on', !on);
   if (on) showHint3d();
-  else $('#set3d').hidden = true;
+  if (state.follow) setFollow(false);
   if (sel.on) setSelect(false);
   if (farmUi.pick3d) pick3dStop();
   renderPickLabel();
@@ -764,16 +856,11 @@ async function set3d(on) {
 /* 3D: Hinweis nur kurz zeigen, Einstellungen hinter dem Zahnrad */
 let hint3dTimer = null;
 function showHint3d() {
-  const h = $('#hint3d-text');
+  const h = $('.hint3d');
   h.classList.remove('gone');
   clearTimeout(hint3dTimer);
   hint3dTimer = setTimeout(() => h.classList.add('gone'), 8000);
 }
-$('#set3d-btn').addEventListener('click', () => {
-  const p = $('#set3d');
-  p.hidden = !p.hidden;
-  $('#set3d-btn').classList.toggle('on', !p.hidden);
-});
 $('.hint3d').addEventListener('mouseenter', showHint3d);
 
 /* Minimap in 3D: kleine 2D-Karte um die Kamera, Pfeil zeigt die Blickrichtung */
@@ -848,6 +935,9 @@ function on3dSelect(selection) {
 function on3dCam(mode) {
   $$('#cam-modes button').forEach((b) => b.classList.toggle('on', b.dataset.cam === mode));
   if (mode !== 'free') $('#cam-panel').hidden = false;
+  // Mitlaufen-Knopf zeigt in 3D, ob die Kamera am Spieler haengt
+  state.follow = mode !== 'free';
+  $('#btn-follow').classList.toggle('on', state.follow);
 }
 $('#cam-modes').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-cam]');
@@ -859,7 +949,24 @@ $('#cam-close').addEventListener('click', () => {
   view3d.select(null);
   $('#cam-panel').hidden = true;
 });
-$('#btn-3d').addEventListener('click', () => set3d(!mode3d));
+$('#btn-3d').addEventListener('click', () => mode3d || set3d(true));
+$('#btn-2d').addEventListener('click', () => mode3d && set3d(false));
+
+/* Kleine Fenster ueber der unteren Leiste: Knopf mit data-pop oeffnet, immer nur eins */
+function openPop(id) {
+  $$('.pop').forEach((p) => { p.hidden = p.id !== id || !p.hidden; });
+  $$('[data-pop]').forEach((b) => b.classList.toggle('open', b.dataset.pop === id && !$('#' + id).hidden));
+  const p = id && $('#' + id), b = id && $(`[data-pop="${id}"]`);
+  if (p && !p.hidden && b) {
+    // ueber dem Knopf ausrichten, aber im Fenster bleiben
+    const r = b.getBoundingClientRect();
+    p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.left + r.width / 2 - p.offsetWidth / 2)) + 'px';
+  }
+}
+$$('[data-pop]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); openPop(b.dataset.pop); }));
+document.addEventListener('pointerdown', (e) => {
+  if (!e.target.closest('.pop, [data-pop]')) $$('.pop').forEach((p) => { if (!p.hidden) openPop(null); });
+});
 const hourText = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
 // Ein Regler fuer die Sichtweite: Stufe -> [Chunks mit vollen Modellen, Fernsicht in Bloecken]
 const SIGHT = [[6, 0], [8, 1024], [12, 2048], [16, 3072], [24, 4096], [32, 6144], [32, 8192], [40, 12288],
@@ -2231,6 +2338,8 @@ function setCut(mode, y, now) {
   $('#cut-y').value = cut.y;
   if (document.activeElement !== $('#cut-yn')) $('#cut-yn').value = cut.y;
   $('.cut').classList.toggle('off', mode === 'off');
+  $('#btn-cut').classList.toggle('on', mode !== 'off');
+  $('#cut-label').textContent = mode === 'off' ? '' : (mode === 'layer' ? '=' : '≤') + cut.y;
   if (view3d) view3d.setClip(mode, cut.y);
   // Karte: Kacheln fuer die neue Hoehe erst nach kurzer Pause anfordern
   clearTimeout(cutTimer);
@@ -2276,10 +2385,9 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === '?') { toggleHelp(); return; }
   if (e.key === 'Escape' && !$('#help').hidden) { toggleHelp(false); return; }
-  const tabs = ['waypoints', 'signs', 'stashes', 'schematics', 'editor', 'chests', 'farm', 'history', 'radar'];
-  if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
-    const t = tabs[Number(e.key) - 1];
-    if (!$('#side').hidden && sideTab === t) toggleSide(false); else toggleSide(true, t);
+  if (/^[1-7]$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    const t = AREA_ORDER[Number(e.key) - 1];
+    if (!$('#side').hidden && areaOf(sideTab) === t) toggleSide(false); else toggleSide(true, t);
     return;
   }
   if (e.key === 'f' || e.key === 'F') setFollow(!state.follow);
@@ -2792,6 +2900,7 @@ async function pollFarm() {
   if (!open && !farmRunning()) { drawFarmArea(); return; }
   if (open && (chests.list || []).length !== farmUi.nChests) { farmUi.nChests = (chests.list || []).length; fillFarmChests(); }
   try { farmUi.auto = await api('/api/auto?' + new URLSearchParams({ srv: gameSrv() })); } catch (_) { return; }
+  autoBadge();
   renderFarm();
 }
 setInterval(pollFarm, 2000);

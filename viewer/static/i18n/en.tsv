@@ -948,3 +948,37 @@ Erste Ecke {} {} {}. Jetzt auf die gegenüberliegende Ecke klicken.	First corner
 Sichtweite	View distance
 Wie weit du siehst. Nah mit vollen Blockmodellen, dahinter vereinfachtes Gelände aus der Karte. Weiter = mehr Arbeit für PC und Viewer.	How far you can see. Full block models up close, simplified terrain from the map beyond. Further = more work for your PC and the viewer.
 Neue Auswahl: wieder zwei Eckblöcke anklicken.	New selection: click two corner blocks again.
+# --- neues GUI (Bereiche, Leiste unten, Suche)
+Werkzeuge	Tools
+Lager	Storage
+Orte	Places
+Optionen	Options
+Automation	Automation
+Verlauf	History
+Sprache	Language
+Schutz bei Automationen	Safety during automations
+Auf der Karte	On the map
+Schichten	Layers
+Kisten und Items	Chests and items
+Bereiche öffnen (Bauen … Optionen)	Open sections (Build … Options)
+Suche: Koordinaten oder Wegpunkt	Search: coordinates or waypoint
+Mitlaufen (Karte bzw. 3D-Kamera)	Follow (map or 3D camera)
+Schutz beim Bauen (Pause bei Spielern, Essen, Werkzeug, Reste): unter	Safety while building (pause near players, eating, tools, leftovers): under
+Karte: oberster Block bis zu dieser Höhe. 3D: alles darüber wird weggeschnitten. Tasten	Map: top block up to this height. 3D: everything above is cut away. Keys
+Koordinaten oder Wegpunkt …	Coordinates or waypoint …
+Suchen oder zu Koordinaten springen	Search or jump to coordinates
+Karte (Tab)	Map (Tab)
+Ansicht: was auf der Karte und in 3D zu sehen ist	View: what is shown on the map and in 3D
+Automationen: Farmen, Abbauen, Füllen, Ebnen (2)	Automations: farm, clear, fill, flatten (2)
+Bauen: Schematics und Editor (1)	Build: schematics and editor (1)
+Bereich auswählen (E): als Schematic speichern, im Editor öffnen oder farmen	Select area (E): save as schematic, open in editor or farm
+Einstellungen (7)	Settings (7)
+Lager: Kisten, Items suchen, Einlagern, Stashes (3)	Storage: chests, item search, storing, stashes (3)
+Mitlaufen: Karte bzw. 3D-Kamera folgt dir (F)	Follow: map or 3D camera follows you (F)
+Orte: Wegpunkte und Schilder (4)	Places: waypoints and signs (4)
+Radar (6)	Radar (6)
+Schichten: Welt bei einer Höhe aufschneiden (, und .)	Layers: cut the world at a height (, and .)
+Verlauf: Zeitraffer und Vergleich (5)	History: timelapse and compare (5)
+Zu dir springen	Jump to you
+Kein Wegpunkt „{}“. Koordinaten gehen auch: „1200 -340“	No waypoint “{}”. Coordinates work too: “1200 -340”
+X und Z oder einen Wegpunkt eingeben, z. B. „1200 -340“	Enter X and Z or a waypoint, e.g. “1200 -340”
