@@ -38,10 +38,8 @@ public class MapperClient implements ClientModInitializer {
         });
 
         KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("webmatica", "main"));
-        toggleKey = Mc.registerKey(new KeyMapping(
-                "key.webmatica.toggle", InputConstants.Type.KEYSYM, InputConstants.KEY_F9, category));
-        viewerKey = Mc.registerKey(new KeyMapping(
-                "key.webmatica.viewer", InputConstants.Type.KEYSYM, InputConstants.KEY_F10, category));
+        toggleKey = Mc.registerKey("key.webmatica.toggle", InputConstants.KEY_F9, category);
+        viewerKey = Mc.registerKey("key.webmatica.viewer", InputConstants.KEY_F10, category);
 
         ClientTickEvents.END_CLIENT_TICK.register(MapperClient::onEndTick);
 
