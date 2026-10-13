@@ -49,3 +49,25 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s viewer/tests -t . -v
+
+  # Block and item images are built from the player's game jar on first start;
+  # make sure that still works for every supported Minecraft version.
+  viewer-assets:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        minecraft: ['1.21.11', '26.1.2', '26.2', '26.3']
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Download the Minecraft ${{ matrix.minecraft }} client jar
+        run: |
+          url=$(curl -s https://piston-meta.mojang.com/mc/game/version_manifest_v2.json \
+            | jq -r --arg v '${{ matrix.minecraft }}' '.versions[] | select(.id==$v) | .url')
+          curl -s -o client.jar "$(curl -s "$url" | jq -r '.downloads.client.url')"
+      - run: python -m viewer.tools.build_assets --jar client.jar
+      - run: python -m viewer.tools.build_items --jar client.jar
