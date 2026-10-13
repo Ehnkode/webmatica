@@ -133,6 +133,7 @@ function playerPopup() {
 /* Live position via Server-Sent Events; falls back to polling on problems. */
 let playerTimer = null, playerStream = null;
 function schedulePlayer() {
+  if (document.hidden) return;   // visibilitychange starts it again
   if (playerStream || !window.EventSource) {
     if (!playerStream) { clearInterval(playerTimer); playerTimer = setInterval(pollPlayer, mode3d ? 250 : 1000); }
     return;
@@ -145,6 +146,16 @@ function schedulePlayer() {
   };
   playerStream.onopen = () => { clearInterval(playerTimer); playerTimer = null; };
 }
+/* A stream holds one of the browser's few connections to the viewer (Firefox: 6 for all tabs).
+   Background tabs give theirs back, otherwise a few open tabs block every request. */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (playerStream) { playerStream.close(); playerStream = null; }
+    clearInterval(playerTimer); playerTimer = null;
+  } else {
+    schedulePlayer();
+  }
+});
 
 /* Follow: in 2D the map follows, in 3D the camera (follow mode) */
 function setFollow(on) {

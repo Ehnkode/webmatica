@@ -1,15 +1,6 @@
 package io.github.ehnkode.webmatica;
 
 import com.google.gson.JsonObject;
-import net.minecraft.block.Block;
-import net.minecraft.block.ChestBlock;
-import net.minecraft.block.EnderChestBlock;
-import net.minecraft.block.ShulkerBoxBlock;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -20,6 +11,14 @@ import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.EnderChestBlock;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
 
 /**
  * Chest lids: the server sends a block event (type 1, data = number of players
@@ -57,10 +56,10 @@ public final class ChestLidTracker {
             return;
         }
         boolean open = data > 0;
-        String id = Registries.BLOCK.getId(block).toString();
+        String id = BuiltInRegistries.BLOCK.getKey(block).toString();
         MapperClient.LOGGER.info("Truhe bei [{}, {}, {}] wurde {} ({} Spieler)", pos.getX(), pos.getY(), pos.getZ(),
                 open ? "GEÖFFNET" : "GESCHLOSSEN", data);
-        LidEvent e = new LidEvent(pos.toImmutable(), id, open, data, System.currentTimeMillis());
+        LidEvent e = new LidEvent(pos.immutable(), id, open, data, System.currentTimeMillis());
         synchronized (recent) {
             recent.addFirst(e);
             while (recent.size() > MAX_RECENT) {
@@ -78,13 +77,13 @@ public final class ChestLidTracker {
     }
 
     private void send(LidEvent e) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.world == null || mc.player == null) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) {
             return;
         }
         JsonObject o = new JsonObject();
         o.addProperty("server", RecordingTarget.serverId(mc));
-        Identifier dim = mc.world.getRegistryKey().getValue();
+        Identifier dim = mc.level.dimension().identifier();
         o.addProperty("dim", "minecraft".equals(dim.getNamespace()) ? dim.getPath() : dim.toString());
         o.addProperty("x", e.pos().getX());
         o.addProperty("y", e.pos().getY());

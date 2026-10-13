@@ -3,24 +3,23 @@ package io.github.ehnkode.webmatica;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ContainerComponent;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.screen.Generic3x3ContainerScreenHandler;
-import net.minecraft.screen.GenericContainerScreenHandler;
-import net.minecraft.screen.HopperScreenHandler;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.ShulkerBoxScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.DispenserMenu;
+import net.minecraft.world.inventory.HopperMenu;
+import net.minecraft.world.inventory.ShulkerBoxMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemContainerContents;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -60,7 +59,7 @@ public final class ContainerTracker {
     private BlockPos ownOther;
     private long ownTime;
 
-    private ScreenHandler current;
+    private AbstractContainerMenu current;
     private BlockPos currentPos;
     private BlockPos currentOther;
     private String currentBlock;
@@ -70,16 +69,16 @@ public final class ContainerTracker {
 
     public void register() {
         UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
-            if (world.isClient()) {
-                usePos = hit.getBlockPos().toImmutable();
-                net.minecraft.block.BlockState bs = world.getBlockState(usePos);
-                useBlock = Registries.BLOCK.getId(bs.getBlock()).toString();
+            if (world.isClientSide()) {
+                usePos = hit.getBlockPos().immutable();
+                net.minecraft.world.level.block.state.BlockState bs = world.getBlockState(usePos);
+                useBlock = BuiltInRegistries.BLOCK.getKey(bs.getBlock()).toString();
                 // double chest: determine the other half exactly (don't guess, chests are often packed tightly)
                 useOther = null;
                 try {
-                    if (bs.getBlock() instanceof net.minecraft.block.ChestBlock
-                            && bs.get(net.minecraft.block.ChestBlock.CHEST_TYPE) != net.minecraft.block.enums.ChestType.SINGLE) {
-                        useOther = usePos.offset(net.minecraft.block.ChestBlock.getFacing(bs)).toImmutable();
+                    if (bs.getBlock() instanceof net.minecraft.world.level.block.ChestBlock
+                            && bs.getValue(net.minecraft.world.level.block.ChestBlock.TYPE) != net.minecraft.world.level.block.state.properties.ChestType.SINGLE) {
+                        useOther = usePos.relative(net.minecraft.world.level.block.ChestBlock.getConnectedDirection(bs)).immutable();
                     }
                 } catch (Throwable ignored) {
                 }
@@ -88,16 +87,16 @@ public final class ContainerTracker {
                 ownOther = useOther;
                 ownTime = useTime;
             }
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         });
     }
 
-    public void tick(MinecraftClient mc) {
+    public void tick(Minecraft mc) {
         if (UnpackTask.getInstance().busy()) {
             usePos = null;      // a briefly placed shulker is not a chest
             return;
         }
-        ScreenHandler h = mc.currentScreen instanceof HandledScreen<?> hs ? hs.getScreenHandler() : null;
+        AbstractContainerMenu h = Mc.screen(mc) instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
         if (h != current) {
             flush(mc);
             current = null;
@@ -113,7 +112,7 @@ public final class ContainerTracker {
                 usePos = null;
             }
         }
-        if (current == null || mc.player == null || mc.world == null) {
+        if (current == null || mc.player == null || mc.level == null) {
             return;
         }
         ownPos = currentPos;
@@ -141,21 +140,21 @@ public final class ContainerTracker {
         return p.equals(ownPos) || p.equals(ownOther);
     }
 
-    private void flush(MinecraftClient mc) {
+    private void flush(Minecraft mc) {
         if (current != null && pending != null && !pending.equals(lastSent)) {
             send(pending);
         }
     }
 
-    private static boolean isStorage(ScreenHandler h) {
-        return h instanceof GenericContainerScreenHandler || h instanceof ShulkerBoxScreenHandler
-                || h instanceof HopperScreenHandler || h instanceof Generic3x3ContainerScreenHandler;
+    private static boolean isStorage(AbstractContainerMenu h) {
+        return h instanceof ChestMenu || h instanceof ShulkerBoxMenu
+                || h instanceof HopperMenu || h instanceof DispenserMenu;
     }
 
-    private String snapshot(MinecraftClient mc) {
+    private String snapshot(Minecraft mc) {
         JsonObject o = new JsonObject();
         o.addProperty("server", RecordingTarget.serverId(mc));
-        Identifier dim = mc.world.getRegistryKey().getValue();
+        Identifier dim = mc.level.dimension().identifier();
         o.addProperty("dim", "minecraft".equals(dim.getNamespace()) ? dim.getPath() : dim.toString());
         o.addProperty("x", currentPos.getX());
         o.addProperty("y", currentPos.getY());
@@ -169,7 +168,7 @@ public final class ContainerTracker {
             o.add("other", other);
         }
         try {
-            Text title = mc.currentScreen != null ? mc.currentScreen.getTitle() : null;
+            Component title = Mc.screen(mc) != null ? Mc.screen(mc).getTitle() : null;
             if (title != null) {
                 o.addProperty("title", title.getString());
             }
@@ -178,20 +177,20 @@ public final class ContainerTracker {
         JsonArray items = new JsonArray();
         int slots = 0;
         for (Slot s : current.slots) {
-            if (s.inventory instanceof PlayerInventory) {
+            if (s.container instanceof Inventory) {
                 continue;
             }
             slots++;
-            ItemStack st = s.getStack();
+            ItemStack st = s.getItem();
             if (st.isEmpty()) {
                 continue;
             }
             JsonObject it = item(st);
-            it.addProperty("slot", s.getIndex());
-            ContainerComponent inner = st.get(DataComponentTypes.CONTAINER);
+            it.addProperty("slot", s.getContainerSlot());
+            ItemContainerContents inner = st.get(DataComponents.CONTAINER);
             if (inner != null) {
                 JsonArray content = new JsonArray();
-                for (ItemStack c : inner.iterateNonEmpty()) {
+                for (ItemStack c : Mc.items(inner)) {
                     content.add(item(c));
                 }
                 if (!content.isEmpty()) {
@@ -208,10 +207,10 @@ public final class ContainerTracker {
     /** A stack as JSON, shulkers with contents (also for the player inventory). */
     static JsonObject itemWithContents(ItemStack st) {
         JsonObject it = item(st);
-        ContainerComponent inner = st.get(DataComponentTypes.CONTAINER);
+        ItemContainerContents inner = st.get(DataComponents.CONTAINER);
         if (inner != null) {
             JsonArray content = new JsonArray();
-            for (ItemStack c : inner.iterateNonEmpty()) {
+            for (ItemStack c : Mc.items(inner)) {
                 content.add(item(c));
             }
             if (!content.isEmpty()) {
@@ -223,9 +222,9 @@ public final class ContainerTracker {
 
     private static JsonObject item(ItemStack st) {
         JsonObject it = new JsonObject();
-        it.addProperty("id", Registries.ITEM.getId(st.getItem()).toString());
+        it.addProperty("id", BuiltInRegistries.ITEM.getKey(st.getItem()).toString());
         it.addProperty("count", st.getCount());
-        Text name = st.getCustomName();
+        Component name = st.getCustomName();
         if (name != null) {
             it.addProperty("name", name.getString());
         }
@@ -263,11 +262,11 @@ public final class ContainerTracker {
                 c.disconnect();
                 if (code == 200) {
                     int n = countItems(withT);
-                    MinecraftClient mc = MinecraftClient.getInstance();
+                    Minecraft mc = Minecraft.getInstance();
                     mc.execute(() -> {
                         if (mc.player != null) {
-                            mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr("Kiste gespeichert (" + n + " Stacks)"))
-                                    .formatted(net.minecraft.util.Formatting.GOLD), true);
+                            Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr("Kiste gespeichert (" + n + " Stacks)"))
+                                    .withStyle(net.minecraft.ChatFormatting.GOLD));
                         }
                     });
                 }

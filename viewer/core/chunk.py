@@ -48,9 +48,15 @@ BLOCKS = Registry("minecraft:air")
 BIOMES = Registry("minecraft:plains")
 
 
-def state_key(entry: dict) -> str:
-    name = entry.get("Name", "minecraft:air")
-    props = entry.get("Properties")
+def state_key(entry) -> str:
+    # Classic {Name, Properties}; since 26.1 vanilla also writes a bare name (default
+    # state), {id, properties}, and {"": name} inside mixed lists.
+    if isinstance(entry, str):
+        return entry
+    if "" in entry:
+        return state_key(entry[""])
+    name = entry.get("Name") or entry.get("id") or "minecraft:air"
+    props = entry.get("Properties") or entry.get("properties")
     if not props:
         return name
     return name + "[" + ",".join(f"{k}={props[k]}" for k in sorted(props)) + "]"
@@ -170,7 +176,7 @@ def from_nbt(root: dict, cx: int | None = None, cz: int | None = None) -> Chunk 
         if bm:
             pal = bm.get("palette") or []
             if pal:
-                lut = np.fromiter((BIOMES.id(p) for p in pal), dtype=np.int32, count=len(pal))
+                lut = np.fromiter((BIOMES.id(p if isinstance(p, str) else p.get("", "")) for p in pal), dtype=np.int32, count=len(pal))
                 bits = 0 if len(pal) == 1 else (len(pal) - 1).bit_length()
                 idx = unpack(bm.get("data"), bits, 64)
                 np.clip(idx, 0, len(pal) - 1, out=idx)

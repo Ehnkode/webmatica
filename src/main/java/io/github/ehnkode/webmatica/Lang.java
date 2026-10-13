@@ -10,8 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /**
  * The mod's messages are written in German. If the game language is not
@@ -27,8 +26,8 @@ public final class Lang {
     }
 
     public static String tr(String s) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        String lang = mc != null && mc.options != null ? mc.options.language : "en_us";
+        Minecraft mc = Minecraft.getInstance();
+        String lang = mc != null && mc.options != null ? mc.options.languageCode : "en_us";
         if (s == null || lang == null || lang.startsWith("de")) {
             return s;
         }
