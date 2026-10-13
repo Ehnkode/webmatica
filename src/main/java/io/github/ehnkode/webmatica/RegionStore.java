@@ -103,13 +103,13 @@ public final class RegionStore {
      */
     public void onChunkLoad(ClientLevel world, LevelChunk chunk) {
         if (enabled) {
-            dirty.put(chunk.getPos().toLong(), System.currentTimeMillis());
+            dirty.put(Mc.pack(chunk.getPos()), System.currentTimeMillis());
         }
     }
 
     /** Chunk leaves view distance: save pending changes immediately. */
     public void onChunkUnload(ClientLevel world, LevelChunk chunk) {
-        if (enabled && dirty.remove(chunk.getPos().toLong()) != null) {
+        if (enabled && dirty.remove(Mc.pack(chunk.getPos())) != null) {
             submit(world, chunk);
         }
     }
@@ -117,7 +117,7 @@ public final class RegionStore {
     /** A block in this chunk has changed. */
     public void markDirty(int chunkX, int chunkZ) {
         if (enabled) {
-            dirty.put(ChunkPos.asLong(chunkX, chunkZ), System.currentTimeMillis());
+            dirty.put(Mc.pack(chunkX, chunkZ), System.currentTimeMillis());
         }
     }
 
@@ -135,11 +135,11 @@ public final class RegionStore {
                 continue;
             }
             it.remove();
-            ChunkPos pos = new ChunkPos(e.getKey());
+            ChunkPos pos = Mc.unpack(e.getKey());
             // create=false returns null for missing chunks. world.getChunk(x, z)
             // would instead return an empty chunk, which would overwrite real data
             // with air.
-            LevelChunk chunk = world.getChunkSource().getChunk(pos.x, pos.z, ChunkStatus.FULL, false);
+            LevelChunk chunk = world.getChunkSource().getChunk(Mc.x(pos), Mc.z(pos), ChunkStatus.FULL, false);
             if (chunk != null) {
                 submit(world, chunk);
             }
@@ -182,7 +182,7 @@ public final class RegionStore {
 
             CRC32 crc = new CRC32();
             crc.update(bytes);
-            String key = regionDir + "|" + snap.pos().toLong();
+            String key = regionDir + "|" + Mc.pack(snap.pos());
             Long prev = lastWritten.get(key);
             if (prev != null && prev == crc.getValue()) {
                 return; // unchanged since the last write
@@ -210,7 +210,7 @@ public final class RegionStore {
      */
     private void backupOld(RegionFile region, Path historyDir, ResourceKey<Level> dim, ChunkSnapshot snap, byte[] bytes) {
         String day = LocalDate.now().toString();
-        String key = historyDir + "|" + day + "|" + snap.pos().toLong();
+        String key = historyDir + "|" + day + "|" + Mc.pack(snap.pos());
         if (historyChecked.contains(key)) {
             return;
         }

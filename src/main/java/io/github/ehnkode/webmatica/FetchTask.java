@@ -20,7 +20,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
@@ -187,7 +186,7 @@ public final class FetchTask {
                 }
             }
             case OPEN -> {
-                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
+                AbstractContainerMenu h = Mc.screen(mc) instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
                 if (h != null && h != p.inventoryMenu) {
                     opened = h;
                     setPhase(Phase.TAKE);
@@ -205,7 +204,7 @@ public final class FetchTask {
                 }
             }
             case TAKE -> {
-                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
+                AbstractContainerMenu h = Mc.screen(mc) instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
                 if (h != opened) {
                     finish(taken > 0, taken > 0 ? "Kiste wurde geschlossen" : "Kiste wurde geschlossen, nichts genommen");
                     return;
@@ -229,7 +228,7 @@ public final class FetchTask {
                     return;
                 }
                 ItemStack before = next.getItem().copy();
-                mc.gameMode.handleInventoryMouseClick(h.containerId, next.index, 0, ClickType.QUICK_MOVE, p);
+                Mc.quickMove(mc, h.containerId, next.index, p);
                 taken += before.getCount();
                 wantSlots.remove(next.getContainerSlot());
                 String iid = BuiltInRegistries.ITEM.getKey(before.getItem()).toString();
@@ -240,7 +239,7 @@ public final class FetchTask {
                     // took a shulker containing the wanted item
                     ItemContainerContents inner = before.get(DataComponents.CONTAINER);
                     if (inner != null) {
-                        for (ItemStack c : inner.nonEmptyItems()) {
+                        for (ItemStack c : Mc.items(inner)) {
                             String cid = BuiltInRegistries.ITEM.getKey(c.getItem()).toString();
                             if (wantItems.containsKey(cid)) {
                                 wantItems.put(cid, wantItems.get(cid) - c.getCount());
@@ -289,7 +288,7 @@ public final class FetchTask {
             }
             storeSlots.remove(s.getContainerSlot());
             int n = s.getItem().getCount();
-            mc.gameMode.handleInventoryMouseClick(h.containerId, s.index, 0, ClickType.QUICK_MOVE, p);
+            Mc.quickMove(mc, h.containerId, s.index, p);
             taken += n;
             storeLast = s;
             storeLastId = iid;
@@ -320,7 +319,7 @@ public final class FetchTask {
             if (shulkerFallback == null && !noShulker) {
                 ItemContainerContents inner = s.getItem().get(DataComponents.CONTAINER);
                 if (inner != null) {
-                    for (ItemStack c : inner.nonEmptyItems()) {
+                    for (ItemStack c : Mc.items(inner)) {
                         Integer l = wantItems.get(BuiltInRegistries.ITEM.getKey(c.getItem()).toString());
                         if (l != null && l > 0) {
                             shulkerFallback = s;
@@ -358,7 +357,7 @@ public final class FetchTask {
 
     private static void actionbar(Minecraft mc, String s, ChatFormatting f) {
         if (mc.player != null) {
-            mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr(s)).withStyle(f), true);
+            Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(s)).withStyle(f));
         }
     }
 
