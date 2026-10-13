@@ -728,8 +728,7 @@ async function set3d(on) {
     } catch (_) { /* Standardhoehe */ }
     $('#view3d').hidden = false;
     document.body.classList.add('mode3d');
-    view3d.setRadius(Number($('#radius3d').value));
-    view3d.setLod(LOD_BLOCKS[Number($('#lod3d').value)] ?? 0);
+    applySight(Number($('#sight3d').value));
     view3d.setFog($('#fog3d').checked);
     view3d.setHour(Number($('#hour3d').value));
     view3d.setFancy($('#fancy3d').checked);
@@ -850,29 +849,33 @@ $('#cam-close').addEventListener('click', () => {
 });
 $('#btn-3d').addEventListener('click', () => set3d(!mode3d));
 const hourText = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
-// Fernsicht-Regler: Stufe -> Bloecke (weit draussen grobe Kacheln, siehe view3d.js)
-const LOD_BLOCKS = [0, 512, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 24576, 32768, 49152, 65536];
+// Ein Regler fuer die Sichtweite: Stufe -> [Chunks mit vollen Modellen, Fernsicht in Bloecken]
+const SIGHT = [[6, 0], [8, 1024], [12, 2048], [16, 3072], [24, 4096], [32, 6144], [32, 8192], [40, 12288],
+  [48, 16384], [48, 24576], [48, 32768], [48, 49152], [48, 65536]];
+const sightBlocks = (v) => Math.max(SIGHT[v][0] * 16, SIGHT[v][1]);
+function applySight(v) {
+  if (!view3d) return;
+  view3d.setRadius(SIGHT[v][0]);
+  view3d.setLod(SIGHT[v][1]);
+}
 const sliderText = {
-  radius3d: (v) => `${v}`,
-  lod3d: (v) => (v > 0 ? `${fmt(LOD_BLOCKS[v])} Blöcke` : 'aus'),
+  sight3d: (v) => `${fmt(sightBlocks(v))} Blöcke`,
   hour3d: hourText,
 };
-// alter Fernsicht-Wert (Regler in 512er-Schritten) auf die neue Tabelle umrechnen
-if (!prefs.lod3dv) {
-  if (prefs.lod3d !== undefined) {
-    const blocks = prefs.lod3d * 512;
-    savePref('lod3d', LOD_BLOCKS.reduce((best, b, i) => (Math.abs(b - blocks) < Math.abs(LOD_BLOCKS[best] - blocks) ? i : best), 0));
-  }
-  savePref('lod3dv', 2);
+// fruehere zwei Regler (Chunks, Fernsicht) auf den einen umrechnen
+if (prefs.sight3d === undefined && (prefs.lod3d !== undefined || prefs.radius3d !== undefined)) {
+  const OLD = [0, 512, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 24576, 32768, 49152, 65536];
+  const blocks = prefs.lod3dv ? OLD[prefs.lod3d] ?? 4096 : (prefs.lod3d ?? 8) * 512;
+  savePref('sight3d', SIGHT.reduce((best, s, i) => (Math.abs(s[1] - blocks) < Math.abs(SIGHT[best][1] - blocks) ? i : best), 0));
 }
-for (const [id, fn] of [['radius3d', 'setRadius'], ['lod3d', 'setLod'], ['hour3d', 'setHour']]) {
+for (const [id, fn] of [['sight3d', applySight], ['hour3d', (v) => view3d && view3d.setHour(v)]]) {
   const el = $('#' + id);
   if (prefs[id] !== undefined) el.value = prefs[id];
   $(`#${id}-val`).textContent = sliderText[id](Number(el.value));
   el.addEventListener('input', () => {
     $(`#${id}-val`).textContent = sliderText[id](Number(el.value));
     savePref(id, Number(el.value));
-    if (view3d) view3d[fn](id === 'lod3d' ? LOD_BLOCKS[Number(el.value)] : Number(el.value));
+    fn(Number(el.value));
   });
 }
 $('#fancy3d').checked = !!prefs.fancy3d;

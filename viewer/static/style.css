@@ -433,7 +433,7 @@ b.warn { color: #ffcf6b; }
 .set3d input[type=range] { flex: 1; padding: 0; }
 .set3d .mono { min-width: 70px; text-align: right; color: var(--muted); }
 .set3d-checks { display: flex; gap: 14px; }
-.spawn-legend[hidden] { display: none; }
+.spawn-legend[hidden], #hour3d-wrap[hidden] { display: none; }
 .spawn-legend { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
 .spawn-legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
 .spawn-legend .sw + .sw, .spawn-legend .sw:not(:first-child) { margin-left: 8px; }
