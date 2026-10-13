@@ -1,5 +1,6 @@
 package io.github.ehnkode.webmatica;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.KeyMapping;
@@ -22,7 +23,7 @@ import net.minecraft.world.inventory.ClickType;
 //?}
 //? if >=26.3 {
 /*import net.minecraft.core.component.DataComponents;
-import net.minecraft.network.protocol.game.ServerboundSwingPacket;
+import net.minecraft.network.protocol.game.ServerboundPunchPacket;
 import net.minecraft.world.item.component.SwingAnimation;
 *///?}
 
@@ -92,7 +93,7 @@ public final class Mc {
     public static void swing(Minecraft mc, LocalPlayer p, InteractionHand hand) {
         //? if >=26.3 {
         /*p.swing(hand, p.getItemInHand(hand).getOrDefault(DataComponents.INTERACT_ANIMATION, SwingAnimation.DEFAULT), false);
-        p.connection.send(new ServerboundSwingPacket(hand));
+        p.connection.send(new ServerboundPunchPacket());
         *///?} else {
         p.swing(hand);
         //?}
@@ -113,7 +114,17 @@ public final class Mc {
         return out;
     }
 
-    public static KeyMapping registerKey(KeyMapping key) {
+    /** Registers a keyboard key binding. */
+    public static KeyMapping registerKey(String name, int key, KeyMapping.Category category) {
+        //? if >=26.3 {
+        /*KeyMapping mapping = new KeyMapping(name, InputConstants.Type.KEYBOARD, key, category);
+        *///?} else {
+        KeyMapping mapping = new KeyMapping(name, InputConstants.Type.KEYSYM, key, category);
+        //?}
+        return register(mapping);
+    }
+
+    private static KeyMapping register(KeyMapping key) {
         //? if >=26.1 {
         /*return KeyMappingHelper.registerKeyMapping(key);
         *///?} else {
