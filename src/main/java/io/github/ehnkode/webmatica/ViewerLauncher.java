@@ -2,10 +2,10 @@ package io.github.ehnkode.webmatica;
 
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 
 import java.io.File;
@@ -45,9 +45,9 @@ final class ViewerLauncher {
     }
 
     /** Client thread, on the key press. */
-    static void open(MinecraftClient mc) {
+    static void open(Minecraft mc) {
         if (busy) {
-            say(mc, "Viewer startet schon …", Formatting.YELLOW, null);
+            say(mc, "Viewer startet schon …", ChatFormatting.YELLOW, null);
             return;
         }
         busy = true;
@@ -56,7 +56,7 @@ final class ViewerLauncher {
                 run(mc);
             } catch (Throwable e) {
                 MapperClient.LOGGER.warn("[webmatica] Viewer-Start fehlgeschlagen", e);
-                say(mc, "Viewer-Start fehlgeschlagen: " + e.getMessage(), Formatting.RED, null);
+                say(mc, "Viewer-Start fehlgeschlagen: " + e.getMessage(), ChatFormatting.RED, null);
             } finally {
                 busy = false;
             }
@@ -74,34 +74,34 @@ final class ViewerLauncher {
         }
     }
 
-    private static void run(MinecraftClient mc) throws IOException, InterruptedException {
+    private static void run(Minecraft mc) throws IOException, InterruptedException {
         if (listening()) {
             browse(mc);
             return;
         }
-        Path app = mc.runDirectory.toPath().toAbsolutePath().normalize().resolve(BUNDLE);
+        Path app = mc.gameDirectory.toPath().toAbsolutePath().normalize().resolve(BUNDLE);
         unpack(app);
 
         List<String> py = findPython();
         if (py == null) {
             say(mc, "Für den Viewer fehlt Python 3.10 oder neuer. Hier herunterladen, beim Installieren „Add python.exe to PATH“ anhaken:",
-                    Formatting.RED, null);
-            say(mc, PYTHON_URL, Formatting.AQUA, PYTHON_URL);
+                    ChatFormatting.RED, null);
+            say(mc, PYTHON_URL, ChatFormatting.AQUA, PYTHON_URL);
             return;
         }
         Path log = app.resolve("viewer.log");
         if (exec(app, log, py, "-c", "import numpy, PIL") != 0) {
-            say(mc, "Viewer: installiere numpy und Pillow …", Formatting.YELLOW, null);
+            say(mc, "Viewer: installiere numpy und Pillow …", ChatFormatting.YELLOW, null);
             if (exec(app, log, py, "-m", "pip", "install", "--user", "-r", "requirements.txt") != 0) {
-                say(mc, "Viewer: numpy und Pillow ließen sich nicht installieren, Details in " + log, Formatting.RED, null);
+                say(mc, "Viewer: numpy und Pillow ließen sich nicht installieren, Details in " + log, ChatFormatting.RED, null);
                 return;
             }
         }
 
         if (!Files.isRegularFile(app.resolve("viewer/assets/blocks.png"))) {
-            say(mc, "Viewer: erster Start, Blockbilder werden erzeugt (etwa eine Minute) …", Formatting.YELLOW, null);
+            say(mc, "Viewer: erster Start, Blockbilder werden erzeugt (etwa eine Minute) …", ChatFormatting.YELLOW, null);
         } else {
-            say(mc, "Viewer startet …", Formatting.YELLOW, null);
+            say(mc, "Viewer startet …", ChatFormatting.YELLOW, null);
         }
         List<String> cmd = new ArrayList<>(py);
         cmd.add("-m");
@@ -119,12 +119,12 @@ final class ViewerLauncher {
                 return;
             }
             if (!process.isAlive()) {
-                say(mc, "Viewer wurde beendet, Details in " + log, Formatting.RED, null);
+                say(mc, "Viewer wurde beendet, Details in " + log, ChatFormatting.RED, null);
                 return;
             }
             Thread.sleep(1000);
         }
-        say(mc, "Viewer antwortet nicht, Details in " + log, Formatting.RED, null);
+        say(mc, "Viewer antwortet nicht, Details in " + log, ChatFormatting.RED, null);
     }
 
     /** Copies the bundled viewer next to the game, once per mod version. Built block images stay. */
@@ -167,7 +167,7 @@ final class ViewerLauncher {
 
     /** The first Python 3.10+ found, as a command line. The Windows Store stub fails the check. */
     private static List<String> findPython() {
-        boolean win = Util.getOperatingSystem() == Util.OperatingSystem.WINDOWS;
+        boolean win = Util.getPlatform() == Util.OS.WINDOWS;
         List<List<String>> cands = win
                 ? List.of(List.of("py", "-3"), List.of("python"), List.of("python3"))
                 : List.of(List.of("python3"), List.of("python"));
@@ -211,21 +211,21 @@ final class ViewerLauncher {
         }
     }
 
-    private static void browse(MinecraftClient mc) {
-        Util.getOperatingSystem().open(URI.create(URL));
-        say(mc, "Viewer offen: " + URL, Formatting.GREEN, URL);
+    private static void browse(Minecraft mc) {
+        Util.getPlatform().openUri(URI.create(URL));
+        say(mc, "Viewer offen: " + URL, ChatFormatting.GREEN, URL);
     }
 
-    private static void say(MinecraftClient mc, String msg, Formatting f, String link) {
+    private static void say(Minecraft mc, String msg, ChatFormatting f, String link) {
         mc.execute(() -> {
             if (mc.player == null) {
                 return;
             }
-            Text t = Text.literal("[Webmatica] " + (link != null && msg.equals(link) ? msg : Lang.tr(msg))).formatted(f);
+            Component t = Component.literal("[Webmatica] " + (link != null && msg.equals(link) ? msg : Lang.tr(msg))).withStyle(f);
             if (link != null) {
-                t = t.copy().styled(s -> s.withClickEvent(new ClickEvent.OpenUrl(URI.create(link))).withUnderline(true));
+                t = t.copy().withStyle(s -> s.withClickEvent(new ClickEvent.OpenUrl(URI.create(link))).withUnderlined(true));
             }
-            mc.player.sendMessage(t, false);
+            mc.player.displayClientMessage(t, false);
         });
     }
 }

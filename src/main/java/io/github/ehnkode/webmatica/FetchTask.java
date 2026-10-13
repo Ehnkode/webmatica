@@ -2,31 +2,30 @@ package io.github.ehnkode.webmatica;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ContainerComponent;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * "Fetch" from the web page: Baritone walks to the chest, the mod opens it and
@@ -63,7 +62,7 @@ public final class FetchTask {
     private int taken;
     private int openTries;
     private boolean noShulker;   // auto-build: Baritone can't build from shulkers
-    private ScreenHandler opened;
+    private AbstractContainerMenu opened;
     private final List<String> notes = new ArrayList<>();
 
     public boolean busy() {
@@ -104,7 +103,7 @@ public final class FetchTask {
         taken = 0;
         openTries = 0;
         opened = null;
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && near(mc.player)) {
             setPhase(Phase.OPEN);
         } else {
@@ -112,7 +111,7 @@ public final class FetchTask {
                 BaritoneSafety.walkOnly();
                 walkTo(pos);
                 setPhase(Phase.WALK);
-                actionbar(mc, "läuft zur Kiste bei " + pos.getX() + " " + pos.getY() + " " + pos.getZ(), Formatting.AQUA);
+                actionbar(mc, "läuft zur Kiste bei " + pos.getX() + " " + pos.getY() + " " + pos.getZ(), ChatFormatting.AQUA);
             } catch (ClassNotFoundException e) {
                 finish(false, "Baritone nicht gefunden");
             } catch (Throwable t) {
@@ -140,16 +139,16 @@ public final class FetchTask {
         phaseStart = System.currentTimeMillis();
     }
 
-    private boolean near(ClientPlayerEntity p) {
-        return p.getEyePos().distanceTo(Vec3d.ofCenter(pos)) <= REACH;
+    private boolean near(LocalPlayer p) {
+        return p.getEyePosition().distanceTo(Vec3.atCenterOf(pos)) <= REACH;
     }
 
-    public void tick(MinecraftClient mc) {
+    public void tick(Minecraft mc) {
         if (phase == Phase.IDLE) {
             return;
         }
-        ClientPlayerEntity p = mc.player;
-        if (p == null || mc.world == null || mc.interactionManager == null) {
+        LocalPlayer p = mc.player;
+        if (p == null || mc.level == null || mc.gameMode == null) {
             finish(false, "nicht mehr im Spiel");
             return;
         }
@@ -188,8 +187,8 @@ public final class FetchTask {
                 }
             }
             case OPEN -> {
-                ScreenHandler h = mc.currentScreen instanceof HandledScreen<?> hs ? hs.getScreenHandler() : null;
-                if (h != null && h != p.playerScreenHandler) {
+                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
+                if (h != null && h != p.inventoryMenu) {
                     opened = h;
                     setPhase(Phase.TAKE);
                     return;
@@ -199,14 +198,14 @@ public final class FetchTask {
                     return;
                 }
                 if (tick % 20 == 1) {
-                    Vec3d c = Vec3d.ofCenter(pos);
-                    Direction side = Direction.getFacing(p.getEyePos().x - c.x, p.getEyePos().y - c.y, p.getEyePos().z - c.z);
-                    BlockHitResult hit = new BlockHitResult(c.add(side.getOffsetX() * 0.5, side.getOffsetY() * 0.5, side.getOffsetZ() * 0.5), side, pos, false);
-                    mc.interactionManager.interactBlock(p, Hand.MAIN_HAND, hit);
+                    Vec3 c = Vec3.atCenterOf(pos);
+                    Direction side = Direction.getApproximateNearest(p.getEyePosition().x - c.x, p.getEyePosition().y - c.y, p.getEyePosition().z - c.z);
+                    BlockHitResult hit = new BlockHitResult(c.add(side.getStepX() * 0.5, side.getStepY() * 0.5, side.getStepZ() * 0.5), side, pos, false);
+                    mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND, hit);
                 }
             }
             case TAKE -> {
-                ScreenHandler h = mc.currentScreen instanceof HandledScreen<?> hs ? hs.getScreenHandler() : null;
+                AbstractContainerMenu h = mc.screen instanceof AbstractContainerScreen<?> hs ? hs.getMenu() : null;
                 if (h != opened) {
                     finish(taken > 0, taken > 0 ? "Kiste wurde geschlossen" : "Kiste wurde geschlossen, nichts genommen");
                     return;
@@ -220,29 +219,29 @@ public final class FetchTask {
                 }
                 Slot next = nextSlot(h);
                 if (next == null) {
-                    p.closeHandledScreen();
+                    p.closeContainer();
                     finish(true, null);
                     return;
                 }
-                if (p.getInventory().getEmptySlot() < 0 && !fitsSomewhere(p, next.getStack())) {
-                    p.closeHandledScreen();
+                if (p.getInventory().getFreeSlot() < 0 && !fitsSomewhere(p, next.getItem())) {
+                    p.closeContainer();
                     finish(taken > 0, "Inventar voll");
                     return;
                 }
-                ItemStack before = next.getStack().copy();
-                mc.interactionManager.clickSlot(h.syncId, next.id, 0, SlotActionType.QUICK_MOVE, p);
+                ItemStack before = next.getItem().copy();
+                mc.gameMode.handleInventoryMouseClick(h.containerId, next.index, 0, ClickType.QUICK_MOVE, p);
                 taken += before.getCount();
-                wantSlots.remove(next.getIndex());
-                String iid = Registries.ITEM.getId(before.getItem()).toString();
+                wantSlots.remove(next.getContainerSlot());
+                String iid = BuiltInRegistries.ITEM.getKey(before.getItem()).toString();
                 Integer left = wantItems.get(iid);
                 if (left != null) {
                     wantItems.put(iid, left - before.getCount());
                 } else {
                     // took a shulker containing the wanted item
-                    ContainerComponent inner = before.get(DataComponentTypes.CONTAINER);
+                    ItemContainerContents inner = before.get(DataComponents.CONTAINER);
                     if (inner != null) {
-                        for (ItemStack c : inner.iterateNonEmpty()) {
-                            String cid = Registries.ITEM.getId(c.getItem()).toString();
+                        for (ItemStack c : inner.nonEmptyItems()) {
+                            String cid = BuiltInRegistries.ITEM.getKey(c.getItem()).toString();
                             if (wantItems.containsKey(cid)) {
                                 wantItems.put(cid, wantItems.get(cid) - c.getCount());
                             }
@@ -250,7 +249,7 @@ public final class FetchTask {
                     }
                 }
                 if (age > 60_000L) {
-                    p.closeHandledScreen();
+                    p.closeContainer();
                     finish(taken > 0, "Zeit abgelaufen");
                 }
             }
@@ -259,11 +258,11 @@ public final class FetchTask {
         }
     }
 
-    private static boolean fitsSomewhere(ClientPlayerEntity p, ItemStack st) {
-        PlayerInventory inv = p.getInventory();
-        for (int i = 0; i < PlayerInventory.MAIN_SIZE; i++) {
-            ItemStack s = inv.getStack(i);
-            if (ItemStack.areItemsAndComponentsEqual(s, st) && s.getCount() < s.getMaxCount()) {
+    private static boolean fitsSomewhere(LocalPlayer p, ItemStack st) {
+        Inventory inv = p.getInventory();
+        for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
+            ItemStack s = inv.getItem(i);
+            if (ItemStack.isSameItemSameComponents(s, st) && s.getCount() < s.getMaxStackSize()) {
                 return true;
             }
         }
@@ -271,58 +270,58 @@ public final class FetchTask {
     }
 
     /** Storing: one stack per call from the inventory into the chest. */
-    private void storeStep(MinecraftClient mc, ClientPlayerEntity p, ScreenHandler h) {
-        if (storeLast != null && storeLast.hasStack()
-                && Registries.ITEM.getId(storeLast.getStack().getItem()).toString().equals(storeLastId)) {
-            p.closeHandledScreen();
+    private void storeStep(Minecraft mc, LocalPlayer p, AbstractContainerMenu h) {
+        if (storeLast != null && storeLast.hasItem()
+                && BuiltInRegistries.ITEM.getKey(storeLast.getItem().getItem()).toString().equals(storeLastId)) {
+            p.closeContainer();
             finish(taken > 0, "Kiste voll");
             return;
         }
         storeLast = null;
         for (Slot s : h.slots) {
-            if (!(s.inventory instanceof PlayerInventory) || !s.hasStack()) {
+            if (!(s.container instanceof Inventory) || !s.hasItem()) {
                 continue;
             }
-            String want = storeSlots.get(s.getIndex());
-            String iid = Registries.ITEM.getId(s.getStack().getItem()).toString();
+            String want = storeSlots.get(s.getContainerSlot());
+            String iid = BuiltInRegistries.ITEM.getKey(s.getItem().getItem()).toString();
             if (want == null || !want.equals(iid)) {
                 continue;
             }
-            storeSlots.remove(s.getIndex());
-            int n = s.getStack().getCount();
-            mc.interactionManager.clickSlot(h.syncId, s.id, 0, SlotActionType.QUICK_MOVE, p);
+            storeSlots.remove(s.getContainerSlot());
+            int n = s.getItem().getCount();
+            mc.gameMode.handleInventoryMouseClick(h.containerId, s.index, 0, ClickType.QUICK_MOVE, p);
             taken += n;
             storeLast = s;
             storeLastId = iid;
             return;
         }
-        p.closeHandledScreen();
+        p.closeContainer();
         finish(true, null);
     }
 
     /** Next chest slot to take. */
-    private Slot nextSlot(ScreenHandler h) {
+    private Slot nextSlot(AbstractContainerMenu h) {
         Slot shulkerFallback = null;
         for (Slot s : h.slots) {
-            if (s.inventory instanceof PlayerInventory || !s.hasStack()) {
+            if (s.container instanceof Inventory || !s.hasItem()) {
                 continue;
             }
-            if (wantSlots.contains(s.getIndex())) {
+            if (wantSlots.contains(s.getContainerSlot())) {
                 return s;
             }
             if (wantItems.isEmpty()) {
                 continue;
             }
-            String iid = Registries.ITEM.getId(s.getStack().getItem()).toString();
+            String iid = BuiltInRegistries.ITEM.getKey(s.getItem().getItem()).toString();
             Integer left = wantItems.get(iid);
             if (left != null && left > 0) {
                 return s;
             }
             if (shulkerFallback == null && !noShulker) {
-                ContainerComponent inner = s.getStack().get(DataComponentTypes.CONTAINER);
+                ItemContainerContents inner = s.getItem().get(DataComponents.CONTAINER);
                 if (inner != null) {
-                    for (ItemStack c : inner.iterateNonEmpty()) {
-                        Integer l = wantItems.get(Registries.ITEM.getId(c.getItem()).toString());
+                    for (ItemStack c : inner.nonEmptyItems()) {
+                        Integer l = wantItems.get(BuiltInRegistries.ITEM.getKey(c.getItem()).toString());
                         if (l != null && l > 0) {
                             shulkerFallback = s;
                             break;
@@ -335,7 +334,7 @@ public final class FetchTask {
     }
 
     private void finish(boolean ok, String why) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         StringBuilder msg = new StringBuilder();
         String verb = store ? "eingelagert" : "genommen";
         msg.append(taken > 0 ? taken + " Items " + verb : "nichts " + verb);
@@ -350,16 +349,16 @@ public final class FetchTask {
             msg.append(" (").append(why).append(")");
         }
         String what = store ? "Einlagern: " : "Holen: ";
-        actionbar(mc, what + msg, ok ? Formatting.GREEN : Formatting.RED);
+        actionbar(mc, what + msg, ok ? ChatFormatting.GREEN : ChatFormatting.RED);
         BaritoneBridge.report(id, ok, what + msg);
         phase = Phase.IDLE;
         opened = null;
         BaritoneSafety.restore();
     }
 
-    private static void actionbar(MinecraftClient mc, String s, Formatting f) {
+    private static void actionbar(Minecraft mc, String s, ChatFormatting f) {
         if (mc.player != null) {
-            mc.player.sendMessage(Text.literal("[Webmatica] " + Lang.tr(s)).formatted(f), true);
+            mc.player.displayClientMessage(Component.literal("[Webmatica] " + Lang.tr(s)).withStyle(f), true);
         }
     }
 
