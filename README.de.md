@@ -5,40 +5,38 @@
 Deine Minecraft-Welt im Browser: Karte, 3D-Ansicht, Kisten und Schematics, dazu Litematica und
 Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
-![Schematic in 3D mit der Liste der fehlenden Items](docs/3d.jpg)
+![Ein Haus im Schematic-Editor bauen](docs/build.gif)
 
 - **Mod** (Fabric 1.21.11, nur Client): speichert jeden Chunk, den du siehst, als normale
   Regiondateien und merkt sich Kisteninhalte. Schickt nichts an den Server oder in den Chat.
 - **Viewer** (Python, läuft lokal unter <http://127.0.0.1:8770>): alles Folgende im Browser.
-  Auf Deutsch und Englisch (Umschalter oben links).
+  Auf Deutsch und Englisch (Umschalter unter Optionen).
 
 ## Funktionen
 
 | | |
 |---|---|
-| ![Karte](docs/map.jpg) | ![Schematic-Editor](docs/editor.jpg) |
-| ![Verfolger-Kamera](docs/follow.jpg) | |
+| ![Wüstendorf in 3D](docs/village.de.jpg) | ![Berg mit Fernsicht](docs/mountain.de.jpg) |
+| ![Rechtsklick auf die Karte, Baritone läuft hin](docs/goto.gif) | ![Kiste anklicken, Inhalt sehen, alle Kisten durchsuchen](docs/storage.gif) |
+| ![Schematic in der Welt platzieren und verschieben](docs/place.gif) | ![Mit einem Klick von der Karte in 3D](docs/2d-3d.gif) |
+| ![Schematic Schicht für Schicht aufschneiden](docs/editor-cut.gif) | ![Bereich mit Baritone ebnen](docs/automation.de.jpg) |
 
-- **Karte und 3D** von allem, was du gesehen hast, mit echten Blockmodellen, Live-Position und Spur.
-- **Verfolger-Kamera:** in 3D dich oder einen anderen Spieler anklicken und die Kamera auf ihn
-  festsetzen, von hinten, aus der Ich-Sicht oder von oben.
+- **Karte und 3D** von allem, was du gesehen hast, mit echten Blockmodellen, weichem Licht,
+  Schatten und Fernsicht bis 65.000 Blöcke. Live-Position, Spur, Verfolger-Kamera und Mob-Spawns.
+- **Schematic-Editor:** Blöcke setzen, abbauen und füllen, alle Blöcke einer Sorte ersetzen oder
+  löschen, kopieren, verschieben, drehen, mit Rückgängig. Jeder Bereich deiner Welt wird mit zwei
+  Klicks zur Schematic.
 - **Schematics:** `.litematic`, `.schem` oder `.nbt` laden, auf der Karte platzieren, mit einem
   Klick an Litematica schicken und sehen, welche Items noch fehlen. Inventar und Kisten sind schon
   abgezogen.
-- **Schematic-Editor:** Blöcke setzen, abbauen und füllen, alle Blöcke einer Sorte ersetzen oder
-  löschen, kopieren, verschieben, drehen, mit Rückgängig. Jeder Bereich deiner Welt kann zur
-  Schematic werden.
-- **Kisten:** Jede Kiste, die du öffnest, wird gemerkt, auch der Inhalt von Shulkern. Such ein
-  Item über alle Kisten hinweg, dann läuft Baritone auf Knopfdruck hin oder holt genau die Stacks,
-  die du ausgewählt hast.
-- **Goto:** Rechtsklick auf die Karte, „Hierhin laufen“, und Baritone läuft hin.
-- **Autobau:** holt fehlendes Material aus deinen Kisten, baut mit Baritone Schicht für Schicht,
-  holt Nachschub und bringt Reste zurück. Hält an, wenn ein Spieler in die Nähe kommt.
-  Am Ende korrigiert er falsche Blöcke, eine Warteschlange baut mehrere Schematics nacheinander.
-- **Farmen:** Bereich auf der Karte wählen, Blöcke und Menge angeben, Baritone baut ab und sammelt
-  ein. Volles Inventar kommt in eine gewählte Kiste oder eine, die er selbst aufstellt.
-- **Außerdem:** Wegpunkte, Schilder, Stash-Finder, Zeitleiste der Änderungen, Radar für Spieler
-  in der Nähe.
+- **Automation mit Baritone:** bestimmte Blöcke farmen, einen Bereich abbauen, füllen oder ebnen
+  oder eine ganze Schematic bauen. Material kommt aus deinen Kisten, Reste gehen zurück, und er hält
+  an, wenn ein Spieler in die Nähe kommt. Eine Warteschlange baut mehrere Schematics nacheinander.
+- **Lager:** Jede Kiste, die du öffnest, wird gemerkt, auch der Inhalt von Shulkern. Such ein Item
+  über alle Kisten, lass Baritone genau die gewählten Stacks holen oder dein Inventar dorthin
+  einlagern, wo das Item schon liegt. Mit Stash-Finder.
+- **Außerdem:** Wegpunkte, Schilder, Zeitleiste der Änderungen, Radar für Spieler in der Nähe, Suche
+  nach Koordinaten oder Wegpunkten.
 
 ## Voraussetzungen
 
