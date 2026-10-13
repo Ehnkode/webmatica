@@ -128,6 +128,11 @@ def _tag_of(v) -> int:
         return TAG_LIST
     if isinstance(v, (bytes, bytearray)):
         return TAG_BYTE_ARRAY
+    if isinstance(v, np.ndarray):
+        # arrays from an untyped read, e.g. a player head's UUID in a loaded schematic
+        if v.dtype.itemsize == 1:
+            return TAG_BYTE_ARRAY
+        return TAG_INT_ARRAY if v.dtype.itemsize == 4 else TAG_LONG_ARRAY
     raise TypeError(f"kein NBT-Typ fuer {type(v)}")
 
 
@@ -154,14 +159,16 @@ def _w_val(out: bytearray, tag: int, v):
             _w_val(out, t, x)
         out.append(TAG_END)
     elif tag == TAG_LIST:
-        et = _tag_of(v[0]) if v else TAG_END
+        et = _tag_of(v[0]) if len(v) else TAG_END
+        if et == TAG_INT and any(_tag_of(x) == TAG_LONG for x in v):
+            et = TAG_LONG
         out.append(et)
         out += struct.pack(">i", len(v))
         for x in v:
             _w_val(out, et, x)
     elif tag == TAG_BYTE_ARRAY:
         out += struct.pack(">i", len(v))
-        out += bytes(v)
+        out += v.tobytes() if isinstance(v, np.ndarray) else bytes(v)
     elif tag == TAG_INT_ARRAY:
         out += struct.pack(f">i{len(v)}i", len(v), *v)
     elif tag == TAG_LONG_ARRAY:
