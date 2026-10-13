@@ -5,37 +5,37 @@
 Your Minecraft world in the browser: map, 3D view, chests and schematics, plus remote control for
 Litematica and Baritone. Works on any server or Singleplayer.
 
-![Schematic in 3D with the list of missing items](docs/3d.jpg)
+![Building a house in the schematic editor](docs/build.gif)
 
 - **Mod** (Fabric 1.21.11, client only): saves every chunk you see as normal region files and
   remembers chest contents. Sends nothing to the server or the chat.
 - **Viewer** (Python, runs locally at <http://127.0.0.1:8770>): everything below, in your browser.
-  English and German (switch at the top left).
+  English and German (switch under Options).
 
 ## Features
 
 | | |
 |---|---|
-| ![Map](docs/map.jpg) | ![Schematic editor](docs/editor.jpg) |
-| ![Follow camera](docs/follow.jpg) | |
+| ![Desert village in 3D](docs/village.jpg) | ![Mountain with far view](docs/mountain.jpg) |
+| ![Right-click the map and Baritone walks there](docs/goto.gif) | ![Click a chest to see its contents, search all chests](docs/storage.gif) |
+| ![Place a schematic in the world and move it](docs/place.gif) | ![From the map to 3D in one click](docs/2d-3d.gif) |
+| ![Cutting through a schematic layer by layer](docs/editor-cut.gif) | ![Flatten an area with Baritone](docs/automation.jpg) |
 
-- **Map and 3D** of everything you have seen, with real block models, live position and trail.
-- **Follow camera:** click yourself or another player in 3D and lock the camera on them, from
-  behind, first person or from above.
+- **Map and 3D** of everything you have seen, with real block models, smooth light, shadows and a
+  far view of up to 65,000 blocks. Live position, trail, follow camera and mob spawn spots.
+- **Schematic editor:** place, break and fill blocks, replace or delete every block of a type, copy,
+  move and rotate, with undo. Any area of your world becomes a schematic with two clicks.
 - **Schematics:** load `.litematic`, `.schem` or `.nbt`, place them on the map, send them to
   Litematica with one click, and see which items are still missing. Your inventory and chests are
   already subtracted.
-- **Schematic editor:** place, break and fill blocks, replace or delete every block of a type, copy,
-  move and rotate, with undo. Any area of your world can become a schematic.
-- **Chests:** every chest you open is remembered, shulker contents included. Search for an item
-  across all chests, then let Baritone walk to the chest or fetch exactly the stacks you picked.
-- **Goto:** right-click the map and pick "Walk here". Baritone walks there.
-- **Auto build:** fetches the missing materials from your chests, builds with Baritone layer by
-  layer, refills when it runs out and brings leftovers back. It pauses when a player comes close.
-  At the end it fixes wrong blocks, and a queue builds several schematics in a row.
-- **Farming:** pick an area on the map, choose blocks and amounts, and Baritone mines and picks
-  them up. A full inventory goes into a chest you choose or one it places itself.
-- **More:** waypoints, signs, stash finder, timeline of what changed, radar for nearby players.
+- **Automation with Baritone:** farm chosen blocks, clear, fill or flatten an area, or build a whole
+  schematic. Materials come from your chests, leftovers go back, and it pauses when a player comes
+  close. A queue builds several schematics in a row.
+- **Storage:** every chest you open is remembered, shulker contents included. Search an item across
+  all chests, let Baritone fetch exactly the stacks you picked, or store your inventory where each
+  item already is. Stash finder included.
+- **More:** waypoints, signs, a timeline of what changed, radar for nearby players, search for
+  coordinates or waypoints.
 
 ## Requirements
 
