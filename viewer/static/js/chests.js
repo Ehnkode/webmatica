@@ -107,6 +107,9 @@ const prettyItem = (it) => chestKey(it).replace(/_/g, ' ');
     itemsMeta = await api('/api/items.json');
     document.documentElement.style.setProperty('--items-url', `url(/api/items.png?v=${Object.keys(itemsMeta.index).length})`);
     renderChests();
+    fillSwitchIcons();
+    drawChests();
+    if (typeof drawMarkers === 'function') drawMarkers();
   } catch (_) { itemsMeta = null; }
 })();
 
@@ -118,6 +121,16 @@ function itemIcon(id, size = 32) {
   const x = (i % itemsMeta.cols) * size, y = Math.floor(i / itemsMeta.cols) * size;
   return `<span class="ico" style="width:${size}px;height:${size}px;background-position:-${x}px -${y}px;background-size:${itemsMeta.cols * size}px ${itemsMeta.rows * size}px"></span>`;
 }
+
+/* Map pin: item picture in a small frame (ring colour = kind), falls back to a dot without item pictures */
+const pinIcons = {};
+function itemPin(id, ring, size = 18, cls = '') {
+  const key = [id, ring, size, cls, !!itemsMeta].join('|');
+  return pinIcons[key] || (pinIcons[key] = L.divIcon({ className: 'item-pin-wrap', iconSize: [size + 6, size + 6], iconAnchor: [(size + 6) / 2, (size + 6) / 2],
+    html: `<span class="item-pin ${cls}" style="--c:${ring}">${itemIcon(id, size)}</span>` }));
+}
+// Icons next to the map switches (once the item pictures are loaded)
+function fillSwitchIcons() { $$('[data-icon]').forEach((e) => { e.innerHTML = itemIcon(e.dataset.icon, 16); }); }
 
 async function loadContainers() {
   if (!state.server) return;
@@ -288,12 +301,12 @@ function drawChests() {
   for (const c of chests.list) {
     if (c.dim !== state.dim) continue;
     const n = chestItems(c).reduce((a, e) => a + e[1], 0);
-    L.circleMarker(toLatLng(c.x + 0.5, c.z + 0.5), { radius: 5, color: '#c48a3a', weight: 2, fillColor: '#f0b35a', fillOpacity: 0.9 })
+    L.marker(toLatLng(c.x + 0.5, c.z + 0.5), { icon: itemPin(c.block || 'minecraft:chest', '#f0b35a'), riseOnHover: true, keyboard: false })
       .bindTooltip(`${esc(c.title || chestWhere(c))}<br>${fmt(n)} Items · ${agoText(c.t)}`)
       .on('click', () => openInv(c)).addTo(chests.layer);
   }
   for (const w of unopenedChests()) {
-    L.circleMarker(toLatLng(w.x + 0.5, w.z + 0.5), { radius: 4, color: '#8a8f98', weight: 1.5, fillColor: '#3a3f47', fillOpacity: 0.6 })
+    L.marker(toLatLng(w.x + 0.5, w.z + 0.5), { icon: itemPin(w.block || 'minecraft:chest', '#8a8f98', 14, 'dim'), keyboard: false })
       .bindTooltip(`${esc(prettyItem(w.block))} bei ${w.x} ${w.y} ${w.z}<br>noch nie geöffnet`).addTo(chests.layer);
   }
   // Opened by someone else (purple ring)

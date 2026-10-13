@@ -186,8 +186,9 @@ function drawMarkers() {
   const filter = $('#sign-filter').value.trim().toLowerCase();
   const signs = state.markers.signs.filter((s) => !filter || s.lines.join(' ').toLowerCase().includes(filter));
   if ($('#show-signs').checked) {
-    const icon = L.divIcon({ className: '', html: '<div class="sign-pin"></div>', iconSize: [12, 12], iconAnchor: [6, 6] });
     for (const s of signs) {
+      const icon = itemsMeta ? itemPin(s.block || 'minecraft:oak_sign', '#c9a36b', 16)
+        : L.divIcon({ className: '', html: '<div class="sign-pin"></div>', iconSize: [12, 12], iconAnchor: [6, 6] });
       L.marker(toLatLng(s.x + 0.5, s.z + 0.5), { icon })
         .bindPopup(`<div class="sign-text">${esc(s.lines.join('\n'))}</div><div class="muted mono">${s.x} ${s.y} ${s.z}</div>`)
         .addTo(overlay.signs);

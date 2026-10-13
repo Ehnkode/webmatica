@@ -477,4 +477,27 @@ $('#full3d').addEventListener('change', (e) => view3d && view3d.setFull(e.target
 $('#spawn3d').addEventListener('change', (e) => {
   $('#spawn3d-legend').hidden = !e.target.checked;
   if (view3d) view3d.setSpawn(e.target.checked);
+  spawn2dSync();
 });
+
+/* 2D: one overlay image per region (zoom 0 native, shown from zoom -1 on). */
+let spawn2d = null;
+function spawn2dSync() {
+  if (spawn2d) { map.removeLayer(spawn2d); spawn2d = null; }
+  if (!$('#spawn3d').checked || !state.server || !state.dim) return;
+  const m = /^surface(-?\d+)$/.exec(state.layer || '');
+  const q = m ? `?ymax=${m[1]}` : '';
+  const srv = encodeURIComponent(state.server), dim = encodeURIComponent(state.dim);
+  const Layer = L.GridLayer.extend({
+    createTile(c, done) {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.className = 'spawn-tile';
+      img.onload = img.onerror = () => done(null, img);
+      img.src = `/api/spawn-tile/${srv}/${dim}/${c.x}/${c.y}.png${q}`;
+      return img;
+    },
+  });
+  spawn2d = new Layer({ tileSize: 512, minZoom: -1, maxZoom: MAX_ZOOM, maxNativeZoom: 0, minNativeZoom: 0, opacity: 0.85, zIndex: 5 });
+  spawn2d.addTo(map);
+}

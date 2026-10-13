@@ -119,3 +119,130 @@ def points(ch, dim_key: str = "overworld") -> dict:
     kind = np.where((sky <= 7) | (dim_key in ("the_nether", "the_end")), 2, 1).astype(np.int32)
     out = np.stack([xs + ch.cx * 16, ys + 1 + ch.min_y, zs + ch.cz * 16, kind], 1).astype(np.int32)
     return {"light": True, "pts": out.reshape(-1).tolist()}
+
+
+def columns(ch, dim_key: str = "overworld", ymax: int | None = None) -> np.ndarray | None:
+    """For the 2D map: per column (16 × 16, [z, x]) the kind of the topmost spawn spot
+    that can be seen from above (nothing solid over it), 0 = none. None without light data.
+
+    ``ymax``: layer cut, everything above counts as open and spots above it are ignored.
+    """
+    lit = ch.light()
+    if lit is None:
+        return None
+    bl, sl = lit
+    cls = LUT.get(len(BLOCKS.names))[ch.blocks]
+    free = cls == 2
+    top = ch.blocks.shape[0]
+    if ymax is not None:
+        cut = max(0, min(top, ymax - ch.min_y + 1))
+        free[cut:] = True
+    # open[i]: everything from i upwards is free (no roof)
+    open_ = np.flip(np.cumprod(np.flip(free, 0), 0), 0).astype(bool)
+    floor = cls[:-2] == 1
+    limit = 7 if dim_key == "the_nether" else 0
+    ok = floor & free[1:-1] & free[2:] & (bl[1:-1] <= limit) & open_[1:-1]
+    if ymax is not None:
+        ok[max(0, ymax - ch.min_y):] = False
+    any_ = ok.any(0)
+    out = np.zeros((16, 16), np.uint8)
+    if not any_.any():
+        return out
+    # topmost spot per column
+    h = ok.shape[0] - 1 - np.argmax(ok[::-1], 0)
+    zs, xs = np.nonzero(any_)
+    ys = h[zs, xs]
+    sky = sl[1:-1][ys, zs, xs]
+    night_only = (sky > 7) & (dim_key not in ("the_nether", "the_end"))
+    out[zs, xs] = np.where(night_only, 1, 2)
+    return out
+
+
+def region_png(rec, dim, rx: int, rz: int, ymax: int | None = None) -> bytes | None:
+    """512 × 512 overlay (1 px per block) of a region: red = any time, orange = only at night."""
+    import io
+
+    from PIL import Image
+
+    rgba = np.zeros((512, 512, 4), np.uint8)
+    found = False
+    for lz in range(32):
+        for lx in range(32):
+            ch = rec.chunk(dim, rx * 32 + lx, rz * 32 + lz)
+            if ch is None:
+                continue
+            k = columns(ch, dim.key, ymax)
+            if k is None or not k.any():
+                continue
+            found = True
+            tile = rgba[lz * 16:lz * 16 + 16, lx * 16:lx * 16 + 16]
+            tile[k == 2] = (229, 72, 77, 200)
+            tile[k == 1] = (245, 165, 36, 110)
+    if not found:
+        return None
+    buf = io.BytesIO()
+    Image.fromarray(rgba, "RGBA").save(buf, "PNG", optimize=False, compress_level=3)
+    return buf.getvalue()
+
+
+#: Torches light up to 13 blocks (Manhattan distance); a bit less because walls swallow light
+TORCH_REACH = 11
+# placed light sources: right after placing, the recording may still have the old light
+_LIGHTS = re.compile(r"^minecraft:(.*torch|.*lantern)$")
+
+
+def torch_plan(rec, dim, area: dict, near: tuple | None = None) -> dict:
+    """Where torches would have to go so that no monster spawns in the area any more.
+
+    Greedy: from the lowest uncovered spawn spot, one torch on it, everything within
+    reach counts as lit. Light sources already in the area (even when the recording's
+    light is not updated yet) count too. ``area`` as in farm (inclusive bounds).
+    -> {"spots": n, "torches": [(x, y, z), ...], "chunks": {(cx, cz): torches}}
+    """
+    pts, lights = [], []
+    for cz in range(area["z0"] >> 4, (area["z1"] >> 4) + 1):
+        for cx in range(area["x0"] >> 4, (area["x1"] >> 4) + 1):
+            ch = rec.chunk(dim, cx, cz)
+            if ch is None:
+                continue
+            p = np.array(points(ch, dim.key)["pts"], np.int32).reshape(-1, 4)
+            if len(p):
+                m = ((p[:, 0] >= area["x0"]) & (p[:, 0] <= area["x1"]) & (p[:, 2] >= area["z0"]) & (p[:, 2] <= area["z1"])
+                     & (p[:, 1] >= area["y0"]) & (p[:, 1] <= area["y1"]))
+                pts.append(p[m, :3])
+            lut = _light_lut()
+            hit = lut[np.minimum(ch.blocks, len(lut) - 1)]
+            ys, zs, xs = np.nonzero(hit)
+            if len(ys):
+                lights.append(np.stack([xs + cx * 16, ys + ch.min_y, zs + cz * 16], 1))
+    p = np.concatenate(pts) if pts else np.zeros((0, 3), np.int32)
+    out = {"spots": int(len(p)), "torches": [], "chunks": {}}
+    if not len(p):
+        return out
+    lit = np.zeros(len(p), bool)
+    for q in (np.concatenate(lights)[:4096] if lights else ()):
+        lit |= np.abs(p - q).sum(1) <= TORCH_REACH
+    order = np.lexsort((p[:, 2], p[:, 0], p[:, 1]))
+    torches = []
+    for i in order:
+        if lit[i]:
+            continue
+        q = p[i]
+        lit |= np.abs(p - q).sum(1) <= TORCH_REACH
+        torches.append((int(q[0]), int(q[1]), int(q[2])))
+    if near is not None:
+        torches.sort(key=lambda t: (t[0] - near[0]) ** 2 + (t[2] - near[2]) ** 2 + 4 * (t[1] - near[1]) ** 2)
+    for x, _y, z in torches:
+        out["chunks"][(x >> 4, z >> 4)] = out["chunks"].get((x >> 4, z >> 4), 0) + 1
+    out["torches"] = torches
+    return out
+
+
+_light_cache = [np.zeros(0, bool)]
+
+
+def _light_lut() -> np.ndarray:
+    n = len(BLOCKS.names)
+    if len(_light_cache[0]) < n:
+        _light_cache[0] = np.array([bool(_LIGHTS.match(base_name(s))) for s in BLOCKS.names] + [False], bool)
+    return _light_cache[0]
