@@ -57,6 +57,7 @@ import mimetypes
 import multiprocessing
 import os
 import re
+import shutil
 import sys
 import threading
 import time
@@ -425,7 +426,7 @@ def make_handler(app: App):
                 self.end_headers()
                 if self.command != "HEAD":
                     self.wfile.write(body)
-            except (BrokenPipeError, ConnectionResetError):
+            except ConnectionError:   # also Windows "ConnectionAbortedError" when the browser cancels
                 pass
 
         def json(self, obj, code: int = 200):
@@ -1054,6 +1055,26 @@ def _bundle_version() -> str:
 VERSION = _bundle_version()
 
 
+def _reset_cache_on_update(cache: str) -> None:
+    """Tiles rendered by another viewer build may be wrong (e.g. chunks it could not read): start over."""
+    os.makedirs(cache, exist_ok=True)
+    stamp = os.path.join(cache, ".viewer-version")
+    if not VERSION:
+        return   # started by hand, not unpacked by the mod
+    try:
+        with open(stamp, encoding="utf-8") as f:
+            if f.read().strip() == VERSION:
+                return
+    except OSError:
+        pass
+    # Only the default cache folder or one we stamped earlier is ours to empty.
+    if os.path.basename(os.path.normpath(cache)) == ".viewer-cache" or os.path.isfile(stamp):
+        shutil.rmtree(cache, ignore_errors=True)
+    os.makedirs(cache, exist_ok=True)
+    with open(stamp, "w", encoding="utf-8") as f:
+        f.write(VERSION)
+
+
 def _exit_with_stdin(srv) -> None:
     """The game holds our stdin open; when it closes, even after a crash, the game is gone."""
     try:
@@ -1080,7 +1101,7 @@ def main(argv=None):
         ap.error("Recording not found. Start Minecraft with the mod once (then the viewer finds it by itself) "
                  "or pass --recording <.minecraft/webmatica_recording>")
     cache = args.cache or os.path.join(args.recording, ".viewer-cache")
-    os.makedirs(cache, exist_ok=True)
+    _reset_cache_on_update(cache)
 
     app = App(args.recording, cache)
     if args.workers > 0:
