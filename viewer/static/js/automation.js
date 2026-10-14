@@ -60,12 +60,13 @@ $('#gd-friends').addEventListener('change', (e) => saveGuard({ friends: e.target
 api('/api/auto/settings').then((g) => { guard.cfg = g; renderGuard(); }).catch(() => {});
 
 /* Storing (chests tab): runs in the same flow as auto-build */
-const storeUi = { timer: null };
+const storeUi = { timer: null, running: false };
 async function pollStore() {
   const srv = (state.player && state.player.server) || state.server;
   let a = null;
   try { a = await api('/api/auto?' + new URLSearchParams({ srv })); } catch (_) { /* ignore */ }
-  const running = a && a.mode === 'store' && a.phase === 'store';
+  const running = storeUi.running = !!(a && a.mode === 'store' && a.phase === 'store');
+  if (running && !storeUi.timer) storeUi.timer = setInterval(pollStore, 1500);   // e.g. after reloading the page
   $('#st-go').textContent = running ? '■ Einlagern stoppen' : 'Inventar einlagern';
   if (a && a.mode === 'store') {
     $('#st-info').innerHTML = `<b class="${a.phase === 'error' ? 'bad' : a.phase === 'done' ? 'ok' : ''}">${running ? 'lagert ein' : a.phase === 'done' ? 'fertig' : 'angehalten'}</b> · ${esc(a.info || '')}`;
@@ -75,15 +76,17 @@ async function pollStore() {
 $('#st-go').addEventListener('click', async () => {
   const srv = (state.player && state.player.server) || state.server;
   try {
-    if (storeUi.timer) { await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv }) }); }
+    await pollStore();
+    if (storeUi.running) { await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv }) }); }
     else {
       if (!confirm('Inventar einlagern?\n\nBaritone läuft zu deinen Kisten und legt jeden Stack dorthin, wo dieses Item schon liegt. Was in keine Kiste passt, bleibt bei dir.' + ($('#st-hotbar').checked ? '' : '\n\nDie Hotbar bleibt, wie sie ist.'))) return;
       await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv, store: true, hotbar: $('#st-hotbar').checked }) });
-      storeUi.timer = setInterval(pollStore, 1500);
+      if (!storeUi.timer) storeUi.timer = setInterval(pollStore, 1500);
     }
   } catch (e) { toast('Einlagern: ' + e.message); }
   pollStore();
 });
+setTimeout(pollStore, 1500);   // a run that is still going shows "stop" right away
 
 $('#ab-toggle').addEventListener('click', async () => {
   const a = ctl.auto, pl = selPl();
