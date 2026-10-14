@@ -147,7 +147,8 @@ async function runCheck(quiet) {
     schem.check = c;
     schem.checkPid = pl.id;
     pl._pct = Math.floor((c.stats.ok / Math.max(1, c.stats.total)) * 100);
-    if (view3d && $('#chk-show').checked) view3d.setVerify(pl.id, c.points);
+    if (view3d && schem.fixArm) view3d.setVerify(pl.id, { wrong: c.points.wrong, rotated: c.points.rotated, extra: schem.fixExtra ? c.points.extra : [] });
+    else if (view3d && $('#chk-show').checked) view3d.setVerify(pl.id, c.points);
     renderCheck();
     renderMats();
     renderPlaced();
@@ -196,6 +197,7 @@ function stacksShort(item, n) {
   return st ? (r ? `${st}×${s}+${r}` : `${st}×${s}`) : `${r}`;
 }
 
+const fixCount = (c) => c.stats.wrong + c.stats.rotated + (schem.fixExtra ? c.stats.extra : 0);
 function renderCheck() {
   const c = schem.check;
   if (!c) { $('#chk-out').innerHTML = ''; return; }
@@ -212,11 +214,14 @@ function renderCheck() {
       ${keys.slice(1).map(([k, l]) => `<span class="k-${k}">${l}</span><span class="mono">${fmt(s[k])}</span>`).join('')}
       <span class="k-extra">muss weg</span><span class="mono">${fmt(s.extra)}</span>
     </div>
-    ${s.wrong + s.rotated + s.extra ? `<div class="sp-row chk-fix"><button id="chk-fix" title="Baritone baut diese Blöcke ab und sammelt sie ein. Danach setzt der Autobau oder der Printer die richtigen.">Falsche Blöcke abbauen (${fmt(s.wrong + s.rotated)})</button>
-      ${s.extra ? `<label class="check" title="Blöcke, wo die Schematic Luft hat"><input type="checkbox" id="chk-fix-extra"${schem.fixExtra ? ' checked' : ''}> auch „muss weg“ (${fmt(s.extra)})</label>` : ''}</div>` : ''}
+    ${s.wrong + s.rotated + s.extra ? (schem.fixArm ? `<div class="chk-fix armed"><p>In 3D markiert: <b>${fmt(fixCount(c))} Blöcke</b> werden abgebaut und eingesammelt.</p>
+      <div class="sp-row"><button id="chk-fix-go" class="primary danger">${fmt(fixCount(c))} Blöcke abbauen</button><button id="chk-fix-cancel">Abbrechen</button></div></div>`
+      : `<div class="sp-row chk-fix"><button id="chk-fix" title="Zeigt die Blöcke erst in 3D, abgebaut wird nach dem Bestätigen">Falsche Blöcke zeigen und abbauen (${fmt(s.wrong + s.rotated)})</button>
+      ${s.extra ? `<label class="check" title="Blöcke, wo die Schematic Luft hat (Wasser und Pflanzen zählen nicht)"><input type="checkbox" id="chk-fix-extra"${schem.fixExtra ? ' checked' : ''}> auch „muss weg“ (${fmt(s.extra)})</label>` : ''}</div>`) : ''}
     ${c.todo && c.todo.length ? `<h4>Als Nächstes bauen <span class="muted">(${fmt(c.todoTotal)} offen, unten zuerst${state.player && state.player.active ? ', dann nächste zu dir' : ''})</span></h4>
-      <table class="mats todo"><tbody>${c.todo.slice(0, 80).map((t) => `<tr data-goto="${t[0]},${t[1]},${t[2]}" title="Hinfliegen"><td class="mono">${t[0]} ${t[1]} ${t[2]}</td>
-      <td>${esc(itemName(t[3]))}</td><td class="k-${t[4]}">${t[4] === 'missing' ? 'fehlt' : t[4] === 'wrong' ? 'statt ' + esc(itemName(t[5] || '')) : 'drehen'}</td></tr>`).join('')}</tbody></table>` : ''}
+      <table class="mats todo"><tbody>${c.todo.slice(0, schem.todoAll ? 80 : 10).map((t) => `<tr data-goto="${t[0]},${t[1]},${t[2]}" title="Hinfliegen"><td class="mono">${t[0]} ${t[1]} ${t[2]}</td>
+      <td>${esc(itemName(t[3]))}</td><td class="k-${t[4]}">${t[4] === 'missing' ? 'fehlt' : t[4] === 'wrong' ? 'statt ' + esc(itemName(t[5] || '')) : 'drehen'}</td></tr>`).join('')}</tbody></table>
+      ${c.todo.length > 10 ? `<button id="chk-todo-all" class="link">${schem.todoAll ? 'weniger zeigen' : `alle zeigen (${fmt(Math.min(80, c.todo.length))})`}</button>` : ''}` : ''}
     ${(() => {
       const need = stillNeeded(c.missingItems);
       if (!c.missingItems.length) return '';
