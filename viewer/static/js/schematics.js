@@ -206,6 +206,7 @@ function spBadge(tab, text, cls) {
 const SPT_DEFAULT = { place: 'Position', mats: 'Liste', check: 'Fortschritt', build: 'Autobau' };
 function selectSchem(id, from3d) {
   if (schem.sel !== id) { schem.mats = null; schem.check = null; for (const k in SPT_DEFAULT) spBadge(k, SPT_DEFAULT[k]); }
+  schem.fixArm = false; schem.todoAll = false;
   if (schem.sel && schem.sel !== id && view3d) view3d.setVerify(schem.sel, null);
   schem.sel = id;
   if (view3d && !from3d) view3d.select(id ? { type: 'schematic', id } : null, true);

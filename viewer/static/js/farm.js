@@ -6,12 +6,30 @@
 const gameSrv = () => (state.player && state.player.server) || state.server;
 
 $('#chk-out').addEventListener('change', (e) => { if (e.target.id === 'chk-fix-extra') schem.fixExtra = e.target.checked; });
+/* Breaking wrong blocks: first show exactly these blocks in 3D, then confirm with the number */
+function fixPreview(on) {
+  const pl = selPl(), c = schem.check;
+  schem.fixArm = on;
+  if (view3d && pl && c) {
+    const p = c.points;
+    view3d.setVerify(pl.id, on ? { wrong: p.wrong, rotated: p.rotated, extra: schem.fixExtra ? p.extra : [] }
+      : ($('#chk-show').checked ? p : null));
+  }
+  renderCheck();
+}
 $('#chk-out').addEventListener('click', async (e) => {
-  if (e.target.id !== 'chk-fix') return;
+  if (e.target.id === 'chk-todo-all') { schem.todoAll = !schem.todoAll; renderCheck(); return; }
+  if (e.target.id === 'chk-fix-cancel') { fixPreview(false); return; }
   const pl = selPl(), c = schem.check;
   if (!pl || !c) return;
-  const n = c.stats.wrong + c.stats.rotated + (schem.fixExtra ? c.stats.extra : 0);
-  if (!confirm(`${fmt(n)} Blöcke abbauen?\n\nBaritone baut genau diese Blöcke im Rahmen der Schematic ab und sammelt sie ein. Danach setzt der Autobau (oder der Printer) die richtigen.`)) return;
+  if (e.target.id === 'chk-fix') {
+    if (!mode3d) await set3d(true);
+    gotoSchem(pl);
+    fixPreview(true);
+    return;
+  }
+  if (e.target.id !== 'chk-fix-go') return;
+  fixPreview(false);
   try {
     const r = await api('/api/fix', { method: 'POST', body: JSON.stringify({ srv: gameSrv(), pid: pl.id, extra: !!schem.fixExtra }) });
     toast(r.n ? `Baritone baut ${fmt(r.n)} Blöcke ab` : 'Nichts abzubauen');
