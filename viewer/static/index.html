@@ -229,6 +229,8 @@
       <label class="check" title="Baritones Werkzeugschutz (itemSaver): ein Werkzeug mit weniger als 10 Haltbarkeit wird nicht mehr benutzt"><input type="checkbox" data-guard="tools"> Werkzeug nicht kaputtmachen</label>
       <label class="check" title="Beim Laufen, Holen und Einsammeln darf Baritone Blöcke abbauen und den kürzesten Weg graben"><input type="checkbox" data-guard="dig"> Unterwegs durchgraben erlaubt</label>
       <p class="hint gd-note">Aus lassen, solange du in deiner Basis bist, sonst gräbt Baritone durch Wände. Weit weg von der Basis spart es Umwege.</p>
+      <label class="gd-row" title="Wer läuft beim Holen, Einlagern, Einsammeln und Hinlaufen über die Karte">Laufen mit <select id="gd-engine"><option value="auto">Automatisch</option><option value="native">Immer eigene Engine</option><option value="baritone">Nur Baritone</option></select></label>
+      <p class="hint gd-note">Automatisch: Baritone, wenn installiert. Fehlt Baritone oder steckt es fest, läuft die eigene Engine. Die gräbt nie und baut nichts, Abbauen beim Farmen und Ebnen braucht weiter Baritone.</p>
       <label class="check" title="Wenn alles steht: falsch gedrehte und überflüssige Blöcke im Rahmen abbauen und richtig neu setzen"><input type="checkbox" data-guard="fix"> Am Ende falsche Blöcke korrigieren</label>
       <label class="check" title="Wenn alles steht: übrig gebliebene Baumaterialien in Kisten bringen, in denen dieses Item schon liegt"><input type="checkbox" data-guard="leftovers"> Reste nach dem Bauen zurück in die Kisten</label>
       <p class="hint">Gilt für Autobau, Einlagern, Farmen und Ebnen, solange sie laufen (Durchgraben auch beim Hinlaufen über die Karte). Wird gespeichert.</p>

@@ -96,6 +96,7 @@ public class MapperClient implements ClientModInitializer {
         UnpackTask.getInstance().tick(mc);
         FarmTask.getInstance().tick(mc);
         BaritoneSafety.tick();
+        Walker.tick(mc);
         AutoGuard.tick(mc);
         ContainerTracker.getInstance().tick(mc);
     }

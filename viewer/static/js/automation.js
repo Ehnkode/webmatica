@@ -82,8 +82,10 @@ function renderGuard() {
   if (!g) return;
   $$('[data-guard]').forEach((c) => { c.checked = !!g[c.dataset.guard]; });
   if (document.activeElement !== $('#gd-dist')) $('#gd-dist').value = g.radarDist;
+  $('#gd-engine').value = g.engine || 'auto';
   if (document.activeElement !== $('#gd-friends')) $('#gd-friends').value = (g.friends || []).join(', ');
-  const on = [g.radar && 'Spieler-Pause', g.eat && 'Essen', g.tools && 'Werkzeug', g.fix && 'Korrektur', g.leftovers && 'Reste', g.dig && 'Graben erlaubt'].filter(Boolean);
+  const on = [g.radar && 'Spieler-Pause', g.eat && 'Essen', g.tools && 'Werkzeug', g.fix && 'Korrektur', g.leftovers && 'Reste', g.dig && 'Graben erlaubt',
+    g.engine === 'native' && 'eigene Engine', g.engine === 'baritone' && 'nur Baritone'].filter(Boolean);
   $('#gd-sum').textContent = on.length ? '· ' + on.join(', ') : '· alles aus';
 }
 async function saveGuard(patch) {
@@ -92,6 +94,7 @@ async function saveGuard(patch) {
 }
 $$('[data-guard]').forEach((c) => c.addEventListener('change', () => saveGuard({ [c.dataset.guard]: c.checked })));
 $('#gd-dist').addEventListener('change', (e) => saveGuard({ radarDist: Number(e.target.value) || 64 }));
+$('#gd-engine').addEventListener('change', (e) => saveGuard({ engine: e.target.value }));
 $('#gd-friends').addEventListener('change', (e) => saveGuard({ friends: e.target.value.split(',') }));
 api('/api/auto/settings').then((g) => { guard.cfg = g; renderGuard(); }).catch(() => {});
 

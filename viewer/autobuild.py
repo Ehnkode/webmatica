@@ -35,7 +35,7 @@ import time
 
 from .automation.build import BuildMode
 from .automation.common import *  # noqa: F401,F403  (constants used to live here)
-from .automation.common import DEFAULTS, FRESH_PLAYER, MAIN_SLOTS, RADAR_CLEAR, RUNNING, STEP_EVERY
+from .automation.common import DEFAULTS, ENGINES, FRESH_PLAYER, MAIN_SLOTS, RADAR_CLEAR, RUNNING, STEP_EVERY
 from .automation.farming import FarmMode
 from .automation.flatten import FlattenMode
 from .automation.store import StoreMode
@@ -83,6 +83,8 @@ class AutoBuild(BuildMode, StoreMode, FarmMode, FlattenMode):
                     continue
                 if k == "radarDist":
                     v = max(8, min(256, int(v)))
+                elif k == "engine":
+                    v = v if v in ENGINES else "auto"
                 elif k == "friends":
                     v = [str(n).strip()[:32] for n in (v if isinstance(v, list) else str(v).split(",")) if str(n).strip()][:50]
                 else:
@@ -106,7 +108,7 @@ class AutoBuild(BuildMode, StoreMode, FarmMode, FlattenMode):
             on = bool(st and st["phase"] in RUNNING + ("store",))
             # "dig" always applies: also for walking started from the map
             return {"eat": on and self.settings["eat"], "tools": on and self.settings["tools"],
-                    "dig": bool(self.settings["dig"])}
+                    "dig": bool(self.settings["dig"]), "engine": self.settings.get("engine", "auto")}
 
     # ------------------------------------------------------------ Queue
 
