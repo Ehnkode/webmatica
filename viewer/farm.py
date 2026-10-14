@@ -11,7 +11,7 @@ import re
 
 import numpy as np
 
-from .core.chunk import AIR_NAMES, BLOCKS, base_name
+from .core.chunk import AIR_NAMES, BLOCKS, REPLACEABLE, base_name
 
 MAX_CHUNKS = 64 * 64      # 1024 x 1024 blocks are enough for a farm
 # can't be broken (or picked up): leave out of the selection
@@ -111,8 +111,7 @@ def count(rec, dim, area: dict, names: set[str]) -> dict[str, int]:
 
 
 # count as a hole when filling (get replaced)
-_FILLABLE = re.compile(r"^minecraft:(water|lava|bubble_column|short_grass|tall_grass|fern|large_fern|dead_bush|snow|"
-                       r"seagrass|tall_seagrass|kelp|kelp_plant|vine|glow_lichen)$")
+_FILLABLE = REPLACEABLE
 
 
 def holes(rec, dim, area: dict, level: int, near: tuple | None = None, limit: int | None = None,

@@ -365,16 +365,15 @@ class Control:
             with self.lock:
                 st["auto"], st["autoInfo"] = None, f"aus: {e}"
             return
-        missing = [t for t in res.get("todo") or [] if t[4] == "missing"]
+        lowest = res.get("lowestMissing")
         with self.lock:
-            if not missing:
+            if not lowest:
                 want = {"mode": "all"}
                 st["autoInfo"] = "fertig" if not res.get("todoTotal") else "nur noch falsche Bloecke"
             else:
-                y = min(t[1] for t in missing)
-                n = sum(1 for t in missing if t[1] == y)
+                y = lowest["y"]
                 want = {"mode": "range", "min": y, "max": y}
-                st["autoInfo"] = f"Y {y}: noch {n}{'+' if len(missing) >= 400 else ''} Bloecke"
+                st["autoInfo"] = f"Y {y}: noch {lowest['count']} Bloecke"
             if want != st["layer"]:
                 st["layer"] = want
                 st["seq"] += 1
@@ -394,6 +393,8 @@ class Radar:
                 self.log: list = json.load(f)
         except (OSError, ValueError):
             self.log = []
+        # (server, name) -> the log entry still being extended (seen within the last 120 s)
+        self._open = {(s.get("server"), s.get("name")): s for s in self.log if isinstance(s, dict)}
 
     def update(self, me: dict, others: list) -> list:
         now = time.time()
@@ -408,16 +409,20 @@ class Radar:
             clean.append(e)
         with self.lock:
             for e in clean:
-                last = next((s for s in reversed(self.log[-50:]) if s["name"] == e["name"]
-                             and s["server"] == me["server"] and now - s["last"] < 120), None)
-                if last is None:
+                key = (me["server"], e["name"])
+                last = self._open.get(key)
+                if last is None or now - last.get("last", 0) >= 120:
                     last = {"name": e["name"], "server": me["server"], "dim": me["dim"], "first": now,
                             "x": round(e["x"]), "z": round(e["z"]), "closest": e["dist"]}
                     self.log.append(last)
+                    self._open[key] = last
                 last["last"] = now
                 if e["dist"] <= last["closest"]:
                     last.update(closest=e["dist"], x=round(e["x"]), z=round(e["z"]))
-            del self.log[:-500]
+            if len(self.log) > 500:
+                del self.log[:-500]
+                kept = {id(x) for x in self.log}
+                self._open = {k: v for k, v in self._open.items() if id(v) in kept}
             if clean and time.monotonic() - self.saved > 10:
                 self.saved = time.monotonic()
                 tmp = self.path + ".tmp"
