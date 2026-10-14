@@ -6,6 +6,7 @@ import gzip
 import hashlib
 import json
 import os
+import re
 import threading
 import time
 
@@ -400,4 +401,7 @@ def world_label(server: str) -> str:
         return "Einzelspieler (alle alten Welten gemischt)"
     if server.startswith("singleplayer-"):
         return "Einzelspieler: " + server[len("singleplayer-"):].replace("_", " ")
+    m = re.fullmatch(r"(.+)_(\d{1,5})", server)
+    if m:
+        return f"{m.group(1)}:{m.group(2)}"     # server on another port than 25565
     return server
