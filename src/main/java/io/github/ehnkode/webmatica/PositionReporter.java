@@ -210,6 +210,7 @@ public final class PositionReporter {
             } catch (Throwable t) {
                 failedOnce("radar", t);
             }
+            o.add("mods", mods());
             o.addProperty("server", RecordingTarget.serverId(mc));
             o.addProperty("recording", RegionStore.getInstance().isEnabled());
             o.addProperty("written", RegionStore.getInstance().getWrittenCount());
@@ -217,6 +218,28 @@ public final class PositionReporter {
             payload.set(o.toString());
         } catch (Throwable t) {
             MapperClient.LOGGER.debug("[webmatica] Position-JSON fehlgeschlagen", t);
+        }
+    }
+
+    private JsonObject mods;
+
+    /** Which helper mods are installed, for the viewer's status chip (doesn't change while running). */
+    private JsonObject mods() {
+        if (mods == null) {
+            JsonObject m = new JsonObject();
+            m.addProperty("litematica", net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("litematica"));
+            m.addProperty("baritone", hasClass("baritone.api.BaritoneAPI"));
+            mods = m;
+        }
+        return mods;
+    }
+
+    private static boolean hasClass(String name) {
+        try {
+            Class.forName(name, false, PositionReporter.class.getClassLoader());
+            return true;
+        } catch (Throwable t) {
+            return false;
         }
     }
 
