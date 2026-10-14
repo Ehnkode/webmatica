@@ -16,7 +16,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -34,7 +33,7 @@ import net.minecraft.world.phys.Vec3;
  * Slowly paced (one click every few ticks) so the server doesn't complain.
  * "Stop" on the web page aborts.
  */
-public final class FetchTask {
+public final class FetchTask extends BotTask<FetchTask.Phase> {
 
     private static final FetchTask INSTANCE = new FetchTask();
     private static final double REACH = 4.2;
@@ -44,10 +43,8 @@ public final class FetchTask {
         return INSTANCE;
     }
 
-    private enum Phase { IDLE, WALK, OPEN, TAKE }
+    enum Phase { IDLE, WALK, OPEN, TAKE }
 
-    private Phase phase = Phase.IDLE;
-    private String id;
     private BlockPos pos;
     private final Set<Integer> wantSlots = new HashSet<>();
     // Storing: player inventory index -> item that should go there
@@ -56,24 +53,18 @@ public final class FetchTask {
     private Slot storeLast;
     private String storeLastId;
     private final Map<String, Integer> wantItems = new LinkedHashMap<>();
-    private long phaseStart;
-    private int tick;
     private int taken;
     private int openTries;
     private boolean noShulker;   // auto-build: Baritone can't build from shulkers
-    private AbstractContainerMenu opened;
     private final List<String> notes = new ArrayList<>();
 
-    public boolean busy() {
-        return phase != Phase.IDLE;
+    private FetchTask() {
+        super(Phase.IDLE);
     }
 
     /** Client thread. */
     public void start(String cmdId, JsonObject cmd) {
-        if (busy()) {
-            finish(false, "abgebrochen, neuer Auftrag");
-        }
-        id = cmdId;
+        begin(cmdId);
         pos = new BlockPos(cmd.get("x").getAsInt(), cmd.get("y").getAsInt(), cmd.get("z").getAsInt());
         wantSlots.clear();
         storeSlots.clear();
@@ -120,50 +111,17 @@ public final class FetchTask {
         }
     }
 
-    public void cancel() {
-        if (busy()) {
-            finish(false, "gestoppt");
-        }
-    }
-
-    private long frozenAt;
-
     /** On the way to the chest (nothing open yet): eating may happen in between. */
     public boolean walking() {
         return phase == Phase.WALK;
-    }
-
-    private void setPhase(Phase p) {
-        phase = p;
-        phaseStart = System.currentTimeMillis();
     }
 
     private boolean near(LocalPlayer p) {
         return p.getEyePosition().distanceTo(Vec3.atCenterOf(pos)) <= REACH;
     }
 
-    public void tick(Minecraft mc) {
-        if (phase == Phase.IDLE) {
-            return;
-        }
-        LocalPlayer p = mc.player;
-        if (p == null || mc.level == null || mc.gameMode == null) {
-            finish(false, "nicht mehr im Spiel");
-            return;
-        }
-        if (AutoGuard.paused() || AutoGuard.eating()) {
-            // player nearby or eating: wait without the time limits running on
-            if (frozenAt == 0L) {
-                frozenAt = System.currentTimeMillis();
-            }
-            return;
-        }
-        if (frozenAt != 0L) {
-            phaseStart += System.currentTimeMillis() - frozenAt;
-            frozenAt = 0L;
-        }
-        long age = System.currentTimeMillis() - phaseStart;
-        tick++;
+    @Override
+    protected void step(Minecraft mc, LocalPlayer p, long age) {
         switch (phase) {
             case WALK -> {
                 if (near(p)) {
@@ -340,8 +298,8 @@ public final class FetchTask {
         return shulkerFallback;
     }
 
-    private void finish(boolean ok, String why) {
-        Minecraft mc = Minecraft.getInstance();
+    @Override
+    protected void finish(boolean ok, String why) {
         StringBuilder msg = new StringBuilder();
         String verb = store ? "eingelagert" : "genommen";
         msg.append(taken > 0 ? taken + " Items " + verb : "nichts " + verb);
@@ -356,16 +314,7 @@ public final class FetchTask {
             msg.append(" (").append(why).append(")");
         }
         String what = store ? "Einlagern: " : "Holen: ";
-        actionbar(mc, what + msg, ok ? ChatFormatting.GREEN : ChatFormatting.RED);
-        BaritoneBridge.report(id, ok, what + msg);
-        phase = Phase.IDLE;
-        opened = null;
+        report(ok, what + msg);
         BaritoneSafety.restore();
-    }
-
-    private static void actionbar(Minecraft mc, String s, ChatFormatting f) {
-        if (mc.player != null) {
-            Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(s)).withStyle(f));
-        }
     }
 }
