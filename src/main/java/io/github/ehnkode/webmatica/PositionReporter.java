@@ -31,7 +31,7 @@ import net.minecraft.world.entity.player.PlayerSkin;
  *  - errors are swallowed (server off -> just keep running)
  *
  * Pure self data (position/rotation/UUID/skin). No send, no
- * movement, no anticheat interference — same line as the recorder.
+ * movement, no anticheat interference, same line as the recorder.
  */
 public final class PositionReporter {
 
