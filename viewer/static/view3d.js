@@ -9,12 +9,13 @@
  * region), so nothing jitters even at coordinates in the millions.
  */
 import * as THREE from '/static/vendor/three/three.module.min.js';
+import { createMarkers } from './view3d/markers.js';
+import { createPlayer } from './view3d/player.js';
 
 THREE.ColorManagement.enabled = false;
 
 const SKY = { overworld: 0x9cc3f5, the_nether: 0x2a0c0c, the_end: 0x120d1a };
 const PASSES = 3;
-const PX = 0.9375 / 16;                     // Player model: pixel -> block
 
 export function create(container, ctx) {
   const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: true });
@@ -744,169 +745,9 @@ export function create(container, ctx) {
   }
   setInterval(pollChanges, 3000);
 
-  // ------------------------------------------------------------ Player (skin figure)
+  // ------------------------------------------------------------ Player (skin figure, view3d/player.js)
 
-  const player = {
-    root: new THREE.Group(), parts: {}, version: -1, model: null,
-    pos: null, target: null, yaw: 0, pitch: 0, phase: 0, speed: 0, data: null,
-    interp: new window.PlayerInterp(),
-  };
-  scene.add(player.root);
-  player.root.visible = false;
-
-  function boxUV(geo, u, v, w, h, d, tw, th) {
-    const rects = [
-      [u + d + w, v + d, d, h],     // +x  left side of the figure
-      [u, v + d, d, h],             // -x  right side
-      [u + d, v, w, d],             // top
-      [u + d + w, v, w, d],         // bottom
-      [u + d, v + d, w, h],         // front (+z)
-      [u + 2 * d + w, v + d, w, h], // back
-    ];
-    const uvs = geo.attributes.uv;
-    for (let f = 0; f < 6; f++) {
-      const [px, py, pw, ph] = rects[f];
-      for (let k = 0; k < 4; k++) {
-        const i = f * 4 + k;
-        const U = uvs.getX(i), V = uvs.getY(i);
-        uvs.setXY(i, (px + U * pw) / tw, 1 - (py + (1 - V) * ph) / th);
-      }
-    }
-    uvs.needsUpdate = true;
-  }
-
-  function part(tex, tw, th, w, h, d, uv, overlay, inflate) {
-    const g = new THREE.Group();
-    const mk = (u, v, grow, mat) => {
-      const geo = new THREE.BoxGeometry((w + grow * 2) * PX, (h + grow * 2) * PX, (d + grow * 2) * PX);
-      boxUV(geo, u, v, w, h, d, tw, th);
-      return new THREE.Mesh(geo, mat);
-    };
-    g.add(mk(uv[0], uv[1], 0, new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.1 })));
-    if (overlay && (th >= 64 || overlay[1] < 32)) g.add(mk(overlay[0], overlay[1], inflate, new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide })));
-    return g;
-  }
-
-  function buildPlayer(tex, slim) {
-    const tw = tex.image.width, th = tex.image.height;
-    const legacy = th < 64;
-    if (player.model) { player.root.remove(player.model); disposeGroup(player.model); }
-    const model = new THREE.Group();
-    const aw = slim ? 3 : 4;
-    const pivot = (mesh, px, py, pz, oy) => {
-      const p = new THREE.Group();
-      p.position.set(px * PX, py * PX, pz * PX);
-      mesh.position.y = oy * PX;
-      p.add(mesh);
-      model.add(p);
-      return p;
-    };
-    player.parts.head = pivot(part(tex, tw, th, 8, 8, 8, [0, 0], [32, 0], 0.5), 0, 24, 0, 4);
-    player.parts.body = pivot(part(tex, tw, th, 8, 12, 4, [16, 16], [16, 32], 0.25), 0, 24, 0, -6);
-    player.parts.rarm = pivot(part(tex, tw, th, aw, 12, 4, [40, 16], [40, 32], 0.25), -(4 + aw / 2), 22, 0, -4);
-    player.parts.larm = pivot(part(tex, tw, th, aw, 12, 4, legacy ? [40, 16] : [32, 48], legacy ? null : [48, 48], 0.25), 4 + aw / 2, 22, 0, -4);
-    player.parts.rleg = pivot(part(tex, tw, th, 4, 12, 4, [0, 16], [0, 32], 0.25), -1.9, 12, 0, -6);
-    player.parts.lleg = pivot(part(tex, tw, th, 4, 12, 4, legacy ? [0, 16] : [16, 48], legacy ? null : [0, 48], 0.25), 1.9, 12, 0, -6);
-    player.root.add(model);
-    player.model = model;
-  }
-
-  // Without a skin: plain figure until the skin arrives
-  function placeholderTexture() {
-    const c = document.createElement('canvas');
-    c.width = 64; c.height = 64;
-    const g = c.getContext('2d');
-    g.fillStyle = '#c69c6d'; g.fillRect(0, 0, 32, 16);
-    g.fillStyle = '#3aa7a3'; g.fillRect(16, 16, 24, 16);
-    g.fillStyle = '#c69c6d'; g.fillRect(40, 16, 16, 16); g.fillRect(32, 48, 16, 16);
-    g.fillStyle = '#3b3f8f'; g.fillRect(0, 16, 16, 16); g.fillRect(16, 48, 16, 16);
-    g.fillStyle = '#2b1d0e'; g.fillRect(8, 0, 16, 8);
-    const t = new THREE.CanvasTexture(c);
-    t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.colorSpace = THREE.NoColorSpace;
-    return t;
-  }
-  buildPlayer(placeholderTexture(), false);
-
-  function loadSkin(version, slim) {
-    player.version = version;
-    new THREE.TextureLoader().load(`/api/skin/full.png?v=${version}`, (t) => {
-      t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.colorSpace = THREE.NoColorSpace;
-      t.generateMipmaps = false;
-      buildPlayer(t, slim);
-    }, undefined, () => { /* no skin: placeholder stays */ });
-  }
-
-  // Name tag
-  let nameSprite = null;
-  function setName(name) {
-    if (nameSprite && nameSprite.userData.name === name) return;
-    if (nameSprite) { player.root.remove(nameSprite); nameSprite.material.map.dispose(); nameSprite.material.dispose(); }
-    const c = document.createElement('canvas');
-    const g = c.getContext('2d');
-    g.font = 'bold 36px system-ui, sans-serif';
-    const w = Math.ceil(g.measureText(name).width) + 24;
-    c.width = w; c.height = 52;
-    g.font = 'bold 36px system-ui, sans-serif';
-    g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(0, 0, w, 52);
-    g.fillStyle = '#fff'; g.textBaseline = 'middle'; g.fillText(name, 12, 27);
-    const t = new THREE.CanvasTexture(c);
-    t.colorSpace = THREE.NoColorSpace;
-    nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
-    nameSprite.scale.set(w / 52 * 0.35, 0.35, 1);
-    nameSprite.position.y = 2.25;
-    nameSprite.renderOrder = 10;
-    nameSprite.userData.name = name;
-    player.root.add(nameSprite);
-  }
-
-  // Invisible hit box for clicks, ring when selected
-  const playerHit = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.1, 0.9), new THREE.MeshBasicMaterial({ visible: false }));
-  playerHit.position.y = 1.0;
-  playerHit.userData.pick = { type: 'player' };
-  player.root.add(playerHit);
-  const playerRing = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.7, 32), new THREE.MeshBasicMaterial({ color: 0x22a06b, side: THREE.DoubleSide, depthTest: false, transparent: true }));
-  playerRing.rotation.x = -Math.PI / 2;
-  playerRing.position.y = 0.05;
-  playerRing.visible = false;
-  player.root.add(playerRing);
-
-  function updatePlayer(p) {
-    player.data = p;
-    const vis = !!(p && p.active && p.dim === st.dim && (!p.server || p.server === st.srv));
-    player.root.visible = vis;
-    if (!p) return;
-    if (p.hasSkin && p.skinVersion !== player.version) loadSkin(p.skinVersion, p.skinModel === 'slim');
-    else if (!p.hasSkin && player.version < 0 && p.name) loadSkin(0, false);   // The server fetches the skin by name
-    if (p.name) setName(p.name);
-    if (!vis) return;
-    player.interp.push(p);
-    if (!player.pos) player.pos = new THREE.Vector3(p.x, p.y, p.z);
-    player.target = true;
-  }
-
-  function animatePlayer(dt) {
-    if (!player.root.visible || !player.target) return;
-    const bx = player.pos.x, bz = player.pos.z;
-    const smp = player.interp.sample();
-    if (smp) { player.pos.set(smp.x, smp.y, smp.z); player.yaw = smp.yaw; player.pitch = smp.pitch; }
-    const moved = Math.hypot(player.pos.x - bx, player.pos.z - bz) / Math.max(dt, 1e-3);
-    player.speed += (moved - player.speed) * Math.min(1, dt * 6);
-    player.root.position.copy(player.pos);
-    const ry = -THREE.MathUtils.degToRad(player.yaw);
-    if (player.model) player.model.rotation.y = ry;
-    playerHit.rotation.y = ry;
-    const pr = player.parts;
-    if (pr.head) {
-      pr.head.rotation.x = THREE.MathUtils.degToRad(player.pitch);
-      player.phase += dt * Math.min(player.speed, 8) * 1.6;
-      const swing = Math.sin(player.phase) * Math.min(1, player.speed / 4) * 0.9;
-      pr.rleg.rotation.x = swing; pr.lleg.rotation.x = -swing;
-      pr.rarm.rotation.x = -swing * 0.8; pr.larm.rotation.x = swing * 0.8;
-    }
-    if (player.model) player.model.visible = st.cam !== 'ego';
-    if (nameSprite) nameSprite.visible = st.cam !== 'ego';
-    playerRing.visible = !!(st.selected && st.selected.type === 'player');
-  }
+  const player = createPlayer(scene, st, disposeGroup);
 
   // ------------------------------------------------------------ Schematics
 
@@ -998,111 +839,8 @@ export function create(container, ctx) {
     s.group.add(g);
   }
 
-  // Timeline: changes compared with an earlier day as colored cubes
-  const DIFF = { added: 0x22c55e, removed: 0xe5484d, changed: 0xf5a524 };
-  let diffGroup = null;
-  function setDiff(points) {
-    if (diffGroup) { scene.remove(diffGroup); diffGroup.children.forEach((m) => { m.material.dispose(); m.dispose && m.dispose(); }); diffGroup = null; }
-    if (!points) return;
-    diffGroup = new THREE.Group();
-    const m4 = new THREE.Matrix4();
-    for (const [kind, color] of Object.entries(DIFF)) {
-      const pts = points[kind] || [];
-      const n = pts.length / 3;
-      if (!n) continue;
-      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: kind === 'removed' ? 0.35 : 0.5, depthWrite: false });
-      const mesh = new THREE.InstancedMesh(cubeGeo, mat, n);
-      for (let i = 0; i < n; i++) { m4.makeTranslation(pts[i * 3] + 0.5, pts[i * 3 + 1] + 0.5, pts[i * 3 + 2] + 0.5); mesh.setMatrixAt(i, m4); }
-      mesh.instanceMatrix.needsUpdate = true;
-      diffGroup.add(mesh);
-    }
-    scene.add(diffGroup);
-  }
-
-  // ------------------------------------------------------------ Waypoints and trail
-
-  const wpGroup = new THREE.Group();
-  scene.add(wpGroup);
-  function label(text, color) {
-    const c = document.createElement('canvas');
-    const g = c.getContext('2d');
-    g.font = 'bold 32px system-ui, sans-serif';
-    const w = Math.ceil(g.measureText(text).width) + 20;
-    c.width = w; c.height = 44;
-    g.font = 'bold 32px system-ui, sans-serif';
-    g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(0, 0, w, 44);
-    g.fillStyle = color; g.textBaseline = 'middle'; g.fillText(text, 10, 23);
-    const t = new THREE.CanvasTexture(c);
-    t.colorSpace = THREE.NoColorSpace;
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true, sizeAttenuation: false }));
-    sp.scale.set(w / 44 * 0.035, 0.035, 1);
-    sp.renderOrder = 9;
-    return sp;
-  }
-  function setWaypoints(list) {
-    wpGroup.children.slice().forEach((c) => { wpGroup.remove(c); disposeGroup(c); });
-    for (const w of list) {
-      if (w.server !== st.srv || w.dim !== st.dim) continue;
-      const g = new THREE.Group();
-      g.position.set(w.x + 0.5, w.y, w.z + 0.5);
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.35, 300, 0.35), new THREE.MeshBasicMaterial({ color: w.color, transparent: true, opacity: 0.4, depthWrite: false }));
-      beam.position.y = 150;
-      g.add(beam);
-      const l = label(w.name || `${w.x} ${w.z}`, w.color);
-      l.position.y = 3;
-      g.add(l);
-      wpGroup.add(g);
-    }
-  }
-
-  // Radar: other players as a red pillar with their name
-  const othersGroup = new THREE.Group();
-  scene.add(othersGroup);
-  const othersByName = new Map();
-  function setOthers(list) {
-    const seen = new Set();
-    for (const o of list || []) {
-      seen.add(o.name);
-      let g = othersByName.get(o.name);
-      if (!g) {
-        g = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.8, 0.6), new THREE.MeshBasicMaterial({ color: 0xff3b3b, transparent: true, opacity: 0.8 }));
-        body.position.y = 0.9;
-        g.add(body);
-        const beam = new THREE.Mesh(new THREE.BoxGeometry(0.2, 200, 0.2), new THREE.MeshBasicMaterial({ color: 0xff3b3b, transparent: true, opacity: 0.25, depthWrite: false }));
-        beam.position.y = 101;
-        g.add(beam);
-        const l = label(o.name, '#ff6b6b');
-        l.position.y = 2.6;
-        g.add(l);
-        othersGroup.add(g);
-        othersByName.set(o.name, g);
-      }
-      g.position.set(o.x, o.y, o.z);
-    }
-    for (const [n, g] of othersByName) {
-      if (!seen.has(n)) { othersGroup.remove(g); disposeGroup(g); othersByName.delete(n); }
-    }
-  }
-
-  let trailLine = null;
-  function setTrail(points) {
-    if (trailLine) { scene.remove(trailLine); trailLine.geometry.dispose(); trailLine = null; }
-    if (!points || points.length < 2) return;
-    const [ox, oy, oz] = points[0];
-    const seg = [];
-    for (let i = 1; i < points.length; i++) {
-      const a = points[i - 1], b = points[i];
-      if (Math.hypot(b[0] - a[0], b[2] - a[2]) > 120) continue;   // don't connect teleports/gaps
-      seg.push(a[0] - ox, a[1] - oy + 0.1, a[2] - oz, b[0] - ox, b[1] - oy + 0.1, b[2] - oz);
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(seg), 3));
-    trailLine = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xffd23f }));
-    trailLine.position.set(ox, oy, oz);
-    trailLine.frustumCulled = false;
-    scene.add(trailLine);
-  }
+  // Timeline diff, waypoints, other players, trail: view3d/markers.js
+  const { setDiff, setWaypoints, setOthers, setTrail } = createMarkers(scene, st, disposeGroup);
 
   // ------------------------------------------------------------ Selection by click
 
@@ -1110,7 +848,7 @@ export function create(container, ctx) {
   function pick(ndcX, ndcY) {
     ray.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
     const targets = [];
-    if (player.root.visible) targets.push(playerHit);
+    if (player.root.visible) targets.push(player.hit);
     for (const s of schems.values()) if (s.group.visible && s.hit) targets.push(s.hit);
     const hit = ray.intersectObjects(targets, false)[0];
     return hit ? hit.object.userData.pick : null;
@@ -1233,7 +971,7 @@ export function create(container, ctx) {
     if (!st.active) return;
     applyPending(4);
     placeSun();
-    animatePlayer(dt);
+    player.animate(dt);
     if (st.cam === 'free' || !player.pos) {
       camera.rotation.set(st.pitch, st.yaw, 0);
       const k = st.keys;
@@ -1517,7 +1255,7 @@ export function create(container, ctx) {
     },
     canvas() { return renderer.domElement; },
     setFull(f) { if (st.full !== f) { st.full = f; for (const c of st.chunks.values()) if (c.group || c.empty) { c.stale = true; c.empty = false; } } },
-    updatePlayer,
+    updatePlayer: player.update,
     setCam,
     cam() { return st.cam; },
     gotoPlayer(p) {
