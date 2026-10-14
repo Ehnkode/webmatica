@@ -41,7 +41,7 @@ player opens one; lids other players open.
 
 **POST /api/litematica/status**: which placements arrived in Litematica.
 
-**POST /api/control/status**: in-game Printer / layer state, with the `seq` it has applied,
+**POST /api/control/status**: in-game layer state, with the `seq` it has applied,
 plus `web` (Webmatica printer: `on, range, bps, placed, todo, wrong, blocked, noItem, missing`)
 and `safe`.
 
@@ -52,14 +52,13 @@ and `safe`.
 **GET /api/control?srv=** (about every second, with a 2 s timeout)
 
 ```json
-{"seq": 3, "printer": {"on": true}, "layer": {"mode": "range", "min": 64, "max": 64},
+{"seq": 3, "safe": false, "web": {"on": true, "range": 4.5, "bps": 10}, "layer": {"mode": "range", "min": 64, "max": 64},
  "guard": {"eat": true, "tools": true, "dig": false}}
 ```
 
-* `printer` holds only the changed Printer settings and is sent until the mod confirms that `seq` in /api/control/status.
 * `safe`: server-safe for this server (stored in `.viewer/safety.json`). The mod
   then refuses every command except highlight / pause / resume / stop, stops
-  running tasks and keeps the Litematica Printer off; the viewer answers bot
+  running tasks and keeps an installed Litematica Printer off; the viewer answers bot
   requests and X-ray with 403.
 * `web`: Webmatica's own printer `{"on", "range", "bps"}`, sent on every poll.
   The in-game key posts `{"srv", "web": {"on": ...}}` to /api/control itself.
@@ -119,8 +118,8 @@ GET  /api/inventory                      last player inventory (from the mod)
 GET  /api/commands?srv=                  Baritone commands for the mod (pick up)
 POST /api/commands                       drop a command      POST /api/commands/result (mod)
 GET  /api/auto?srv=                      auto-build state    POST /api/auto {srv, pid} start / {srv} stop
-GET  /api/control?srv=                   Printer/layer target state for the mod   POST /api/control (browser)
-POST /api/control/status                 mod reports in-game Printer/layer   GET /api/control/state?srv=
+GET  /api/control?srv=                   printer/layer/server-safe target state for the mod   POST /api/control (browser)
+POST /api/control/status                 mod reports printer/layer state   GET /api/control/state?srv=
 POST /api/control {srv, safe}            server-safe on/off for that server
 POST /api/control {srv, web: {on, range, bps}}   Webmatica printer
 GET  /api/printer/blocks?srv=&dim=&x=&y=&z=&r=   target blocks around the player (mod)

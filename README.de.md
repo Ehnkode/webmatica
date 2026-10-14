@@ -41,7 +41,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 - **Printer:** setzt die Blöcke einer Schematic, sobald du in der Nähe bist, auch ohne Litematica.
   Dreht dabei nur gegenüber dem Server den Kopf, damit Treppen und Stämme richtig herum liegen.
 - **Server-safe** (Optionen, pro Server): für öffentliche Server. Schaltet Baritone, alle
-  Automationen, den Litematica Printer und X-Ray ab; der Printer setzt dann nur, was du auch von Hand
+  Automationen und X-Ray ab; der Printer setzt dann nur, was du auch von Hand
   könntest (keine vorgetäuschte Blickrichtung, nur sichtbare Flächen, höchstens 5 Blöcke pro Sekunde).
 - **X-Ray:** nur die gesuchten Blöcke zeigen, in 3D und auf der Karte, und Baritone direkt zu einem Fund schicken.
 - **Außerdem:** Wegpunkte, Schilder, Zeitraffer der Änderungen (Export als GIF oder Video), Radar für
@@ -51,7 +51,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
 - Minecraft 1.21.11, 26.1, 26.2 oder 26.3 mit Fabric Loader und Fabric API
 - Python 3.10+
-- Optional: [Baritone](https://github.com/cabaletta/baritone), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib), Litematica Printer (Webmatica hat einen eigenen Printer, der ohne auskommt)
+- Optional: [Baritone](https://github.com/cabaletta/baritone), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib)
 
 ## Installation
 

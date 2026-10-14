@@ -122,7 +122,6 @@ function gameStatus() {
   return {
     online, recording: online && p.recording !== false, player: p,
     litematica: !online ? null : g && g.layer ? !!g.layer.available : (mods.litematica ?? null),
-    printer: !online || !g ? null : !!(g.printer && g.printer.available),
     baritone: online ? (mods.baritone ?? null) : null,
   };
 }
@@ -157,8 +156,7 @@ function statusText(force) {
   const html = `<li class="pc-pop-title">${gs.online ? 'Spiel verbunden' : 'Spiel offline'}</li>` +
     (gs.online ? row('Aufnahme', gs.recording, 'läuft', 'aus, im Spiel F9') : '<li class="muted">Minecraft mit Webmatica starten</li>') +
     row('Litematica', gs.litematica, 'gefunden', 'fehlt') +
-    row('Baritone', gs.baritone, 'gefunden', 'fehlt') +
-    row('Printer', gs.printer, 'gefunden', 'fehlt');
+    row('Baritone', gs.baritone, 'gefunden', 'fehlt');
   const pop = $('#pc-pop');
   if (pop.dataset.html !== html) { pop.innerHTML = html; pop.dataset.html = html; }
 }
