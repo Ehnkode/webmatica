@@ -64,8 +64,8 @@ map.on('contextmenu', (e) => {
   d.className = 'ctx-pop';
   d.innerHTML = `<div class="muted mono">${x} ${z}</div>
     <button data-ctx="wp">Wegpunkt setzen</button>
-    <button data-ctx="goto">Hierhin laufen (Baritone)</button>
-    <button data-ctx="stop">Baritone stoppen</button>`;
+    <button data-ctx="goto">Hierhin laufen</button>
+    <button data-ctx="stop">Laufen stoppen</button>`;
   d.addEventListener('click', async (ev) => {
     const b = ev.target.closest('[data-ctx]');
     if (!b) return;
@@ -89,13 +89,13 @@ map.on('contextmenu', (e) => {
 /* Baritone: drop off a command, the mod picks it up and reports back */
 async function baritone(cmd) {
   const p = state.player;
-  if (!p || !p.active) { toast('Spieler ist nicht online, Baritone kann nicht starten'); return; }
+  if (!p || !p.active) { toast('Spieler ist nicht online'); return; }
   if (cmd.kind === 'goto' && p.dim !== state.dim) { toast('Du bist gerade in einer anderen Dimension'); return; }
   try {
     const c = await jsonPost('/api/commands', { srv: p.server || state.server, ...cmd });
-    toast({ goto: `Baritone läuft nach ${cmd.x} ${cmd.z} …`, stop: 'Baritone wird gestoppt …', litematica: 'Baritone fängt an zu bauen …',
+    toast({ goto: `Läuft nach ${cmd.x} ${cmd.z} …`, stop: 'Wird gestoppt …', litematica: 'Baritone fängt an zu bauen …',
       clear: 'Baritone räumt den Bauplatz frei …', pause: 'Baritone pausiert …', resume: 'Baritone macht weiter …',
-      highlight: 'Kisten werden im Spiel markiert …', fetch: 'Baritone holt die Items …', store: 'Baritone lagert die Items ein …' }[cmd.kind] || 'Baritone …');
+      highlight: 'Kisten werden im Spiel markiert …', fetch: 'Holt die Items …', store: 'Lagert die Items ein …' }[cmd.kind] || 'Baritone …');
     const long = cmd.kind === 'fetch' || cmd.kind === 'store';
     if (long || cmd.kind === 'goto' || cmd.kind === 'litematica' || cmd.kind === 'clear') {
       act.manual = { kind: cmd.kind, since: Date.now(), text: { goto: `läuft nach ${cmd.x} ${cmd.z}`, fetch: 'holt Items aus einer Kiste',
@@ -107,13 +107,13 @@ async function baritone(cmd) {
       await new Promise((r) => setTimeout(r, 500));
       const last = await api('/api/commands/last?' + new URLSearchParams({ id: c.id }));
       if (last && last.id === c.id) {
-        toast(`Baritone: ${last.msg}`);
+        toast(last.msg);
         if (long && act.manual && act.manual.since && cmd.kind === act.manual.kind) { act.manual = null; renderActivity(); }
         return;
       }
     }
     toast('Keine Antwort aus dem Spiel (ist die Mod aktiv?)');
-  } catch (e) { toast('Baritone: ' + e.message); }
+  } catch (e) { toast(e.message); }
 }
 
 /* Activity at the top center: what the game is doing right now, with a stop for everything */
@@ -143,7 +143,7 @@ function renderActivity() {
   if (autoRunning(a)) {
     text = `<b>${a.mode === 'store' ? 'Einlagern' : 'Autobau'}</b> ${esc(a.info || AB_PHASE[a.phase] || '')}`;
   } else if (act.manual) {
-    text = `<b>Baritone</b> ${esc(act.manual.text)}`;
+    text = `<b>${act.manual.kind === 'litematica' || act.manual.kind === 'clear' ? 'Baritone' : 'Unterwegs'}</b> ${esc(act.manual.text)}`;
   } else if (a && (a.phase === 'error' || a.phase === 'done') && a.log && a.log.length) {
     const t = a.log[a.log.length - 1][0];
     if (Date.now() - t < 60000 && t !== act.dismissed) {

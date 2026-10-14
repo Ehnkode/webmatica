@@ -133,6 +133,7 @@ function xrayStats(s) {
 }
 
 function xrayToggle(on = !xray.on) {
+  if (on && state.safe) { toast('Server-safe ist an: X-Ray ist aus (Optionen)'); return; }
   if (on && !xray.groups.length) { openPop('pop-xray'); xrayLoadNames(); $('#xray-input').focus(); return; }
   xray.on = on;
   xraySave();

@@ -1,5 +1,5 @@
 /* Webmatica map UI: Startup. */
-import './xray.js';   // runs before this file (load order, see index.html)
+import './safe.js';   // runs before this file (load order, see index.html)
 import { api, map, prefs, state, toast, toLatLng } from './core.js';
 import { select } from './world.js';
 import { loadWaypoints } from './places.js';

@@ -289,10 +289,10 @@ class Commands:
                     self.results.pop(k)
 
 
-# ------------------------------------------------------------------ Printer + Litematica layers
+# ------------------------------------------------------------------ Printer, server-safe, Litematica layers
 
 class Control:
-    """Desired state for Printer and Litematica layers (per server).
+    """Desired state for the Webmatica printer, server-safe and Litematica layers (per server).
 
     The browser changes parts of it, each change increments ``seq``; the mod
     applies the state as soon as it sees a new number, and reports the real
@@ -300,33 +300,73 @@ class Control:
     the lowest layer of the chosen schematic in which something is still missing.
     """
 
-    PRINTER_KEYS = {"on": bool, "range": float, "interval": int, "air": bool, "interact": bool,
-                    "strip": bool, "fluids": bool}
+    # Webmatica's own printer: on/off, reach in blocks, blocks per second
+    WEB_DEFAULTS = {"on": False, "range": 4.5, "bps": 10.0}
     AUTO_EVERY = 3.0
 
-    def __init__(self):
+    def __init__(self, rec_root: str | None = None):
         self.lock = threading.Lock()
         self.state: dict[str, dict] = {}
         self.status: dict[str, dict] = {}
         self.status_ts: dict[str, float] = {}
         self._auto_ts: dict[str, float] = {}
+        # Server-safe switch and printer settings per server, kept in .viewer/safety.json
+        # (the printer's on/off is not kept: after a restart it starts off)
+        self.path = os.path.join(rec_root, ".viewer", "safety.json") if rec_root else None
+        self.saved: dict = {"safe": {}, "web": {}}
+        if self.path:
+            try:
+                with open(self.path, encoding="utf-8") as f:
+                    data = json.load(f)
+                for k in self.saved:
+                    if isinstance(data.get(k), dict):
+                        self.saved[k] = data[k]
+            except (OSError, ValueError):
+                pass
+
+    def safe(self, srv: str) -> bool:
+        """Server-safe for this server: everything most public servers forbid is off."""
+        return bool(self.saved["safe"].get(srv))
+
+    def web(self, srv: str) -> dict:
+        st = self._st(srv)
+        return {**self.WEB_DEFAULTS, **self.saved["web"].get(srv, {}), "on": bool(st.get("webOn"))}
+
+    def _save(self):
+        if not self.path:
+            return
+        tmp = self.path + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(self.saved, f, indent=1)
+            os.replace(tmp, self.path)
+        except OSError:
+            pass
 
     def _st(self, srv: str) -> dict:
-        return self.state.setdefault(srv, {"seq": int(time.time()), "printer": {}, "layer": None, "auto": None})
+        return self.state.setdefault(srv, {"seq": int(time.time()), "layer": None, "auto": None})
 
     def push(self, req: dict) -> dict:
         srv = str(req["srv"])
         with self.lock:
             st = self._st(srv)
             changed = False
-            if isinstance(req.get("printer"), dict):
-                pr = {}
-                for k, conv in self.PRINTER_KEYS.items():
-                    if k in req["printer"]:
-                        pr[k] = conv(req["printer"][k])
-                st["printer"] = pr          # only what changed, otherwise hotkey changes get overwritten
+            if "safe" in req:
+                self.saved["safe"][srv] = bool(req["safe"])
+                self._save()
                 changed = True
-                st["printer_seq"] = st["seq"] + 1
+            if isinstance(req.get("web"), dict):
+                w = req["web"]
+                if "on" in w:
+                    st["webOn"] = bool(w["on"])
+                keep = dict(self.saved["web"].get(srv, {}))
+                if "range" in w:
+                    keep["range"] = min(6.0, max(1.0, float(w["range"])))
+                if "bps" in w:
+                    keep["bps"] = min(20.0, max(1.0, float(w["bps"])))
+                self.saved["web"][srv] = keep
+                self._save()
+                changed = True
             if "layer" in req:
                 st["layer"] = self._layer(req["layer"])
                 changed = True
@@ -353,9 +393,8 @@ class Control:
     def for_mod(self, srv: str) -> dict:
         with self.lock:
             st = self._st(srv)
-            # Keep sending the Printer change only until the mod has confirmed it
-            done = int((self.status.get(srv) or {}).get("seq", -1)) >= st.get("printer_seq", 0)
-            return {"seq": st["seq"], "printer": None if done else (st["printer"] or None), "layer": st["layer"]}
+            return {"seq": st["seq"], "layer": st["layer"],
+                    "safe": self.safe(srv), "web": self.web(srv)}
 
     def set_status(self, req: dict):
         srv = str(req.get("server") or "")
@@ -367,6 +406,7 @@ class Control:
         fresh = time.monotonic() - self.status_ts.get(srv, -1e9) < 6.0
         st = self._st(srv)
         return {"seq": st["seq"], "auto": st["auto"], "layer": st["layer"], "autoInfo": st.get("autoInfo"),
+                "safe": self.safe(srv), "web": self.web(srv),
                 "online": fresh, "game": self.status.get(srv) if fresh else None}
 
     def auto_step(self, srv: str, verify) -> None:
