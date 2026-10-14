@@ -54,6 +54,7 @@ later file.
 |---|---|
 | `i18n.js` | translates the German UI on the fly with `i18n/en.tsv` (German text is the key) |
 | `js/core.js` | state, helpers (`$`, `api`, `fmt`, `esc`), the Leaflet map |
+| `js/world.js` | the shown world, dimension and layer: selector buttons, map tiles |
 | `js/player.js` | live player, game status chip, 2D/3D switch |
 | `js/sidebar.js`, `js/keyboard.js`, `js/start.js` | layout, shortcuts, first view |
 | `js/schematics.js`, `js/materials.js` | placing schematics, material list, progress check |
