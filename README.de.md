@@ -62,6 +62,10 @@ du das Spiel schließt. Ohne Spiel startest du ihn mit `start-viewer.bat` in die
 ./gradlew buildAll    # eine Jar pro Minecraft-Version in build/libs/
 ```
 
+## Wie es entsteht
+
+Webmatica entsteht mit KI-Unterstützung (Claude). Ideen, Richtung, Tests im Spiel und alle Entscheidungen kommen von mir, beim Schreiben von Code und Texten hilft die KI.
+
 ## Hinweise
 
 Automatisierung ist nicht auf jedem Server erlaubt, Nutzung auf eigenes Risiko. Aufnahmen verraten
