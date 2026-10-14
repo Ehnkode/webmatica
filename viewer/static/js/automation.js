@@ -194,7 +194,7 @@ function renderBuild() {
 function renderWebPrinter(c, g, idle) {
   const want = c && c.web, have = g && g.web;
   const on = !!(want && want.on);
-  $('#wp-toggle').textContent = !want ? 'Printer: ?' : on ? 'Printer AN, klicken zum Ausschalten' : 'Printer aus, klicken zum Einschalten';
+  $('#wp-toggle').textContent = !want ? 'Printer: ?' : on ? 'Printer an' : 'Printer aus';
   $('#wp-toggle').classList.toggle('on', on);
   if (want && idle) { $('#wp-range').value = want.range; $('#wp-bps').value = want.bps; }
   const safe = !!(c && c.safe);

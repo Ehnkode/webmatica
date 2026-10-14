@@ -72,6 +72,8 @@ du das Spiel schließt. Ohne Spiel startest du ihn mit `start-viewer.bat` in die
 ./gradlew buildAll    # eine Jar pro Minecraft-Version in build/libs/
 ```
 
+Spieltests im Dev-Client (Printer, Laufen, Holen): `./gradlew :1.21.11:runClient -Pautotest=all -Pautoquit`, siehe [docs/testing.md](docs/testing.md).
+
 ## Wie es entsteht
 
 Webmatica entsteht mit KI-Unterstützung (Claude). Ideen, Richtung, Tests im Spiel und alle Entscheidungen kommen von mir, beim Schreiben von Code und Texten hilft die KI.

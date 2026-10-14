@@ -110,7 +110,7 @@ Wegpunkt, Hinlaufen, Kiste …	Waypoint, walk there, chest …
 Rechtsklick auf die Karte setzt einen Wegpunkt.	Right-click the map to set a waypoint.
 Noch keine Wegpunkte in dieser Dimension.	No waypoints in this dimension yet.
 Hinlaufen	Walk there
-Hierhin laufen (Baritone)	Walk here (Baritone)
+Hierhin laufen	Walk here
 Hinfliegen	Fly there
 Hierher	Here
 Auf der Karte zeigen	Show on map
@@ -280,8 +280,8 @@ Stellt Litematica immer auf die unterste Schicht, in der noch Blöcke fehlen, un
 rechnet …	calculating …
 Automatik läuft für eine andere Schematic	Automatic mode is running for another schematic
 Printer	Printer
-Printer AN, klicken zum Ausschalten	Printer ON, click to turn off
-Printer aus, klicken zum Einschalten	Printer off, click to turn on
+Printer an	Printer on
+Printer aus	Printer off
 Printer: nicht verbunden	Printer: not connected
 Printer: ?	Printer: ?
 Printer {}	Printer {}
@@ -699,7 +699,7 @@ Block	Block
 richtig	correct
 wartet	waiting
 Blöcke	blocks
-Baritone stoppen	Stop Baritone
+Laufen stoppen	Stop walking
 Ein-/Ausblenden	Show/hide
 Liste als Text kopieren	Copy list as text
 Abhaken	Tick off
@@ -1211,3 +1211,9 @@ Baritone läuft nach {} {} {}	Baritone walking to {} {} {}
 Baritone läuft nach {} {}	Baritone walking to {} {}
 läuft nach {} {} {}	walking to {} {} {}
 läuft nach {} {}	walking to {} {}
+Spieler ist nicht online	Player is not online
+Läuft nach {} {} …	Walking to {} {} …
+Wird gestoppt …	Stopping …
+Holt die Items …	Fetching the items …
+Lagert die Items ein …	Storing the items …
+Unterwegs	On the way
