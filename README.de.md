@@ -20,7 +20,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
 | | |
 |---|---|
-| ![Wüstendorf in 3D](docs/village.de.jpg) | ![Rechtsklick auf die Karte, Baritone läuft hin](docs/goto.gif) |
+| ![Wüstendorf in 3D](docs/village.de.jpg) | ![Rechtsklick auf die Karte, du läufst hin](docs/goto.gif) |
 | ![Kiste anklicken, Inhalt sehen, alle Kisten durchsuchen](docs/storage.gif) | ![Schematic in der Welt platzieren und verschieben](docs/place.gif) |
 | ![Schematic Schicht für Schicht aufschneiden](docs/editor-cut.gif) | ![Ein Haus im Schematic-Editor bauen](docs/build.gif) |
 
@@ -36,8 +36,13 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
   oder eine ganze Schematic bauen. Material kommt aus deinen Kisten, Reste gehen zurück, und er hält
   an, wenn ein Spieler in die Nähe kommt. Eine Warteschlange baut mehrere Schematics nacheinander.
 - **Lager:** Jede Kiste, die du öffnest, wird gemerkt, auch der Inhalt von Shulkern. Such ein Item
-  über alle Kisten, lass Baritone genau die gewählten Stacks holen oder dein Inventar dorthin
+  über alle Kisten, lass genau die gewählten Stacks holen oder dein Inventar dorthin
   einlagern, wo das Item schon liegt. Mit Stash-Finder.
+- **Eigene Lauf-Engine:** Rechtsklick auf die Karte und du läufst hin; Holen, Einlagern und
+  Einsammeln laufen genauso. Klappt ohne Baritone: Sie findet den Weg über Treppen, Stufen und
+  Abgründe, um Mauern, Lava und tiefes Wasser herum, und baut nie einen Block ab oder setzt einen.
+  Ist Baritone installiert, läuft Baritone, und die eigene Engine übernimmt, wenn es feststeckt
+  (Option „Laufen mit“).
 - **Printer:** setzt die Blöcke einer Schematic, sobald du in der Nähe bist, auch ohne Litematica.
   Dreht dabei nur gegenüber dem Server den Kopf, damit Treppen und Stämme richtig herum liegen.
 - **Server-safe** (Optionen, pro Server): für öffentliche Server. Schaltet Baritone, alle
@@ -51,7 +56,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
 - Minecraft 1.21.11, 26.1, 26.2 oder 26.3 mit Fabric Loader und Fabric API
 - Python 3.10+
-- Optional: [Baritone](https://github.com/cabaletta/baritone), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib)
+- Optional: [Baritone](https://github.com/cabaletta/baritone) (nur für Bauen, Farmen und Ebnen; Laufen geht ohne), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib)
 
 ## Installation
 
