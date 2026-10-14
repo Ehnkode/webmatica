@@ -39,7 +39,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
   item already is. Stash finder included.
 - **Own walking engine:** right-click the map and you walk there; fetching, storing and picking up
   drops walk the same way. Works without Baritone: it finds its way over stairs, slabs and drops,
-  around walls, lava and deep water, and never breaks or places a block. With Baritone installed,
+  around walls, lava and deep water. With Baritone installed,
   Baritone walks and the own engine takes over when it gets stuck (option "Walk with").
 - **Printer:** places a schematic's blocks as soon as you are near them, no Litematica needed.
   It turns your head only towards the server, so stairs and logs come out the right way.
