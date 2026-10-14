@@ -146,10 +146,32 @@ public final class RegionStore {
         }
     }
 
-    /** Disconnected or dimension changed: close files. */
+    /** Disconnected: write what is still pending, then close files. */
     public void onDisconnect() {
+        onWorldChange(Minecraft.getInstance().level);
+    }
+
+    /**
+     * Dimension changed or disconnected: pending chunks of {@code old} are written
+     * right away (without the settle delay), then the files are closed. Without
+     * {@code old} (already gone) the pending changes are dropped.
+     */
+    public void onWorldChange(ClientLevel old) {
+        if (old != null && enabled) {
+            flushAll(old);
+        }
         dirty.clear();
         io.submit(this::closeAll);
+    }
+
+    private void flushAll(ClientLevel world) {
+        for (long key : dirty.keySet()) {
+            ChunkPos pos = Mc.unpack(key);
+            LevelChunk chunk = world.getChunkSource().getChunk(Mc.x(pos), Mc.z(pos), ChunkStatus.FULL, false);
+            if (chunk != null) {
+                submit(world, chunk);
+            }
+        }
     }
 
     private void submit(ClientLevel world, LevelChunk chunk) {
@@ -278,8 +300,13 @@ public final class RegionStore {
         }
     }
 
-    /** On game exit: drain the queue, then close. */
+    /** On game exit: write pending chunks, drain the queue, then close. */
     public void shutdown() {
+        ClientLevel world = Minecraft.getInstance().level;
+        if (world != null && enabled) {
+            flushAll(world);
+        }
+        dirty.clear();
         io.submit(this::closeAll);
         io.shutdown();
         try {

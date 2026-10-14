@@ -55,10 +55,13 @@ public class MapperClient implements ClientModInitializer {
     private static void onEndTick(Minecraft mc) {
         RegionStore store = RegionStore.getInstance();
 
-        // Dimension change: pending changes belong to the old world.
+        // Dimension change: write the old world's pending changes, then switch.
+        // When leaving the server (level gone) DISCONNECT has already written them,
+        // and the server folder may no longer be known.
         if (mc.level != lastWorld) {
+            ClientLevel old = lastWorld;
             lastWorld = mc.level;
-            store.onDisconnect();
+            store.onWorldChange(mc.level != null ? old : null);
         }
 
         while (toggleKey.consumeClick()) {
