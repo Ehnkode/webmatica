@@ -297,7 +297,7 @@ function ingameText(pl) {
   if (!pl.ingame) return 'nur im Viewer';
   switch (pl.ingameState) {
     case 'ok': return 'in Litematica ✓';
-    case 'offline': return 'wartet aufs Spiel (Mod 0.3 + Litematica)';
+    case 'offline': return 'wartet aufs Spiel (Webmatica + Litematica)';
     case 'kein Litematica': return 'Litematica nicht gefunden';
     case 'andere Dimension': return 'erscheint in ihrer Dimension';
     case 'wartet': case undefined: case null: return 'wird übertragen …';

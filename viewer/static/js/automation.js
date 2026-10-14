@@ -91,7 +91,7 @@ $('#ab-toggle').addEventListener('click', async () => {
   const running = a && (a.mode || 'build') === 'build' && ['plan', 'fetch', 'approach', 'build', 'unpack', 'return', 'fix'].includes(a.phase);
   if (!running && !pl) return;
   if (!running && a && (a.mode === 'farm' || a.mode === 'flatten') && ['fplan', 'mine', 'deposit'].includes(a.phase) && !confirm(a.mode === 'flatten' ? 'Gerade wird geebnet. Ebnen beenden und stattdessen bauen?' : 'Gerade wird gefarmt. Farmen beenden und stattdessen bauen?')) return;
-  if (!running && !confirm('Autobau starten?\n\nBaritone läuft zu deinen Kisten, nimmt das fehlende Material und baut die Schematic. Unterwegs baut es nichts ab, beim Bauen selbst schon (falsche Blöcke im Rahmen).\n\nShulker im Inventar packt er neben sich aus und baut sie wieder ab.\\n\\nAbbrechen jederzeit mit „■ Stopp“.')) return;
+  if (!running && !confirm('Autobau starten?\n\nBaritone läuft zu deinen Kisten, nimmt das fehlende Material und baut die Schematic. Unterwegs baut es nichts ab, beim Bauen selbst schon (falsche Blöcke im Rahmen).\n\nShulker im Inventar packt er neben sich aus und baut sie wieder ab.\n\nAbbrechen jederzeit mit „■ Stopp“.')) return;
   try {
     ctl.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify(running ? { srv } : { srv, pid: pl.id }) });
   } catch (e) { toast('Autobau: ' + e.message); }
@@ -113,7 +113,7 @@ function renderBuild() {
   const pr = g && g.printer, ly = g && g.layer;
   const pl = selPl();
   let txt;
-  if (!c || !c.online) txt = 'Spiel nicht verbunden (Minecraft mit Mod 0.3.2 starten)';
+  if (!c || !c.online) txt = 'Spiel nicht verbunden (Minecraft mit Webmatica starten)';
   else {
     const parts = [];
     parts.push(pr && pr.available ? `Printer ${pr.on ? '<b class="ok">AN</b>' : 'aus'}` : 'kein Printer gefunden');

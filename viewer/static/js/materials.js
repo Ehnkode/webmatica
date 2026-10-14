@@ -221,7 +221,7 @@ function renderCheck() {
       if (!c.missingItems.length) return '';
       const tour = planTour(need);
       const carried = invCounts();
-      return `<h4>Noch zu besorgen <span class="muted">${myInv ? '(abzüglich deinem Inventar)' : '(Inventar unbekannt: Mod 0.3.2)'}</span></h4>
+      return `<h4>Noch zu besorgen <span class="muted">${myInv ? '(abzüglich deinem Inventar)' : '(Inventar unbekannt: Spiel nicht verbunden)'}</span></h4>
       <table class="mats"><tbody>${c.missingItems.map(([it, n]) => { const full = fullId(it), have = carried.get(full) || 0;
         return `<tr class="${have >= n ? 'done' : ''}"><td>${itemIcon(it, 20)} ${esc(itemName(it))}</td><td class="n">${fmt(n)}</td>
         <td class="s ${have ? 'inv-have' : 'muted'}">${have ? fmt(Math.min(have, n)) + ' dabei' : '–'}</td>${chestCell(it)}</tr>`; }).join('')}</tbody></table>
