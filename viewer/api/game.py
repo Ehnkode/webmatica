@@ -233,6 +233,15 @@ def auto(h, p, q):
     return h.json(h.app.auto.view(q["srv"][0]))
 
 
+@routes.get("/api/auto/storeplan")
+def store_plan(h, p, q):
+    """Where "Inventar einlagern" would walk to, for the confirm dialog."""
+    try:
+        return h.json(h.app.auto.store_plan(q["srv"][0], q.get("hotbar", ["0"])[0] == "1"))
+    except ValueError as e:
+        return h.fail(400, str(e))
+
+
 @routes.post("/api/auto")
 def start_auto(h, req):
     """One endpoint for every automation; the fields of the request pick which (see docs/protocol.md)."""

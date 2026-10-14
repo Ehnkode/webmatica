@@ -47,7 +47,7 @@ class FlattenMode:
             c = next((c for c in self.app.containers.list(srv) if c.get("key") == req["chest"]), None)
             if c is None:
                 raise ValueError("Kiste unbekannt")
-            chest = {"x": c["x"], "y": c["y"], "z": c["z"], "name": c.get("title") or f"{c['x']} {c['y']} {c['z']}", "own": False}
+            chest = {"x": c["x"], "y": c["y"], "z": c["z"], "name": f"{c.get('title') or 'Kiste'} bei {c['x']} {c['y']} {c['z']}", "own": False}
         with self.lock:
             self.state[srv] = {"pid": None, "mode": "flatten", "phase": "fplan", "info": "", "log": [], "cmd": None,
                                "ts": time.monotonic(), "next": 0.0, "fetched": 0, "not_before": 0.0,
@@ -115,8 +115,8 @@ class FlattenMode:
                 with self.lock:
                     st["info"] = "wartet auf dein Inventar …"
                 return
-            if free < FREE_MIN:
-                return self._farm_deposit(srv, st, now)
+            if free < FREE_MIN and (free <= 0 or self._can_deposit(srv, st, p)):
+                return self._farm_deposit(srv, st, now, p, free)
             cid = self._push(srv, {"kind": "breakboxes", "boxes": farm.boxes(pts), "label": "Abbauen" if fl.get("kind") == "clear" else "Ebnen", "pickup": True,
                                    "timeout": int(MINE_TIMEOUT)})
             self._set(srv, phase="mine", cmd=cid, batch=pts)
