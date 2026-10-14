@@ -61,6 +61,10 @@ close the game. To use it without the game, run `start-viewer.bat` in that folde
 ./gradlew buildAll    # one jar per Minecraft version in build/libs/
 ```
 
+## How it's made
+
+Webmatica is built with the help of AI (Claude). The idea, the direction, testing in the game and all decisions are mine, the AI helps write code and text.
+
 ## Notes
 
 Automation is not allowed on every server, use at your own risk. Recordings reveal coordinates,
