@@ -398,6 +398,13 @@ Einlagern dauert zu lange	Storing takes too long
 bringt {} Stacks zu {}	bringing {} stacks to {}
 , ohne passende Kiste: {}	, without a matching chest: {}
 (ohne passende Kiste: {})	(without a matching chest: {})
+Einlagern: {} Stacks in {} Kisten im Umkreis von {} m	Storing: {} stacks in {} chests within {} m
+nichts einzulagern: keine Kiste im Umkreis von {} m hat diese Items	nothing to store: no chest within {} m holds these items
+bringt {} Stacks zu {} ({} m vom Start)	bringing {} stacks to {} ({} m from the start)
+Baritone bringt jeden Stack in eine Kiste im Umkreis von {} m, in der dieses Item schon liegt:	Baritone brings every stack to a chest within {} m that already holds that item:
+Bleibt bei dir (keine passende Kiste): {}	Stays with you (no matching chest): {}
+und {} weitere Kisten	and {} more chests
+Einlagern: keine Kiste im Umkreis von {} m hat deine Items. Öffne die Kiste im Spiel einmal oder wähle sie auf der Karte und lagere dort ein.	Storing: no chest within {} m holds your items. Open the chest once in the game, or pick it on the map and store there.
 Inhalt kennt der Viewer, sobald du eine Kiste einmal öffnest. Grau = noch nie geöffnet, lila Ring = jemand anderes war dran.	The viewer knows a chest's contents once you open it. Grey = never opened, purple ring = someone else used it.
 Noch keine Kiste gemerkt. Öffne im Spiel eine Kiste.	No chest remembered yet. Open a chest in the game.
 {} gemerkte Kisten	{} known chests
@@ -418,6 +425,15 @@ Klick wählt Stacks zum Holen aus · Doppelklick öffnet Shulker	Click selects s
 Alle Stacks auswählen	Select all stacks
 Baritone läuft hin, öffnet die Kiste und nimmt die ausgewählten Stacks	Baritone walks there, opens the chest and takes the selected stacks
 Baritone läuft hin und nimmt genau diese Items	Baritone walks there and takes exactly these items
+Dein Inventar	Your inventory
+Alle ohne Hotbar	All except hotbar
+Alle Stacks außer der Hotbar auswählen	Select all stacks except the hotbar
+Baritone läuft hin, öffnet die Kiste und legt die ausgewählten Stacks hinein	Baritone walks there, opens the chest and puts the selected stacks in
+Baritone läuft hin, öffnet die Kiste und legt die ausgewählten Stacks hinein (zuletzt {} Plätze frei)	Baritone walks there, opens the chest and puts the selected stacks in ({} slots free when last seen)
+Klick wählt Stacks zum Einlagern in diese Kiste aus	Click selects stacks to store into this chest
+Einlagern ({} Stacks)	Store ({} stacks)
+Einlagern ({} Stack)	Store ({} stack)
+Baritone lagert die Items ein …	Baritone is storing the items …
 · in Shulker „{}“	· in shulker "{}"
 · {} Shulker	· {} shulkers
 ({} Shulker)	({} shulkers)
@@ -785,6 +801,12 @@ Inventar voll: bringt {} Stacks zu {}	Inventory full: taking {} stacks to {}
 Inventar voll und keine Kiste gewählt	Inventory full and no chest chosen
 Inventar voll und keine Kiste dabei (Kiste mitnehmen oder eine wählen)	Inventory full and no chest with you (bring one or pick one)
 Inventar voll: stellt eine Kiste auf und packt {} Stacks hinein	Inventory full: placing a chest and putting {} stacks in
+Inventar voll ({}/{} Plätze belegt), aber nichts zum Einlagern (nur Werkzeug/Essen/Hotbar)	Inventory full ({}/{} slots used), but nothing to store (only tools/food/hotbar)
+Inventar voll ({}/{} Plätze belegt) und keine Kiste in der Nähe oder im Inventar (Kiste mitnehmen oder eine wählen)	Inventory full ({}/{} slots used) and no chest nearby or with you (bring one or pick one)
+Inventar fast voll ({}/{}): bringt {} Stacks zu {}	Inventory almost full ({}/{}): taking {} stacks to {}
+Inventar fast voll ({}/{}): stellt eine Kiste auf und packt {} Stacks hinein	Inventory almost full ({}/{}): placing a chest and putting {} stacks in
+Kiste bei {} {} {}	Chest at {} {} {}
+{} bei {} {} {}	{} at {} {} {}
 neue Kiste {} {} {}	new chest {} {} {}
 Kiste: {} Items eingelagert bei {} {} {}	Chest: {} items stored at {} {} {}
 Kiste: {} Items eingelagert	Chest: {} items stored

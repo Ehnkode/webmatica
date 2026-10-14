@@ -322,6 +322,9 @@ ol.tour .btns button { font-size: 12px; padding: 2px 8px; }
 .inv-grid .slot.pick { background: #6fb37f; box-shadow: inset 0 0 0 2px #2c7a45; }
 .inv-grid .slot.has { cursor: pointer; }
 .inv-hint { font-size: 11.5px; margin-top: 6px; }
+.inv-me { margin-top: 10px; padding-top: 4px; border-top: 2px solid #8b8b8b; }
+.inv-me .inv-foot { margin: 0 0 6px; }
+.inv-mine-gap { grid-column: 1 / -1; height: 6px; }
 
 .ab-info { margin: 6px 0; font-size: 13px; }
 .ab-info .bad { color: #ff8f93; }
