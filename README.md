@@ -37,7 +37,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
 - **Storage:** every chest you open is remembered, shulker contents included. Search an item across
   all chests, let Baritone fetch exactly the stacks you picked, or store your inventory where each
   item already is. Stash finder included.
-- **X-Ray:** show only the blocks you search for, in 3D and on the map, and jump from find to find.
+- **X-Ray:** show only the blocks you search for, in 3D and on the map, and send Baritone straight to a find.
 - **More:** waypoints, signs, a timelapse of what changed (export as GIF or video), radar for nearby
   players, search for coordinates or waypoints.
 
