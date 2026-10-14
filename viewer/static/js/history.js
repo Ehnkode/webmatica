@@ -1,5 +1,13 @@
 /* Webmatica map UI: Timeline, timelapse overlay and Y layer cut. */
-'use strict';
+import './gif.js';   // runs before this file (load order, see index.html)
+import {
+  $, $$, api, esc, fmt, map, MAX_ZOOM, MIN_ZOOM, prefs, savePref, state, toast, toLatLng,
+} from './core.js';
+import { rebuildTiles, renderSelectors } from './world.js';
+import { loadMarkers } from './places.js';
+import { mode3d, saveHash, setFollow, view3d } from './player.js';
+import { DIM_Y } from './selection.js';
+import { encodeGif } from './gif.js';
 
 // ------------------------------------------------------------------ Timeline
 
@@ -311,3 +319,5 @@ $('#cut-mode').addEventListener('change', (e) => {
 });
 $('#cut-y').addEventListener('input', (e) => setCut(cut.mode, Number(e.target.value)));
 $('#cut-yn').addEventListener('change', (e) => setCut(cut.mode, Number(e.target.value)));
+
+export { cut, cutRange, drawHistory, loadHistoryDates, setCut, tl, tlShow };

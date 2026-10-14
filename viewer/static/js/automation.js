@@ -1,5 +1,12 @@
 /* Webmatica map UI: Building automation: Baritone, printer, auto-build, guard switches, storing. */
-'use strict';
+import './keyboard.js';   // runs before this file (load order, see index.html)
+import { $, $$, api, esc, fmt, renderChecklist, state, toast } from './core.js';
+import { baritone } from './places.js';
+import { gameChecks, gameStatus, statusText } from './player.js';
+import { jsonPost, schem, selPl, spBadge } from './schematics.js';
+import { runCheck } from './materials.js';
+import { loadContainers, planTour, stillNeeded } from './chests.js';
+import { renderQueue } from './farm.js';
 
 // ------------------------------------------------------------------ Building: Baritone, printer, layers
 
@@ -216,3 +223,5 @@ $('#bd-clear').addEventListener('click', () => {
     (done ? `\n\nAchtung: ${fmt(done)} Blöcke der Schematic stehen schon und würden mit abgebaut.` : '') + '\n\nWirklich starten?')) return;
   baritone({ kind: 'clear', x0: pl.x, y0: pl.y, z0: pl.z, x1: pl.x + w - 1, y1: pl.y + h - 1, z1: pl.z + l - 1 });
 });
+
+export { AB_PHASE, ctl, highlightChests, renderAuto };

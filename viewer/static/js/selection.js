@@ -1,5 +1,9 @@
 /* Webmatica map UI: Schematic area selection (2D and 3D) and the player trail. */
-'use strict';
+import './player.js';   // runs before this file (load order, see index.html)
+import { $, api, fmt, fromLatLng, map, savePref, state, toast, toLatLng } from './core.js';
+import { mode3d, setFollow, view3d } from './player.js';
+import { openEditor } from './schematics.js';
+import { drawFarmArea, farmUi, pick3dStop } from './farm.js';
 
 // ------------------------------------------------------------------ Schematic selection
 
@@ -184,3 +188,5 @@ function drawTrail() {
   });
   trail.line = L.polyline(parts, { color: '#ffd23f', weight: 2, opacity: 0.85, interactive: false }).addTo(map);
 }
+
+export { DIM_Y, extendTrail, loadTrail, sel, setSelect, setTrail, trail };

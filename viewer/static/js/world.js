@@ -1,5 +1,13 @@
 /* Webmatica map UI: the shown world, dimension and layer (selector buttons, map tiles). */
-'use strict';
+import './core.js';   // runs before this file (load order, see index.html)
+import { $, dimOf, esc, fromLatLng, map, MAX_ZOOM, MIN_ZOOM, RegionLayer, state, toLatLng } from './core.js';
+import { drawWaypoints, loadMarkers } from './places.js';
+import { drawPlayer, mode3d, reload3d, saveHash, spawn2dSync } from './player.js';
+import { loadTrail, sel, setSelect } from './selection.js';
+import { loadPlacements } from './schematics.js';
+import { loadContainers } from './chests.js';
+import { cut, cutRange, loadHistoryDates, tl, tlShow } from './history.js';
+import { xray2dSoon } from './xray.js';
 
 let tiles = null;
 
@@ -87,3 +95,5 @@ $('#layers').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-layer]');
   if (b) select(state.server, state.dim, b.dataset.layer, true);
 });
+
+export { rebuildTiles, renderSelectors, select, tiles };

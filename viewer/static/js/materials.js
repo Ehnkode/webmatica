@@ -1,5 +1,12 @@
 /* Webmatica map UI: Schematics: material list, comparison with the world, shulker packing. */
-'use strict';
+import './schematics.js';   // runs before this file (load order, see index.html)
+import { $, $$, api, esc, fmt, map, prefs, savePref, state, toast, toLatLng } from './core.js';
+import { mode3d, view3d } from './player.js';
+import { flushSchems, renderPlaced, schem, selPl, spBadge } from './schematics.js';
+import {
+  chestKey, chests, chestWhere, fullId, inChests, invCounts, itemIcon, myInv, planTour, prettyItem,
+  stillNeeded,
+} from './chests.js';
 
 // --- Material list and comparison
 
@@ -242,3 +249,5 @@ function renderCheck() {
     })()}
     ${s.unknown ? '<p class="hint">Teile sind nicht aufgezeichnet: einmal mit der Mod hinfliegen, dann neu abgleichen.</p>' : ''}`;
 }
+
+export { itemName, loadPaneData, renderCheck, renderMats, renderMissing, runCheck, stacksText };

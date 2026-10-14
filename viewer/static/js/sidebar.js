@@ -1,5 +1,8 @@
 /* Webmatica map UI: Jump and search, sidebar areas, shortcut help, collapsible sections. */
-'use strict';
+import './world.js';   // runs before this file (load order, see index.html)
+import { $, $$, esc, map, state, toast, toLatLng } from './core.js';
+import { select } from './world.js';
+import { mode3d, setFollow, view3d } from './player.js';
 
 // ------------------------------------------------------------------ Jump
 
@@ -142,3 +145,5 @@ $$('details.fold').forEach((d) => {
   try { d.open = localStorage.getItem('fold:' + d.dataset.fold) === '1'; } catch (_) { /* ignore */ }
   d.addEventListener('toggle', () => { try { localStorage.setItem('fold:' + d.dataset.fold, d.open ? '1' : '0'); } catch (_) { /* ignore */ } });
 });
+
+export { AREA_ORDER, areaOf, fillGotoList, flash, searchOpen, sideTab, toggleHelp, toggleSide };

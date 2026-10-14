@@ -1,5 +1,10 @@
 /* Webmatica map UI: Schematics: library, placement, 2D drag, editor link, Litematica bridge. */
-'use strict';
+import './selection.js';   // runs before this file (load order, see index.html)
+import { $, api, esc, fmt, fromLatLng, map, state, toast, toLatLng } from './core.js';
+import { toggleSide } from './sidebar.js';
+import { mode3d, setFollow, view3d } from './player.js';
+import { sel, setSelect } from './selection.js';
+import { loadPaneData } from './materials.js';
 
 // ------------------------------------------------------------------ Schematics
 
@@ -362,3 +367,8 @@ function schemKeys(e) {
   if (e.key === 'Escape' && document.pointerLockElement === null) { selectSchem(null); return true; }
   return false;
 }
+
+export {
+  flushSchems, gotoSchem, jsonPost, loadLibrary, loadPlacements, openEditor, placedHere, renderPlaced,
+  schem, schemKeys, selectSchem, selPl, spBadge,
+};

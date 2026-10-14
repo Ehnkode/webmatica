@@ -1,5 +1,11 @@
 /* Webmatica map UI: Inventory, pickup tour, chest inventory and the chest window. */
-'use strict';
+import './materials.js';   // runs before this file (load order, see index.html)
+import { $, $$, api, esc, fmt, fromLatLng, map, prefs, savePref, state, toast, toLatLng } from './core.js';
+import { baritone, drawMarkers } from './places.js';
+import { mode3d, setFollow, view3d } from './player.js';
+import { jsonPost, schem, selPl } from './schematics.js';
+import { renderCheck, renderMats, renderMissing } from './materials.js';
+import { highlightChests } from './automation.js';
 
 // --- Inventory, pickup tour, Baritone buttons for building
 
@@ -426,3 +432,8 @@ $('#inv-grid').addEventListener('mousemove', (e) => {
   tip.style.top = Math.min(window.innerHeight - tip.offsetHeight - 8, e.clientY + 14) + 'px';
 });
 $('#inv-grid').addEventListener('mouseleave', () => { $('#inv-tip').hidden = true; });
+
+export {
+  agoText, chestKey, chests, chestWhere, fullId, inChests, invCounts, itemIcon, itemPin, itemsMeta,
+  loadContainers, myInv, planTour, prettyItem, stillNeeded,
+};

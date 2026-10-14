@@ -1,5 +1,16 @@
 /* Webmatica map UI: Wrong blocks, build queue, farms, automations, 3D area picking. */
-'use strict';
+import './radar.js';   // runs before this file (load order, see index.html)
+import {
+  $, $$, api, esc, fmt, map, prefs, renderChecklist, savePref, state, toast, toLatLng,
+} from './core.js';
+import { sideTab, toggleSide } from './sidebar.js';
+import { autoBadge } from './places.js';
+import { gameChecks, mode3d, set3d, view3d } from './player.js';
+import { sel, setSelect } from './selection.js';
+import { gotoSchem, schem, selPl } from './schematics.js';
+import { itemName, renderCheck, stacksText } from './materials.js';
+import { chests, chestWhere, itemIcon } from './chests.js';
+import { AB_PHASE, ctl, renderAuto } from './automation.js';
 
 // ------------------------------------------------------------------ Wrong blocks, queue, farms
 
@@ -466,3 +477,5 @@ $('#spawn-light').addEventListener('click', () => {
   toggleSide(true, 'farm');
   if (!farmUi.box) setSelect(true);
 });
+
+export { drawFarmArea, farmRunning, farmUi, pick3dStop, renderPickLabel, renderQueue };

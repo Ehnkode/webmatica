@@ -488,22 +488,8 @@
 <div id="inv-tip" hidden></div>
 <script src="/static/vendor/leaflet/leaflet.js"></script>
 <script src="/static/interp.js"></script>
-<script src="/static/js/core.js"></script>
-<script src="/static/js/world.js"></script>
-<script src="/static/js/sidebar.js"></script>
-<script src="/static/js/places.js"></script>
-<script src="/static/js/player.js"></script>
-<script src="/static/js/selection.js"></script>
-<script src="/static/js/schematics.js"></script>
-<script src="/static/js/materials.js"></script>
-<script src="/static/js/chests.js"></script>
-<script src="/static/js/gif.js"></script>
-<script src="/static/js/history.js"></script>
-<script src="/static/js/keyboard.js"></script>
-<script src="/static/js/automation.js"></script>
-<script src="/static/js/radar.js"></script>
-<script src="/static/js/farm.js"></script>
-<script src="/static/js/xray.js"></script>
-<script src="/static/js/start.js"></script>
+<!-- The page's ES modules. Each one first imports the file before it, so loading the last one
+     runs them all in this order: core world sidebar places player selection schematics materials chests gif history keyboard automation radar farm xray start -->
+<script type="module" src="/static/js/start.js"></script>
 </body>
 </html>
