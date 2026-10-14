@@ -18,6 +18,7 @@ import net.minecraft.world.level.storage.LevelResource;
  * <pre>
  * webmatica_recording/
  *   2b2t.org/
+ *   localhost_25566/       a port other than 25565 gets its own folder
  *     region/        Overworld
  *     DIM-1/region/  Nether
  *     DIM1/region/   End
@@ -32,7 +33,7 @@ public final class RecordingTarget {
         return mc.gameDirectory.toPath().resolve("webmatica_recording");
     }
 
-    /** Folder name for the current server (address without port, safe characters only),
+    /** Folder name for the current server (address, plus "_port" for a port other than 25565; safe characters only),
      *  in singleplayer "singleplayer-" + the save folder, so every world keeps its own map,
      *  history, chests and waypoints. */
     public static String serverId(Minecraft mc) {
@@ -48,7 +49,13 @@ public final class RecordingTarget {
         String addr = info.ip.trim().toLowerCase(Locale.ROOT);
         int colon = addr.lastIndexOf(':');
         if (colon > 0 && addr.indexOf(':') == colon) {
+            // Default port: just the address (as before). Another port gets its own folder,
+            // so several servers on one host (e.g. localhost:25566) don't share a map.
+            String port = addr.substring(colon + 1);
             addr = addr.substring(0, colon);
+            if (!port.isEmpty() && !port.equals("25565")) {
+                return sanitize(addr) + "_" + sanitize(port);
+            }
         }
         return sanitize(addr);
     }
