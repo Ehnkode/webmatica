@@ -5,7 +5,7 @@
 Your Minecraft world in the browser: map, 3D view, chests and schematics, plus remote control for
 Litematica and Baritone. Works on any server or Singleplayer.
 
-![Building a house in the schematic editor](docs/build.gif)
+![Webmatica showcase](docs/showcase.gif)
 
 - **Mod** (Fabric, Minecraft 1.21.11 to 26.3, client only): saves every chunk you see as normal region files and
   remembers chest contents. Sends nothing to the server or the chat.
@@ -18,7 +18,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
 |---|---|
 | ![Desert village in 3D](docs/village.jpg) | ![Right-click the map and Baritone walks there](docs/goto.gif) |
 | ![Click a chest to see its contents, search all chests](docs/storage.gif) | ![Place a schematic in the world and move it](docs/place.gif) |
-| ![Cutting through a schematic layer by layer](docs/editor-cut.gif) | ![Flatten an area with Baritone](docs/automation.jpg) |
+| ![Cutting through a schematic layer by layer](docs/editor-cut.gif) | ![Building a house in the schematic editor](docs/build.gif) |
 
 - **Map and 3D** of everything you have seen, with real block models, smooth light, shadows and a
   far view of up to 65,000 blocks. Live position, trail, follow camera and mob spawn spots.
