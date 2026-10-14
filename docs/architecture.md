@@ -37,7 +37,7 @@ the web page and runs the automations' logic. The mod only executes steps.
 | `app.py` | `App`: the state of a running viewer (recording, tile cache, player, every store) |
 | `workers.py` | 3D meshes and X-ray in worker processes, pre-rendering, the automation loop |
 | `core/` | reading the recording: region files and NBT (`world`, `nbt`, `chunk`), map tiles (`tiles`, `colors`), 3D meshes (`mesher`, `models`), schematics (`schem`, `schematic`) |
-| `autobuild.py` | state machine for auto-build, storing, farming and flattening |
+| `autobuild.py`, `automation/` | auto-build, storing, farming and flattening: the step loop in `autobuild.py`, one module per mode |
 | `extras.py` | smaller stores: commands queue, chests, Printer/layer control, history, radar, lids |
 | `placements.py`, `editor.py` | placed schematics and the schematic editor |
 | `farm.py`, `spawn.py`, `xray.py` | area scans, mob spawn spots, X-ray search |
