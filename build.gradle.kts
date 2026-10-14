@@ -49,11 +49,9 @@ tasks.processResources {
     from(rootProject.file("viewer/static/i18n")) {
         into("assets/webmatica/i18n")
     }
-    // The viewer ships inside the jar; the mod copies it next to the game (ViewerLauncher)
-    from(rootProject.projectDir) {
-        include("viewer/**", "requirements.txt", "start-viewer.bat", "start-viewer.sh", "LICENSE")
-        exclude("**/__pycache__/**", "**/*.pyc", "viewer/tests/**", "viewer/assets/**")
-        into("webmatica-viewer")
+    // The viewer's web page; its server runs in the mod (package viewer, started by ViewerLauncher)
+    from(rootProject.file("viewer/static")) {
+        into("webmatica-viewer/static")
     }
 }
 
