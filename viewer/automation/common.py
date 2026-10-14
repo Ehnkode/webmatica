@@ -21,6 +21,7 @@ FIX_ROUNDS = 2
 MINE_BATCH = 48
 MINE_TIMEOUT = 360.0     # s for one mining job
 FREE_MIN = 3             # this many free slots, otherwise store items first
+STORE_RADIUS = 128.0     # blocks: farther chests are not picked on their own for storing
 FILL_BATCH = 128         # holes per fill job
 LIGHT_BATCH = 8          # torches per job, then plan again with the new light
 # stays in the inventory when storing
