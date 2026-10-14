@@ -333,6 +333,8 @@ var inv = { stack: [], hl: null };   // stack: [{ chest, title, slots, items }]
 function openInv(c, highlight) {
   inv.hl = highlight || null;
   inv.pick = new Set();
+  inv.mine = new Set();
+  loadInventory().then(() => { if (inv.stack.length) renderInv(); });
   inv.stack = [{ chest: c, title: c.title || chestWhere(c), slots: c.slots || 27, items: c.items }];
   renderInv();
   $('#inv-win').hidden = false;
@@ -378,7 +380,52 @@ function renderInv() {
   $('#inv-fetch').hidden = !npick;
   $('#inv-fetch').textContent = `Holen (${npick} Stack${npick === 1 ? '' : 's'})`;
   $('#inv-all').hidden = !top;
+  renderMine(c, top);
 }
+/* Your own inventory under the chest: pick stacks to store into this chest. */
+const KEEP_ID = /pickaxe|_axe|shovel|_hoe|sword|shears|totem|elytra|helmet|chestplate|leggings|boots|flint_and_steel|ender_pearl|firework/;
+function renderMine(c, top) {
+  const p = state.player;
+  const items = (myInv && myInv.items) || [];
+  const show = top && !!p && p.active && (c.dim === 'ender' || p.dim === c.dim) && items.length > 0;
+  $('#inv-me').hidden = !show;
+  if (!show) return;
+  const bySlot = new Map(items.filter((it) => Number.isInteger(it.slot) && it.slot < 36).map((it) => [it.slot, it]));
+  for (const s of inv.mine) if (!bySlot.has(s)) inv.mine.delete(s);
+  const cell = (i) => {
+    const it = bySlot.get(i);
+    if (!it) return '<div class="slot"></div>';
+    return `<div class="slot has ${(it.contents || []).length ? 'shulker' : ''} ${inv.mine.has(i) ? 'pick' : ''}" data-s="${i}">${itemIcon(it.id)}${it.count > 1 ? `<span class="n">${it.count}</span>` : ''}</div>`;
+  };
+  const main = Array.from({ length: 27 }, (_, k) => cell(k + 9)).join('');
+  const hot = Array.from({ length: 9 }, (_, k) => cell(k)).join('');
+  $('#inv-mine').innerHTML = main + '<div class="inv-mine-gap"></div>' + hot;
+  const n = inv.mine.size;
+  const free = Math.max(0, (c.slots || 27) - (c.items || []).length);
+  $('#inv-store').hidden = !n;
+  $('#inv-store').textContent = `Einlagern (${n} Stack${n === 1 ? '' : 's'})`;
+  $('#inv-store').title = `Baritone läuft hin, öffnet die Kiste und legt die ausgewählten Stacks hinein (zuletzt ${free} Plätze frei)`;
+}
+$('#inv-mine').addEventListener('click', (e) => {
+  const s = e.target.closest('.slot.has');
+  if (!s) return;
+  const i = Number(s.dataset.s);
+  if (inv.mine.has(i)) inv.mine.delete(i); else inv.mine.add(i);
+  renderInv();
+});
+$('#inv-me-all').addEventListener('click', () => {
+  const all = ((myInv && myInv.items) || []).filter((it) => it.slot >= 9 && it.slot < 36 && !KEEP_ID.test(it.id)).map((it) => it.slot);
+  inv.mine = all.every((s) => inv.mine.has(s)) && all.length ? new Set() : new Set(all);
+  renderInv();
+});
+$('#inv-store').addEventListener('click', () => {
+  const c = inv.stack[0].chest;
+  const bySlot = new Map(((myInv && myInv.items) || []).map((it) => [it.slot, it]));
+  const put = Array.from(inv.mine).filter((s) => bySlot.has(s)).map((s) => ({ slot: s, id: bySlot.get(s).id }));
+  if (!put.length) return;
+  baritone({ kind: 'store', x: c.x, y: c.y, z: c.z, put });
+  closeInv();
+});
 function closeInv() { $('#inv-win').hidden = true; $('#inv-tip').hidden = true; inv.stack = []; }
 $('#inv-close').addEventListener('click', closeInv);
 $('#inv-win').addEventListener('click', (e) => { if (e.target.id === 'inv-win') closeInv(); });
