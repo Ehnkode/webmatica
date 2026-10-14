@@ -145,6 +145,7 @@ async function runCheck(quiet) {
     const c = await api(`/api/schematics/${encodeURIComponent(pl.id)}/verify`);
     if (selPl() !== pl) return;
     schem.check = c;
+    schem.checkPid = pl.id;
     pl._pct = Math.floor((c.stats.ok / Math.max(1, c.stats.total)) * 100);
     if (view3d && $('#chk-show').checked) view3d.setVerify(pl.id, c.points);
     renderCheck();
