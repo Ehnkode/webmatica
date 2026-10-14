@@ -23,6 +23,7 @@ version differences live in `Mc.java` and `//?` comments.
 | `FetchTask`, `UnpackTask`, `FarmTask` | multi-step bot jobs (fetch/store, empty shulkers, break and pick up) |
 | `BotTask` | their shared base: one command at a time, phases on the client tick, frozen while paused or eating, the result report |
 | `BaritoneApi` | every call into Baritone (reflection through its API interfaces): commands, settings, walking, state |
+| `AutoTest` | game tests for the dev client (`-Pautotest`, see testing.md); inactive otherwise |
 | `Walker` | every walk of the tasks and of goto: Baritone if installed, else `NativeWalker`; switches over when Baritone is stuck (guard `engine`: auto, native, baritone) |
 | `NativeWalker` | own walking: A* over standable spots (step up 1, drop 3, never digs or places), follows the path with the movement keys |
 | `BaritoneSafety` | walk without breaking blocks unless the guard allows digging; restore Baritone's settings |

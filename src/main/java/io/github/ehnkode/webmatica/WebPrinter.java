@@ -103,9 +103,14 @@ public final class WebPrinter {
     private volatile double bps = 10.0;
 
     private long keyAt;
+    /** Autotest: targets come from {@link #testFeed}, not from the viewer. */
+    private volatile boolean test;
 
     /** Client thread, from BuildControl on every poll. */
     void configure(Minecraft mc, boolean on, double range, double bps) {
+        if (test) {
+            return;
+        }
         if (on != this.on && System.currentTimeMillis() - keyAt < 2500L) {
             on = this.on;        // the key was just pressed: the viewer hasn't seen it yet
         }
@@ -181,7 +186,7 @@ public final class WebPrinter {
             try {
                 String srv = serverId, d = dim;
                 BlockPos c = center;
-                if (on && srv != null && d != null && c != null) {
+                if (on && !test && srv != null && d != null && c != null) {
                     fetched = fetch(srv, d, c, (int) Math.ceil(range) + 3);
                 }
                 Thread.sleep(on ? 400L : 1000L);
@@ -283,6 +288,29 @@ public final class WebPrinter {
             double pace = ServerSafe.on() ? Math.min(bps, SAFE_BPS) : bps;
             cooldown = Math.max(0, (int) Math.ceil(20.0 / pace) - 1);
         }
+    }
+
+    /**
+     * Autotest: place these blocks (palette + x,y,z,index quads, as /api/printer/blocks
+     * sends them) without a viewer. Called every tick while the test runs; null ends it.
+     */
+    void testFeed(List<String> palette, int[] blocks, double range, double bps) {
+        if (palette == null) {
+            test = false;
+            on = false;
+            fetched = null;
+            targets.clear();
+            return;
+        }
+        test = true;
+        on = true;
+        this.range = range;
+        this.bps = bps;
+        fetched = new Fetched(palette, blocks, System.currentTimeMillis());
+    }
+
+    long placedCount() {
+        return placed;
     }
 
     private void readTargets(Fetched f) {
