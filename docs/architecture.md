@@ -46,9 +46,21 @@ the web page and runs the automations' logic. The mod only executes steps.
 
 ## The web page
 
-Plain scripts without a build step, loaded in order by `static/index.html`.
-They share one global scope, so a function in `core.js` can be used in every
-later file.
+ES modules without a build step. Each file imports what it uses from the
+others and exports what the others use (`export { ... }` at the end).
+
+Load order: every file first imports the file before it (`import './prev.js';`),
+and `static/index.html` loads only the last one, `js/start.js`. So the files run
+in a fixed order, the one listed in index.html: core, world, sidebar, places,
+player, selection, schematics, materials, chests, gif, history, keyboard,
+automation, radar, farm, xray, start. Code that runs while a file loads may only
+use files earlier in that list; inside functions and event handlers every
+import is available. `core.js` imports nothing.
+A new file goes into this chain (its first import is the file before it, the
+file after it imports the new one) and into the comment in index.html.
+
+Only `i18n.js`, `interp.js` and Leaflet stay plain scripts (globals `I18N`,
+`PlayerInterp`, `L`).
 
 | file | job |
 |---|---|

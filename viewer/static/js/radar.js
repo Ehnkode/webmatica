@@ -1,5 +1,9 @@
 /* Webmatica map UI: Radar. */
-'use strict';
+import './automation.js';   // runs before this file (load order, see index.html)
+import { $, api, esc, fmt, map, prefs, savePref, state, toast, toLatLng } from './core.js';
+import { view3d } from './player.js';
+import { placedHere } from './schematics.js';
+import { agoText } from './chests.js';
 
 // ------------------------------------------------------------------ Radar
 
@@ -72,3 +76,5 @@ for (const id of ['#rd-now', '#rd-log']) {
   });
 }
 $('#rd-sound').addEventListener('click', () => { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); });
+
+export { radarUpdate };

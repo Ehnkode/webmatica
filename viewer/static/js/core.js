@@ -4,7 +4,6 @@
  * World point (x, z) <-> LatLng(-z, x). Zoom level 0 = 1 pixel per block,
  * one tile (512 px) = one region.
  */
-'use strict';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -161,3 +160,8 @@ async function columnInfo(x, z) {
     $('#info').textContent = `Y ${c.y}  ${block}  ·  ${c.biome.replace('minecraft:', '')}`;
   } catch (_) { $('#info').textContent = ''; }
 }
+
+export {
+  $, $$, api, dimOf, esc, fmt, fromLatLng, map, MAX_ZOOM, MIN_ZOOM, overlay, prefs, RegionLayer,
+  renderChecklist, savePref, state, toast, toLatLng,
+};
