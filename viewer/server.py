@@ -1215,15 +1215,35 @@ def _bundle_version() -> str:
 VERSION = _bundle_version()
 
 
+def _render_version() -> str:
+    """Fingerprint of what the cached tiles depend on: the render code and the block colours.
+
+    A new mod build that only changes the web page keeps the cache.
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    h = hashlib.sha1()
+    core = os.path.join(here, "core")
+    for name in sorted(os.listdir(core)):
+        if name.endswith(".py"):
+            with open(os.path.join(core, name), "rb") as f:
+                h.update(name.encode() + f.read())
+    for name in ("atlas.json", "atlas.png", "blocks.json", "blocks.png"):
+        try:
+            st = os.stat(os.path.join(here, "assets", name))
+            h.update(f"{name}:{st.st_size}".encode())
+        except OSError:
+            pass
+    return h.hexdigest()[:16]
+
+
 def _reset_cache_on_update(cache: str) -> None:
-    """Tiles rendered by another viewer build may be wrong (e.g. chunks it could not read): start over."""
+    """Tiles rendered by other render code may be wrong (e.g. chunks it could not read): start over."""
     os.makedirs(cache, exist_ok=True)
     stamp = os.path.join(cache, ".viewer-version")
-    if not VERSION:
-        return   # started by hand, not unpacked by the mod
+    version = _render_version()
     try:
         with open(stamp, encoding="utf-8") as f:
-            if f.read().strip() == VERSION:
+            if f.read().strip() == version:
                 return
     except OSError:
         pass
@@ -1232,7 +1252,7 @@ def _reset_cache_on_update(cache: str) -> None:
         shutil.rmtree(cache, ignore_errors=True)
     os.makedirs(cache, exist_ok=True)
     with open(stamp, "w", encoding="utf-8") as f:
-        f.write(VERSION)
+        f.write(version)
 
 
 def _exit_with_parent(srv, pid: int) -> None:
