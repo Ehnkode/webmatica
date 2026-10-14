@@ -120,6 +120,7 @@ class App:
         self.editor = Editor(self.placements, self.rec)
         self.auto = AutoBuild(self, recording)
         self.world_chests = {}         # chests from the recording, briefly cached
+        self.polling: dict[str, float] = {}   # server -> last /api/control poll of its mod
         self.lm_status = {}            # last feedback from the mod on the Litematica bridge
         self.lm_status_ts = 0.0
         self.trail_path = os.path.join(recording, ".viewer", "trail.json")
@@ -676,9 +677,10 @@ def make_handler(app: App):
                 if p == "/api/commands":
                     return self.json(app.commands.pop(q["srv"][0]))
                 if p == "/api/control":
+                    # Only read here: the mod waits at most 2 s for this answer.
+                    # Auto-build and layer automation run in automation_loop.
                     srv = q["srv"][0]
-                    app.control.auto_step(srv, lambda pid: app.placements.verify(pid, app.rec))
-                    app.auto.step(srv)
+                    app.polling[srv] = time.monotonic()
                     return self.json({**app.control.for_mod(srv), "guard": app.auto.guard(srv)})
                 if p == "/api/auto/settings":
                     return self.json(app.auto.get_settings())
@@ -1215,6 +1217,25 @@ def _bundle_version() -> str:
 VERSION = _bundle_version()
 
 
+def automation_loop(app: App, every: float = 0.5) -> None:
+    """Auto-build and layer automation for every server whose mod polls right now.
+
+    Verifying a big schematic can take seconds; doing it in the mod's poll made
+    that poll time out (and the guard switches flicker).
+    """
+    while True:
+        now = time.monotonic()
+        for srv, seen in list(app.polling.items()):
+            if now - seen > 10.0:
+                continue
+            try:
+                app.control.auto_step(srv, lambda pid: app.placements.verify(pid, app.rec))
+                app.auto.step(srv)
+            except Exception as e:  # keep the loop alive
+                print(f"automation {srv}: {e}")
+        time.sleep(every)
+
+
 def _render_version() -> str:
     """Fingerprint of what the cached tiles depend on: the render code and the block colours.
 
@@ -1305,6 +1326,7 @@ def main(argv=None):
     if args.workers > 0:
         threading.Thread(target=prerender_loop, args=(app, args.recording, args.workers),
                          daemon=True, name="prerender").start()
+    threading.Thread(target=automation_loop, args=(app,), daemon=True, name="automation").start()
     srv = ThreadingHTTPServer((args.host, args.port), make_handler(app))
     srv.daemon_threads = True
     if args.parent_pid > 0:
