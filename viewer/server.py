@@ -55,6 +55,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import ipaddress
 import gzip
 import hashlib
 import json
@@ -456,6 +457,24 @@ def world_label(server: str) -> str:
     return server
 
 
+def _local_host(value: str | None) -> bool:
+    """Only "localhost" or a bare IP address may appear as Host or Origin.
+
+    DNS rebinding points a foreign domain at 127.0.0.1; the browser then sends
+    that domain as Host. An IP literal (LAN access with --host 0.0.0.0) is fine.
+    """
+    if not value:
+        return False
+    host = urlparse(value if "//" in value else "//" + value).hostname or ""
+    if host == "localhost":
+        return True
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return False
+
+
 def make_handler(app: App):
     empty_png = TileStore.empty_png()
 
@@ -501,6 +520,8 @@ def make_handler(app: App):
         # ---------------------------------------------------------- GET
 
         def do_GET(self):
+            if not _local_host(self.headers.get("Host")):
+                return self.fail(403, "fremder Host")
             u = urlparse(self.path)
             p, q = u.path, parse_qs(u.query)
             try:
@@ -912,6 +933,8 @@ def make_handler(app: App):
         def do_POST(self):
             u = urlparse(self.path)
             # Only local pages may write (protection against foreign web pages in the browser).
+            if not _local_host(self.headers.get("Host")):
+                return self.fail(403, "fremder Host")
             origin = self.headers.get("Origin")
             if origin and urlparse(origin).hostname not in ("127.0.0.1", "localhost", self.server.server_address[0]):
                 return self.fail(403, "fremde Herkunft")
