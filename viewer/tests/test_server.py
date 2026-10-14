@@ -261,6 +261,14 @@ class ServerTest(unittest.TestCase):
         self.assertTrue(headers["Content-Type"].startswith("text/html"))
         self.assertEqual(self.request("/static/..%2Fserver.py")[0], 403)
 
+    def test_lang_follows_game(self):
+        from unittest import mock
+        from viewer import firstrun
+        with mock.patch.object(firstrun, "client_info", return_value={"language": "de_de"}):
+            self.assertEqual(self.get_json("/api/lang")["game"], "de_de")
+        with mock.patch.object(firstrun, "client_info", return_value={}):
+            self.assertIsNone(self.get_json("/api/lang")["game"])
+
     def test_position_and_player(self):
         self.post_json("/api/position", {"x": 1.5, "y": 70, "z": -3, "dim": "minecraft:overworld", "server": SRV})
         pl = self.get_json("/api/player")
