@@ -112,6 +112,20 @@ function gameStatus() {
     baritone: online ? (mods.baritone ?? null) : null,
   };
 }
+
+/* The game-side lines every automation needs */
+function gameChecks(needLitematica) {
+  const gs = gameStatus();
+  const items = [
+    { ok: gs.online, text: gs.online ? 'Spiel verbunden' : 'Spiel offline: Minecraft mit Webmatica starten' },
+  ];
+  if (!gs.online) return items;
+  items.push({ ok: gs.recording, text: gs.recording ? 'Aufnahme läuft' : 'Aufnahme ist aus: im Spiel F9 drücken' });
+  const missing = [gs.baritone === false && 'Baritone', needLitematica && gs.litematica === false && 'Litematica'].filter(Boolean);
+  items.push(missing.length ? { ok: false, text: `${missing.join(' und ')} fehlt im Spiel` }
+    : { ok: gs.baritone === null ? null : true, text: gs.baritone === null ? 'Baritone: unbekannt (ältere Mod-Version)' : needLitematica ? 'Baritone und Litematica gefunden' : 'Baritone gefunden' });
+  return items;
+}
 let statusAt = 0;
 function statusText(force) {
   if (!force && Date.now() - statusAt < 200) return;   // Don't set the text 20 times per second
