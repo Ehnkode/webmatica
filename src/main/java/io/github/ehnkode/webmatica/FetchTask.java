@@ -229,12 +229,20 @@ public final class FetchTask {
                 }
                 ItemStack before = next.getItem().copy();
                 Mc.quickMove(mc, h.containerId, next.index, p);
-                taken += before.getCount();
+                // The client applies the move right away: what is left in the slot did not fit
+                ItemStack after = next.getItem();
+                int moved = before.getCount() - (ItemStack.isSameItemSameComponents(after, before) ? after.getCount() : 0);
                 wantSlots.remove(next.getContainerSlot());
+                if (moved <= 0) {
+                    p.closeContainer();
+                    finish(taken > 0, "Inventar voll");
+                    return;
+                }
+                taken += moved;
                 String iid = BuiltInRegistries.ITEM.getKey(before.getItem()).toString();
                 Integer left = wantItems.get(iid);
                 if (left != null) {
-                    wantItems.put(iid, left - before.getCount());
+                    wantItems.put(iid, left - moved);
                 } else {
                     // took a shulker containing the wanted item
                     ItemContainerContents inner = before.get(DataComponents.CONTAINER);

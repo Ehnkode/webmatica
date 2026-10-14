@@ -3,6 +3,7 @@ package io.github.ehnkode.webmatica;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
@@ -68,6 +69,12 @@ public final class ContainerTracker {
     private int stableTicks;
 
     public void register() {
+        // Chest boat, minecart with chest, donkey: their container must not be saved under
+        // the position of a block clicked shortly before
+        UseEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
+            usePos = null;
+            return InteractionResult.PASS;
+        });
         UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
             if (world.isClientSide()) {
                 usePos = hit.getBlockPos().immutable();
