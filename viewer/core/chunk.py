@@ -7,6 +7,7 @@ lookup tables (``lut[ids]``) over whole chunks without a Python loop.
 
 from __future__ import annotations
 
+import re
 import threading
 from dataclasses import dataclass, field
 
@@ -16,6 +17,9 @@ AIR_NAMES = frozenset({
     "minecraft:air", "minecraft:cave_air", "minecraft:void_air",
     "minecraft:structure_void", "minecraft:light", "minecraft:barrier",
 })
+# Liquids and plants a placed block simply replaces: never "in the way"
+REPLACEABLE = re.compile(r"^minecraft:(water|lava|bubble_column|short_grass|tall_grass|fern|large_fern|dead_bush|snow|"
+                         r"seagrass|tall_seagrass|kelp|kelp_plant|vine|glow_lichen)$")
 
 
 class Registry:

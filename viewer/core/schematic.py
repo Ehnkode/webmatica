@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from . import nbt
-from .chunk import AIR_NAMES, BLOCKS, base_name, state_key, state_props
+from .chunk import AIR_NAMES, BLOCKS, REPLACEABLE, base_name, state_key, state_props
 
 MAX_VOLUME = 64 * 1024 * 1024
 
@@ -373,11 +373,13 @@ def verify(s: Schem, rec, dim, x0: int, y0: int, z0: int, max_points: int = 6000
     n = len(names)
     base_id = np.zeros(n, np.int32)
     air = np.zeros(n, bool)
+    soft = np.zeros(n, bool)
     seen: dict[str, int] = {}
     for i in range(n):
         bn = base_name(names[i])
         base_id[i] = seen.setdefault(bn, len(seen))
         air[i] = bn in AIR_NAMES
+        soft[i] = bool(REPLACEABLE.match(bn))
     want = b.astype(np.intp)
     have = world.astype(np.intp)
     need = ~air[want]
@@ -387,7 +389,7 @@ def verify(s: Schem, rec, dim, x0: int, y0: int, z0: int, max_points: int = 6000
     wrong = need & known & ~air[have] & ~same_block
     rotated = need & known & same_block & ~exact
     ok = need & known & same_block
-    extra = ~need & known & ~air[have]
+    extra = ~need & known & ~air[have] & ~soft[have]   # water, grass etc. don't need breaking
     unknown = need & ~known
 
     miss_items: dict[str, int] = {}
@@ -422,8 +424,13 @@ def verify(s: Schem, rec, dim, x0: int, y0: int, z0: int, max_points: int = 6000
                 entry.append(base_name(names[int(world[y, z, x])]))
             todo.append(entry)
 
+    # Lowest layer with missing blocks, from the full mask (todo is capped at max_todo)
+    per_y = missing.sum(axis=(1, 2))
+    open_y = np.flatnonzero(per_y)
+    lowest = {"y": int(open_y[0]) + y0, "count": int(per_y[open_y[0]])} if len(open_y) else None
+
     return {
-        "todo": todo, "todoTotal": int(len(xs)),
+        "todo": todo, "todoTotal": int(len(xs)), "lowestMissing": lowest,
         "stats": {"total": int(need.sum()), "ok": int(ok.sum()), "rotated": int(rotated.sum()),
                   "missing": int(missing.sum()), "wrong": int(wrong.sum()), "extra": int(extra.sum()),
                   "unknown": int(unknown.sum())},

@@ -45,9 +45,11 @@ STALL = 45.0             # s without progress while building
 BAD_CHEST = 600.0        # s: skip a chest that failed for this long
 MAIN_SLOTS = 36
 NEAR = 20.0              # blocks: from here on Baritone may walk on its own for building
+UNSEEN_WAIT = 8.0        # s at the site for the recording to catch never-seen chunks
 RADAR_CLEAR = 15.0       # s without players nearby, then it continues
 RUNNING = ("plan", "fetch", "build", "approach", "unpack", "return", "fix", "fplan", "mine", "deposit")
-DEFAULTS = {"radar": True, "radarDist": 64, "friends": [], "eat": False, "tools": True, "leftovers": True, "fix": True}
+DEFAULTS = {"radar": True, "radarDist": 64, "friends": [], "eat": False, "tools": True, "leftovers": True, "fix": True,
+            "dig": False}
 FIX_ROUNDS = 2
 MINE_BATCH = 48
 MINE_TIMEOUT = 360.0     # s for one mining job
@@ -118,7 +120,9 @@ class AutoBuild:
         with self.lock:
             st = self.state.get(srv)
             on = bool(st and st["phase"] in RUNNING + ("store",))
-            return {"eat": on and self.settings["eat"], "tools": on and self.settings["tools"]}
+            # "dig" always applies: also for walking started from the map
+            return {"eat": on and self.settings["eat"], "tools": on and self.settings["tools"],
+                    "dig": bool(self.settings["dig"])}
 
     # ------------------------------------------------------------ Queue
 
@@ -365,6 +369,14 @@ class AutoBuild:
             with self.lock:
                 st["info"] = "wartet auf das Spiel …"
             return
+        if p.get("recording") is False and st.get("mode", "build") == "build":
+            # Progress is only visible through the recording: without it the build "stalls"
+            with self.lock:
+                st["info"] = "pausiert: Aufnahme ist aus (im Spiel F9 drücken)"
+                st["rec_off"] = True
+            return
+        if st.pop("rec_off", None):
+            self._set(srv, ts=now, progress_ts=now)
         if self._radar(srv, st, p, now):
             return
         if st.get("mode") == "store" or st["phase"] == "return":
@@ -465,6 +477,11 @@ class AutoBuild:
 
     def _plan(self, srv: str, st: dict, pl: dict, p: dict) -> None:
         miss, res = self._missing(st["pid"])
+        unknown = int((res.get("stats") or {}).get("unknown", 0))
+        if not miss and unknown:
+            # Parts of the frame were never recorded: "nothing missing" means nothing there
+            return self._unseen(srv, st, pl, p, unknown)
+        st.pop("unseen_until", None)
         if not miss:
             if self._start_fix(srv, st, res):
                 return
@@ -524,6 +541,25 @@ class AutoBuild:
             return self._end(srv, "error", "Inventar voll mit anderen Sachen: bitte Platz machen und neu starten")
         names = ", ".join(f"{n}× {k.split(':')[-1]}" for k, n in sorted(need.items(), key=lambda kv: -kv[1])[:6])
         self._end(srv, "error", f"Material fehlt (in keiner gemerkten Kiste): {names}")
+
+    def _unseen(self, srv: str, st: dict, pl: dict, p: dict, unknown: int) -> None:
+        """Walk to the site so the recording sees it; give up if it stays unseen."""
+        now = time.monotonic()
+        tx, tz, d = self._near_box(pl, p)
+        if d > NEAR:
+            self._push(srv, {"kind": "goto", "x": tx, "z": tz})
+            self._set(srv, phase="approach", target=(tx, tz), last_d=d, progress_ts=now)
+            return self._log(srv, f"läuft zur Baustelle, {unknown} Blöcke dort wurden noch nie aufgezeichnet")
+        until = st.get("unseen_until")
+        if until is None:
+            with self.lock:
+                st["unseen_until"] = now + UNSEEN_WAIT
+                st["info"] = "wartet, bis die Aufnahme die Baustelle gespeichert hat …"
+            return
+        if now < until:
+            return
+        self._end(srv, "error", f"{unknown} Blöcke der Schematic wurden noch nie aufgezeichnet "
+                                "(Aufnahme an? Einmal über die Baustelle laufen, dann neu starten)")
 
     def _best_chest(self, srv, pl, p, need, free, now, bad):
         best, best_score = None, 0.0
