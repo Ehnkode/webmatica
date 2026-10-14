@@ -59,7 +59,7 @@ later file.
 | `js/schematics.js`, `js/materials.js` | placing schematics, material list, progress check |
 | `js/farm.js`, `js/automation.js` | farming, flattening, wrong blocks, auto-build, storing |
 | `js/chests.js`, `js/places.js`, `js/history.js`, `js/radar.js`, `js/xray.js`, `js/selection.js` | the other tabs |
-| `view3d.js` | the three.js 3D view |
+| `view3d.js`, `view3d/` | the three.js 3D view (ES module); the player figure and the markers are in `view3d/` |
 | `editor.js` + `editor.html` | the schematic editor page |
 
 New UI text is written in German; add the English line to `i18n/en.tsv`
