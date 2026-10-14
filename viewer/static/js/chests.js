@@ -3,7 +3,7 @@
 
 // --- Inventory, pickup tour, Baritone buttons for building
 
-var myInv = null;    // { items, t } from the player (mod 0.3.2)
+var myInv = null;    // { items, t } from the player
 const fullId = (it) => (it.includes(':') ? it : 'minecraft:' + it);
 function invCounts() {
   const m = new Map();
@@ -225,7 +225,7 @@ function renderChests() {
   const f = $('#ct-filter').value.trim().toLowerCase().replace(/ /g, '_');
   $$('.ct-mode button').forEach((b) => b.classList.toggle('on', b.dataset.ctmode === chests.mode));
   if (!chests.list.length) {
-    $('#ct-sum').textContent = 'Noch keine Kiste gemerkt. Öffne im Spiel eine Kiste (Mod 0.3.2).';
+    $('#ct-sum').textContent = 'Noch keine Kiste gemerkt. Öffne im Spiel eine Kiste.';
     $('#ct-grid').innerHTML = $('#ct-where').innerHTML = $('#ct-list').innerHTML = '';
     return;
   }

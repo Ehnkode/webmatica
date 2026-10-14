@@ -82,7 +82,7 @@ Schließen (S)	Close (S)
 Spieler	Player
 Spieler offline	Player offline
 Spiel nicht verbunden	Game not connected
-Spiel nicht verbunden (Minecraft mit Mod 0.3.2 starten)	Game not connected (start Minecraft with the mod)
+Spiel nicht verbunden (Minecraft mit Webmatica starten)	Game not connected (start Minecraft with the mod)
 Kein Spieler online – startet Minecraft mit der Mod?	No player online. Is Minecraft running with the mod?
 Server nicht erreichbar	Server not reachable
 Noch keine Aufnahmen gefunden. Mit der Mod spielen, dann neu laden.	No recordings found yet. Play with the mod, then reload.
@@ -166,7 +166,7 @@ Als Litematica-Platzierung ins Spiel schicken (Geisterblöcke, Printer, Baritone
 Tipp: „Ins Spiel“ einschalten, sonst sieht Litematica die Schematic nicht	Tip: turn on "In game", otherwise Litematica can't see the schematic
 Erst „Ins Spiel“ einschalten	Turn on "In game" first
 Erst „Ins Spiel“ einschalten, damit Baritone die Schematic aus Litematica bauen kann	Turn on "In game" first so Baritone can build the schematic from Litematica
-wartet aufs Spiel (Mod 0.3 + Litematica)	waiting for the game (mod + Litematica)
+wartet aufs Spiel (Webmatica + Litematica)	waiting for the game (Webmatica + Litematica)
 kein Litematica	no Litematica
 Litematica nicht gefunden	Litematica not found
 Litematica: alle Schichten	Litematica: all layers
@@ -242,7 +242,7 @@ Wird gezählt …	Counting …
 {} Sorten · {} Items · etwa {} Shulker	{} types · {} items · about {} shulkers
 {} Items, {} Sorten, etwa {} Shulker voll	{} items, {} types, about {} shulkers full
 (abzüglich deinem Inventar)	(minus your inventory)
-(Inventar unbekannt: Mod 0.3.2)	(inventory unknown)
+(Inventar unbekannt: Spiel nicht verbunden)	(inventory unknown: game not connected)
 {} in Kisten	{} in chests
 in Kisten	in chests
 noch nicht gebaut	not built yet
@@ -399,7 +399,7 @@ bringt {} Stacks zu {}	bringing {} stacks to {}
 , ohne passende Kiste: {}	, without a matching chest: {}
 (ohne passende Kiste: {})	(without a matching chest: {})
 Inhalt kennt der Viewer, sobald du eine Kiste einmal öffnest. Grau = noch nie geöffnet, lila Ring = jemand anderes war dran.	The viewer knows a chest's contents once you open it. Grey = never opened, purple ring = someone else used it.
-Noch keine Kiste gemerkt. Öffne im Spiel eine Kiste (Mod 0.3.2).	No chest remembered yet. Open a chest in the game.
+Noch keine Kiste gemerkt. Öffne im Spiel eine Kiste.	No chest remembered yet. Open a chest in the game.
 {} gemerkte Kisten	{} known chests
 {} Items, {} Sorten in {} Kisten	{} items, {} types in {} chests
 Kisten mit Inhalt gemerkt	chests remembered with contents
@@ -448,7 +448,7 @@ Keine Antwort aus dem Spiel (ist die Mod aktiv?)	No answer from the game (is the
 unbekannter Befehl	unknown command
 # --- history
 Stand an Tag X	State on day X
-Vergleicht die Welt mit einem früheren Tag. Die Mod sichert ab Version 0.3.1 jeden Tag den alten Stand geänderter Chunks.	Compares the world with an earlier day. Every day the mod keeps the old state of changed chunks.
+Vergleicht die Welt mit einem früheren Tag. Die Mod sichert jeden Tag den alten Stand geänderter Chunks.	Compares the world with an earlier day. Every day the mod keeps the old state of changed chunks.
 Vergleichen	Compare
 Vergleiche …	Comparing …
 noch kein früherer Stand	no earlier state yet
@@ -460,7 +460,7 @@ neu gebaut	newly built
 # --- radar
 Radar	Radar
 Webmatica Radar	Webmatica Radar
-Spieler, die dein Client gerade sieht (Mod 0.3.2). Rot auf Karte und in 3D.	Players your client can see right now. Red on the map and in 3D.
+Spieler, die dein Client gerade sieht. Rot auf Karte und in 3D.	Players your client can see right now. Red on the map and in 3D.
 Jetzt in Sichtweite	In sight now
 noch niemand gesehen	nobody seen yet
 Logbuch	Log
