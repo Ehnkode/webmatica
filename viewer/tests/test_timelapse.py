@@ -7,7 +7,7 @@ import unittest
 
 from viewer.core.world import Recording
 from viewer.extras import History
-from viewer.server import _mesh_compute
+from viewer.workers import _mesh_compute
 from viewer.tests import make_world, support
 
 
