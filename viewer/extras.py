@@ -106,6 +106,8 @@ class LidLog:
                 self.data: dict = json.load(f)
         except (OSError, ValueError):
             self.data = {}
+        self._dirty = False
+        self._saved = 0.0
 
     def put(self, req: dict) -> dict:
         srv, dim = str(req["server"]), str(req.get("dim", "overworld"))
@@ -125,11 +127,27 @@ class LidLog:
             if len(self.data) > 20000:
                 for k in sorted(self.data, key=lambda k: self.data[k].get("seen", 0))[:2000]:
                     self.data.pop(k)
-            tmp = self.path + ".tmp"
+            # Busy chests send many events: write the (large) file at most every 5 s
+            self._dirty = True
+            if time.monotonic() - self._saved > 5.0:
+                self._save()
+        return e
+
+    def save(self) -> None:
+        with self.lock:
+            if self._dirty:
+                self._save()
+
+    def _save(self) -> None:
+        self._saved = time.monotonic()
+        self._dirty = False
+        tmp = self.path + ".tmp"
+        try:
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, ensure_ascii=False)
             os.replace(tmp, self.path)
-        return e
+        except OSError:
+            pass
 
     def list(self, server: str | None, dim: str | None) -> list:
         with self.lock:
@@ -424,16 +442,23 @@ class Radar:
                 kept = {id(x) for x in self.log}
                 self._open = {k: v for k, v in self._open.items() if id(v) in kept}
             if clean and time.monotonic() - self.saved > 10:
-                self.saved = time.monotonic()
-                tmp = self.path + ".tmp"
-                try:
-                    os.makedirs(os.path.dirname(self.path), exist_ok=True)
-                    with open(tmp, "w", encoding="utf-8") as f:
-                        json.dump(self.log, f)
-                    os.replace(tmp, self.path)
-                except OSError:
-                    pass
+                self._save()
         return clean
+
+    def save(self) -> None:
+        with self.lock:
+            self._save()
+
+    def _save(self) -> None:
+        self.saved = time.monotonic()
+        tmp = self.path + ".tmp"
+        try:
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(self.log, f)
+            os.replace(tmp, self.path)
+        except OSError:
+            pass
 
     def list(self, server: str | None) -> list:
         with self.lock:

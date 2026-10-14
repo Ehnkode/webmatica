@@ -70,6 +70,7 @@ public final class RegionStore {
     private final Map<String, Long> lastWritten = new HashMap<>();
     /** Timeline: chunks whose old state has already been backed up (or checked) today. */
     private final Set<String> historyChecked = new HashSet<>();
+    private String historyDay = "";
 
     private final AtomicInteger writtenCount = new AtomicInteger();
 
@@ -215,6 +216,9 @@ public final class RegionStore {
             try (DataOutputStream out = region.getChunkDataOutputStream(snap.pos())) {
                 out.write(bytes);
             }
+            if (lastWritten.size() > 200_000) {
+                lastWritten.clear();        // long sessions: at worst one extra write per chunk
+            }
             lastWritten.put(key, crc.getValue());
             int n = writtenCount.incrementAndGet();
             if (n % 500 == 0) {
@@ -232,6 +236,10 @@ public final class RegionStore {
      */
     private void backupOld(RegionFile region, Path historyDir, ResourceKey<Level> dim, ChunkSnapshot snap, byte[] bytes) {
         String day = LocalDate.now().toString();
+        if (!day.equals(historyDay)) {
+            historyChecked.clear();         // only today's entries matter
+            historyDay = day;
+        }
         String key = historyDir + "|" + day + "|" + Mc.pack(snap.pos());
         if (historyChecked.contains(key)) {
             return;
