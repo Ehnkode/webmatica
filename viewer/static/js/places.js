@@ -1,5 +1,12 @@
 /* Webmatica map UI: Waypoints, Baritone commands, activity indicator, signs and stashes. */
-'use strict';
+import './sidebar.js';   // runs before this file (load order, see index.html)
+import { $, api, esc, fromLatLng, map, overlay, state, toast, toLatLng } from './core.js';
+import { fillGotoList, toggleSide } from './sidebar.js';
+import { setFollow, view3d } from './player.js';
+import { jsonPost, selectSchem } from './schematics.js';
+import { itemPin, itemsMeta } from './chests.js';
+import { AB_PHASE } from './automation.js';
+import { farmRunning } from './farm.js';
 
 // ------------------------------------------------------------------ Waypoints
 
@@ -227,3 +234,5 @@ function stashText(s) {
   setFollow(false);
   map.setView(toLatLng(Number(li.dataset.x), Number(li.dataset.z)), Math.max(map.getZoom(), 1));
 }));
+
+export { autoBadge, baritone, drawMarkers, drawWaypoints, loadMarkers, loadWaypoints };

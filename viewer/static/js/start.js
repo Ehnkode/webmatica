@@ -1,5 +1,12 @@
 /* Webmatica map UI: Startup. */
-'use strict';
+import './xray.js';   // runs before this file (load order, see index.html)
+import { api, map, prefs, state, toast, toLatLng } from './core.js';
+import { select } from './world.js';
+import { loadWaypoints } from './places.js';
+import { pollChanges, pollPlayer, pollWorlds, readHash, schedulePlayer } from './player.js';
+import { setTrail } from './selection.js';
+import { loadLibrary } from './schematics.js';
+import { cut, setCut } from './history.js';
 
 // ------------------------------------------------------------------ Start
 

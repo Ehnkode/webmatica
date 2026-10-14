@@ -1,5 +1,12 @@
 /* Webmatica map UI: Keyboard shortcuts. */
-'use strict';
+import './history.js';   // runs before this file (load order, see index.html)
+import { $, state } from './core.js';
+import { AREA_ORDER, areaOf, searchOpen, sideTab, toggleHelp, toggleSide } from './sidebar.js';
+import { mode3d, set3d, setFollow, view3d } from './player.js';
+import { sel, setSelect, setTrail } from './selection.js';
+import { schemKeys } from './schematics.js';
+import { cut, setCut } from './history.js';
+import { xray, xrayNext, xrayToggle } from './xray.js';
 
 // ------------------------------------------------------------------ Keyboard
 

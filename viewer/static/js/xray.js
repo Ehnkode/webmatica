@@ -1,5 +1,10 @@
 /* Webmatica map UI: X-ray in 3D – hide everything except the searched blocks. */
-'use strict';
+import './farm.js';   // runs before this file (load order, see index.html)
+import { $, api, esc, fmt, fromLatLng, map, prefs, savePref, state, toast, toLatLng } from './core.js';
+import { flash } from './sidebar.js';
+import { baritone } from './places.js';
+import { mode3d, openPop, set3d, setFollow, view3d } from './player.js';
+import { itemIcon } from './chests.js';
 
 // Ready-made searches: label -> block ids. Typing the label (or a part of it) finds them too.
 const XRAY_PRESETS = [
@@ -270,3 +275,5 @@ function xray2dNext() {
 }
 
 map.on('moveend', () => { if (xray.on && !mode3d) xray2dSoon(); });
+
+export { xray, xray2dSoon, xrayApply, xrayNext, xrayStats, xrayToggle };

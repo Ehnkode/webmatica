@@ -3,7 +3,7 @@
  * One shared palette for all frames (median cut over samples of every frame,
  * the frames of a timelapse look alike), no dithering, LZW as in the GIF89a spec.
  */
-'use strict';
+import './chests.js';   // runs before this file (load order, see index.html)
 
 function gifPalette(frames, size = 256) {
   // Samples from all frames, at most ~60k pixels
@@ -123,3 +123,5 @@ function encodeGif(frames, delayMs) {
   out.push(0x3b);
   return new Blob([new Uint8Array(out)], { type: 'image/gif' });
 }
+
+export { encodeGif };

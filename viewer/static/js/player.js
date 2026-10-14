@@ -1,5 +1,19 @@
 /* Webmatica map UI: Player marker, follow mode, live updates, URL hash, 3D glue, minimap, popups. */
-'use strict';
+import './places.js';   // runs before this file (load order, see index.html)
+import {
+  $, $$, api, esc, fmt, fromLatLng, map, MAX_ZOOM, MIN_ZOOM, overlay, prefs, RegionLayer, savePref,
+  state, toast, toLatLng,
+} from './core.js';
+import { renderSelectors, select, tiles } from './world.js';
+import { flash, toggleSide } from './sidebar.js';
+import { loadMarkers } from './places.js';
+import { extendTrail, sel, setSelect, trail } from './selection.js';
+import { schem, selectSchem } from './schematics.js';
+import { cut, drawHistory, tl } from './history.js';
+import { ctl } from './automation.js';
+import { radarUpdate } from './radar.js';
+import { drawFarmArea, farmUi, pick3dStop, renderPickLabel } from './farm.js';
+import { xray2dSoon, xrayApply, xrayStats } from './xray.js';
 
 // ------------------------------------------------------------------ Player
 
@@ -558,3 +572,8 @@ function spawn2dSync() {
   spawn2d = new Layer({ tileSize: 512, minZoom: -1, maxZoom: MAX_ZOOM, maxNativeZoom: 0, minNativeZoom: 0, opacity: 0.85, zIndex: 5 });
   spawn2d.addTo(map);
 }
+
+export {
+  drawPlayer, gameChecks, gameStatus, mode3d, openPop, pollChanges, pollPlayer, pollWorlds, readHash,
+  reload3d, saveHash, schedulePlayer, set3d, setFollow, spawn2dSync, statusText, view3d,
+};
