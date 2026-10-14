@@ -642,3 +642,6 @@ body.xray-on:not(.mode3d) #map .leaflet-tile-pane { filter: brightness(0.38) sat
 .checklist li.bad span { color: var(--fg); }
 .checklist li.ok span { color: var(--muted); }
 .checklist button.small { padding: 2px 8px; font-size: 12px; flex: none; }
+.chk-fix.armed { border: 1px solid var(--danger); border-radius: 10px; padding: 8px 10px; margin: 8px 0; background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.chk-fix.armed p { margin: 0 0 8px; }
+button.link { border: 0; background: transparent; color: var(--accent); padding: 4px 0; }
