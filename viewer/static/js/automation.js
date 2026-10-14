@@ -1,4 +1,4 @@
-/* Webmatica map UI: Building automation: Baritone, printer, auto-build, guard switches, storing. */
+/* Webmatica map UI: Building automation: Baritone, printers, auto-build, guard switches, storing. */
 import './keyboard.js';   // runs before this file (load order, see index.html)
 import { $, $$, api, esc, fmt, renderChecklist, state, toast } from './core.js';
 import { baritone } from './places.js';
@@ -178,6 +178,7 @@ function renderBuild() {
   }
   $('#pr-range-v').textContent = Number($('#pr-range').value).toFixed(1);
   $('#pr-interval-v').textContent = $('#pr-interval').value + ' Ticks';
+  renderWebPrinter(c, g, idle);
   const auto = c && pl && c.auto === pl.id;
   $('#ly-auto').checked = !!auto;
   if (idle && document.activeElement !== $('#ly-y')) {
@@ -188,6 +189,38 @@ function renderBuild() {
   $('#bd-build').disabled = !(pl && pl.ingame);
   $('#bd-build').title = pl && pl.ingame ? 'Baritone baut die Schematic aus Litematica (#litematica)' : 'Erst „Ins Spiel“ einschalten';
 }
+
+/* Webmatica's own printer: the viewer holds the settings, the mod reports what it does */
+function renderWebPrinter(c, g, idle) {
+  const want = c && c.web, have = g && g.web;
+  const on = !!(want && want.on);
+  $('#wp-toggle').textContent = !want ? 'Printer: ?' : on ? 'Printer AN, klicken zum Ausschalten' : 'Printer aus, klicken zum Einschalten';
+  $('#wp-toggle').classList.toggle('on', on);
+  if (want && idle) { $('#wp-range').value = want.range; $('#wp-bps').value = want.bps; }
+  const safe = !!(c && c.safe);
+  $('#wp-range-v').textContent = Number($('#wp-range').value).toFixed(1);
+  $('#wp-bps-v').textContent = safe && Number($('#wp-bps').value) > 5 ? '5 (Server-safe)' : $('#wp-bps').value;
+  $('#wp-sum').textContent = on ? (safe ? '· an, server-safe' : '· an') : '';
+  const parts = [];
+  if (on && !have) parts.push('Spiel meldet sich noch nicht');
+  if (on && have) {
+    if (!schem.list.some((p) => p.ingame)) parts.push('Keine Schematic ist „Ins Spiel“ geschaltet');
+    parts.push(`${fmt(have.placed)} gesetzt`);
+    if (have.todo) parts.push(`${fmt(have.todo)} offen in der Nähe`);
+    if (have.wrong) parts.push(`${fmt(have.wrong)} falsche Blöcke im Weg (werden nicht abgebaut)`);
+    if (have.blocked) parts.push(safe ? `${fmt(have.blocked)} gerade nicht erreichbar oder nur mit anderer Blickrichtung` : `${fmt(have.blocked)} ohne Halt`);
+    if (have.noItem) parts.push(`fehlt: ${have.missing.map((m) => esc(m.split(':').pop())).join(', ')}`);
+  }
+  $('#wp-info').innerHTML = parts.join(' · ');
+}
+$('#wp-toggle').addEventListener('click', () => {
+  const want = ctl.state && ctl.state.web;
+  if (want) control({ web: { on: !want.on } });
+});
+$('#wp-range').addEventListener('input', () => { ctl.pending = Date.now(); renderBuild(); });
+$('#wp-bps').addEventListener('input', () => { ctl.pending = Date.now(); renderBuild(); });
+$('#wp-range').addEventListener('change', (e) => control({ web: { range: Number(e.target.value) } }));
+$('#wp-bps').addEventListener('change', (e) => control({ web: { bps: Number(e.target.value) } }));
 
 $('#pr-toggle').addEventListener('click', () => {
   const pr = ctl.state && ctl.state.game && ctl.state.game.printer;

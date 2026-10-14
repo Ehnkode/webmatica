@@ -223,6 +223,10 @@ class AutoBuild(BuildMode, StoreMode, FarmMode, FlattenMode):
     # ------------------------------------------------------------ Step
 
     def step(self, srv: str) -> None:
+        control = getattr(self.app, "control", None)
+        if control is not None and control.safe(srv):
+            self.stop(srv, "gestoppt (Server-safe ist an)")
+            return
         now = time.monotonic()
         with self.lock:
             st = self.state.get(srv)

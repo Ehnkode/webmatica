@@ -16,7 +16,9 @@ version differences live in `Mc.java` and `//?` comments.
 | `RegionStore`, `ChunkSnapshot`, `WorldChunkMixin`, `RecordingTarget` | write seen chunks as region files, one folder per world |
 | `PositionReporter` | POST /api/position several times a second (position, inventory, mods found, other players) |
 | `ContainerTracker`, `ChestLidTracker` | chest contents when opened, lids opened by others |
-| `BuildControl` | polls /api/control: Printer and layer settings, the guard switches |
+| `BuildControl` | polls /api/control: Printer and layer settings, the guard switches, server-safe, Webmatica printer |
+| `WebPrinter` | Webmatica's own printer: target blocks from /api/printer/blocks, places them within reach (server-safe: only what a player could do by hand) |
+| `ServerSafe` | the server-safe switch: stops the bot tasks when it turns on |
 | `BaritoneBridge` | polls /api/commands and hands each command to a task or to Baritone |
 | `FetchTask`, `UnpackTask`, `FarmTask` | multi-step bot jobs (fetch/store, empty shulkers, break and pick up) |
 | `BotTask` | their shared base: one command at a time, phases on the client tick, frozen while paused or eating, the result report |
@@ -55,7 +57,7 @@ Load order: every file first imports the file before it (`import './prev.js';`),
 and `static/index.html` loads only the last one, `js/start.js`. So the files run
 in a fixed order, the one listed in index.html: core, world, sidebar, places,
 player, selection, schematics, materials, chests, gif, history, keyboard,
-automation, radar, farm, xray, start. Code that runs while a file loads may only
+automation, radar, farm, xray, safe, start. Code that runs while a file loads may only
 use files earlier in that list; inside functions and event handlers every
 import is available. `core.js` imports nothing.
 A new file goes into this chain (its first import is the file before it, the
@@ -74,6 +76,7 @@ Only `i18n.js`, `interp.js` and Leaflet stay plain scripts (globals `I18N`,
 | `js/schematics.js`, `js/materials.js` | placing schematics, material list, progress check |
 | `js/farm.js`, `js/automation.js` | farming, flattening, wrong blocks, auto-build, storing |
 | `js/chests.js`, `js/places.js`, `js/history.js`, `js/radar.js`, `js/xray.js`, `js/selection.js` | the other tabs |
+| `js/safe.js` | the server-safe switch in the options |
 | `view3d.js`, `view3d/` | the three.js 3D view (ES module); the player figure and the markers are in `view3d/` |
 | `editor.js` + `editor.html` | the schematic editor page |
 

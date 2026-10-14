@@ -16,7 +16,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 
 /**
- * Control the Printer and Litematica layers from the web page.
+ * Control the Printer and Litematica layers from the web page, plus
+ * Webmatica's own printer and the server-safe switch.
  *
  * The viewer holds the desired state (Printer on/off, range, speed, which
  * layer Litematica shows) with a sequence number. When the number changes,
@@ -124,6 +125,20 @@ public final class BuildControl {
             return;
         }
         JsonObject w = wanted;
+        boolean fresh = w != null && System.currentTimeMillis() - wantedAt < 5000L;
+        if (fresh) {
+            ServerSafe.set(mc, serverId, w.has("safe") && w.get("safe").getAsBoolean());
+            if (w.has("web") && w.get("web").isJsonObject()) {
+                JsonObject web = w.getAsJsonObject("web");
+                WebPrinter.getInstance().configure(mc, web.has("on") && web.get("on").getAsBoolean(),
+                        web.has("range") ? web.get("range").getAsDouble() : 4.5,
+                        web.has("bps") ? web.get("bps").getAsDouble() : 10.0);
+            }
+        }
+        if (ServerSafe.on() || WebPrinter.getInstance().isOn()) {
+            // Litematica Printer off: forbidden in server-safe, and two printers at once get in each other's way
+            stopLitematicaPrinter(mc);
+        }
         if (w != null && w.has("seq")) {
             long seq = w.get("seq").getAsLong();
             if (seq != appliedSeq) {
@@ -139,7 +154,22 @@ public final class BuildControl {
         st.addProperty("seq", appliedSeq);
         st.add("printer", printerState());
         st.add("layer", layerState());
+        st.add("web", WebPrinter.getInstance().status());
+        st.addProperty("safe", ServerSafe.on());
         statusJson = st.toString();
+    }
+
+    private static void stopLitematicaPrinter(Minecraft mc) {
+        try {
+            if ((Boolean) getCfg("PRINT_MODE", "getBooleanValue")) {
+                setCfg("PRINT_MODE", "setBooleanValue", boolean.class, false);
+                Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(ServerSafe.on()
+                        ? "Litematica Printer aus (Server-safe)" : "Litematica Printer aus (Webmatica-Printer läuft)"))
+                        .withStyle(ChatFormatting.YELLOW));
+            }
+        } catch (Throwable ignored) {
+            // no Litematica Printer installed
+        }
     }
 
     private String apply(JsonObject w) {
@@ -147,7 +177,7 @@ public final class BuildControl {
         if (w.has("printer") && w.get("printer").isJsonObject()) {
             JsonObject p = w.getAsJsonObject("printer");
             try {
-                if (p.has("on")) {
+                if (p.has("on") && !(ServerSafe.on() && p.get("on").getAsBoolean())) {
                     boolean on = p.get("on").getAsBoolean();
                     setCfg("PRINT_MODE", "setBooleanValue", boolean.class, on);
                     msg.append("Printer ").append(on ? "AN" : "AUS");
