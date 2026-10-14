@@ -155,8 +155,12 @@ function renderFarmGo() {
   const ready = farmUi.box && (m === 'farm' ? Object.values(farmUi.amounts).some((n) => n > 0) : flatReady());
   $('#fm-go').textContent = run ? `■ ${AUTO_NAME[runningKind()]} stoppen` : `▶ ${AUTO_NAME[m]} starten`;
   $('#fm-go').classList.toggle('danger', run);
-  $('#fm-go').disabled = !run && !ready;
-  $('#fm-go').title = run || ready ? '' : m === 'farm' ? 'Erst Bereich wählen und bei mindestens einem Block eine Menge eintragen'
+  const items = gameChecks(false);
+  items.push(farmUi.box ? { ok: true, text: 'Bereich gewählt' } : { ok: false, text: 'Noch kein Bereich gewählt (oben unter 1)' });
+  const gameOk = renderChecklist($('#fm-check'), items);
+  $('#fm-check').hidden = run;
+  $('#fm-go').disabled = !run && !(ready && gameOk);
+  $('#fm-go').title = run || ready ? (gameOk ? '' : 'Erst die rot markierten Punkte oben erledigen') : m === 'farm' ? 'Erst Bereich wählen und bei mindestens einem Block eine Menge eintragen'
     : m === 'clear' ? 'Erst einen Bereich wählen' : m === 'fill' ? 'Erst Bereich wählen und einen Füllblock angeben' : m === 'light' ? 'Erst Bereich wählen und Fackeln angeben' : 'Erst Bereich wählen, Höhe eintragen und einen Füllblock angeben';
 }
 function setFarmMode(m) {

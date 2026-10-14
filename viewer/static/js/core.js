@@ -52,6 +52,26 @@ function toast(text) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
+/* Start check before an automation: one line per condition.
+ * ok: true = fine, false = blocks the start, null = only a warning. */
+function renderChecklist(el, items) {
+  el.innerHTML = items.map((it) => `<li class="${it.ok === true ? 'ok' : it.ok === false ? 'bad' : 'warn'}">` +
+    `<span>${it.text}</span>${it.action ? `<button class="small" data-check-action="${it.action.id}">${esc(it.action.label)}</button>` : ''}</li>`).join('');
+  return items.every((it) => it.ok !== false);
+}
+/* The game-side lines every automation needs */
+function gameChecks(needLitematica) {
+  const gs = gameStatus();
+  const items = [
+    { ok: gs.online, text: gs.online ? 'Spiel verbunden' : 'Spiel offline: Minecraft mit Webmatica starten' },
+  ];
+  if (!gs.online) return items;
+  items.push({ ok: gs.recording, text: gs.recording ? 'Aufnahme läuft' : 'Aufnahme ist aus: im Spiel F9 drücken' });
+  const missing = [gs.baritone === false && 'Baritone', needLitematica && gs.litematica === false && 'Litematica'].filter(Boolean);
+  items.push(missing.length ? { ok: false, text: `${missing.join(' und ')} fehlt im Spiel` }
+    : { ok: gs.baritone === null ? null : true, text: gs.baritone === null ? 'Baritone: unbekannt (ältere Mod-Version)' : needLitematica ? 'Baritone und Litematica gefunden' : 'Baritone gefunden' });
+  return items;
+}
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n) => Math.round(n).toLocaleString(I18N.locale);
 const dimOf = () => (state.worlds.find((w) => w.id === state.server) || { dims: [] }).dims.find((d) => d.key === state.dim);

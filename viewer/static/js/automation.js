@@ -20,6 +20,33 @@ async function pollControl() {
   renderAuto();
 }
 
+/* Start check for auto-build (instead of a confirm dialog) */
+let abCheckAt = 0;
+function abChecks(pl) {
+  const items = gameChecks(true);
+  if (!pl) return renderChecklist($('#ab-check'), items);
+  items.push(pl.ingame ? { ok: true, text: 'Schematic ist im Spiel (Litematica)' }
+    : { ok: false, text: 'Schematic ist noch nicht im Spiel', action: { id: 'ingame', label: 'Ins Spiel' } });
+  const c = schem.check && schem.checkPid === pl.id ? schem.check : null;
+  if (!c && Date.now() - abCheckAt > 10000 && !$('#schem-panel').hidden) { abCheckAt = Date.now(); runCheck(true); }
+  if (c) {
+    const st = c.stats, todo = st.missing + st.wrong;
+    items.push(st.unknown ? { ok: null, text: `${Math.round(100 * st.unknown / Math.max(1, st.total))} % der Baustelle noch nie aufgezeichnet: Baritone läuft erst hin` }
+      : { ok: true, text: 'Baustelle ist aufgezeichnet' });
+    if (todo) {
+      const tour = planTour(stillNeeded(c.missingItems || []));
+      const short = tour.missing.reduce((n, [, k]) => n + k, 0);
+      items.push(short ? { ok: null, text: `${fmt(short)} Items in keiner bekannten Kiste (${tour.missing.slice(0, 3).map(([it]) => esc(it.split(':').pop())).join(', ')}${tour.missing.length > 3 ? ' …' : ''})` }
+        : { ok: true, text: `Material für ${fmt(todo)} Blöcke liegt in deinen Kisten oder im Inventar` });
+    } else items.push({ ok: st.unknown ? null : true, text: st.unknown ? 'Nichts fehlt im aufgezeichneten Teil' : 'Alles gebaut' });
+  }
+  return renderChecklist($('#ab-check'), items);
+}
+$('#ab-check').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-check-action]');
+  if (b && b.dataset.checkAction === 'ingame') $('#sp-ingame').click();
+});
+
 /* Auto-build: fetch and build alternately (computed by the viewer, see autobuild.py) */
 const AB_PHASE = { fix: 'korrigiert falsche Blöcke', fplan: 'plant', mine: 'baut ab', deposit: 'lagert ein', unpack: 'packt Shulker aus', plan: 'plant', fetch: 'holt Material', approach: 'läuft zur Baustelle', build: 'baut', return: 'bringt Reste zurück', done: 'fertig', error: 'angehalten', off: 'aus' };
 function renderAuto() {
@@ -31,8 +58,10 @@ function renderAuto() {
   spBadge('build', mine ? (AB_PHASE[a.phase] || 'läuft') : 'Autobau', mine ? 'good' : '');
   $('#ab-toggle').classList.toggle('danger', !!running);
   $('#ab-toggle').classList.add('primary');
-  $('#ab-toggle').disabled = !running && !(pl && pl.ingame);
-  $('#ab-toggle').title = running || (pl && pl.ingame) ? '' : 'Erst „Ins Spiel“ einschalten, damit Baritone die Schematic aus Litematica bauen kann';
+  const ready = running || abChecks(pl);
+  $('#ab-check').hidden = !!running;
+  $('#ab-toggle').disabled = !ready;
+  $('#ab-toggle').title = ready ? '' : 'Erst die rot markierten Punkte oben erledigen';
   if (!a || a.mode === 'store' || a.mode === 'farm' || a.mode === 'flatten' || a.phase === 'off' && !a.log) { $('#ab-info').textContent = ''; $('#ab-log').innerHTML = ''; return; }
   $('#ab-info').innerHTML = `<b class="${a.phase === 'error' ? 'bad' : a.phase === 'done' ? 'ok' : a.paused ? 'warn' : ''}">${running && a.paused ? 'pausiert' : AB_PHASE[a.phase] || a.phase}</b>` +
     (running && !mine ? ' (andere Schematic)' : '') + (a.info ? ' · ' + esc(a.info) : '') + (a.fetched ? ` · ${a.fetched}× geholt` : '');
@@ -94,7 +123,6 @@ $('#ab-toggle').addEventListener('click', async () => {
   const running = a && (a.mode || 'build') === 'build' && ['plan', 'fetch', 'approach', 'build', 'unpack', 'return', 'fix'].includes(a.phase);
   if (!running && !pl) return;
   if (!running && a && (a.mode === 'farm' || a.mode === 'flatten') && ['fplan', 'mine', 'deposit'].includes(a.phase) && !confirm(a.mode === 'flatten' ? 'Gerade wird geebnet. Ebnen beenden und stattdessen bauen?' : 'Gerade wird gefarmt. Farmen beenden und stattdessen bauen?')) return;
-  if (!running && !confirm('Autobau starten?\n\nBaritone läuft zu deinen Kisten, nimmt das fehlende Material und baut die Schematic. Unterwegs baut es nichts ab, beim Bauen selbst schon (falsche Blöcke im Rahmen).\n\nShulker im Inventar packt er neben sich aus und baut sie wieder ab.\n\nAbbrechen jederzeit mit „■ Stopp“.')) return;
   try {
     ctl.auto = await api('/api/auto', { method: 'POST', body: JSON.stringify(running ? { srv } : { srv, pid: pl.id }) });
   } catch (e) { toast('Autobau: ' + e.message); }
