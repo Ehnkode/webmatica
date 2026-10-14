@@ -115,8 +115,10 @@ function renderBuild() {
   const g = c && c.game;
   const pr = g && g.printer, ly = g && g.layer;
   const pl = selPl();
+  const gs = gameStatus();
   let txt;
-  if (!c || !c.online) txt = 'Spiel nicht verbunden (Minecraft mit Webmatica starten)';
+  if (!gs.online) txt = 'Spiel offline (Status unten rechts)';
+  else if (!c || !c.online) txt = 'Spiel verbunden, Litematica und Printer melden sich noch nicht';
   else {
     const parts = [];
     parts.push(pr && pr.available ? `Printer ${pr.on ? '<b class="ok">AN</b>' : 'aus'}` : 'kein Printer gefunden');
@@ -128,6 +130,7 @@ function renderBuild() {
   }
   $('#bd-game').innerHTML = txt;
   $('#bd-game').classList.toggle('muted', !(c && c.online));
+  statusText(true);
   // Only update the slider when nobody is dragging it right now
   const idle = Date.now() - ctl.pending > 2500;
   const ok = !!(pr && pr.available);

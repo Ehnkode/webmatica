@@ -1074,6 +1074,8 @@ def make_handler(app: App):
                     "recording": bool(req.get("recording", True)),
                     "written": int(req.get("written", 0) or 0),
                     "t": float(req.get("t", 0) or 0),
+                    # helper mods found in the game (None: mod too old to tell)
+                    "mods": {k: bool(v) for k, v in req["mods"].items()} if isinstance(req.get("mods"), dict) else None,
                 }
             except (KeyError, TypeError, ValueError):
                 return self.fail(400, "x/y/z fehlen")

@@ -6,15 +6,7 @@
 let playerMarker = null;
 function drawPlayer() {
   const p = state.player;
-  const status = $('#player-status');
-  if (!p || !p.active) {
-    status.className = 'dot off';
-    status.textContent = 'Spieler offline';
-  } else {
-    status.className = p.recording ? 'dot' : 'dot paused';
-    const where = p.dim === state.dim && p.server === state.server ? '' : ` · ${p.dim.replace('the_', '')}`;
-    status.textContent = `${p.name || 'Spieler'} ${fmt(p.x)} ${fmt(p.y)} ${fmt(p.z)}${where}${p.recording ? '' : ' · Aufnahme aus'}`;
-  }
+  statusText(true);
   const visible = p && p.active && p.dim === state.dim && (!p.server || p.server === state.server);
   if (!visible) {
     overlay.player.clearLayers();
@@ -94,17 +86,43 @@ function animatePlayer2d() {
 }
 requestAnimationFrame(animatePlayer2d);
 
-let statusAt = 0;
-function statusText() {
-  if (Date.now() - statusAt < 200) return;   // Don't set the text 20 times per second
-  statusAt = Date.now();
+/* The one place that says whether the game is connected: the chip at the bottom right.
+ * Other panels read gameStatus() instead of checking on their own. */
+function gameStatus() {
   const p = state.player;
-  const status = $('#player-status');
-  if (!p || !p.active) { status.className = 'dot off'; status.textContent = 'Spieler offline'; return; }
-  status.className = p.recording ? 'dot' : 'dot paused';
-  const where = p.dim === state.dim && p.server === state.server ? '' : ` · ${p.dim.replace('the_', '')}`;
-  status.textContent = `${p.name || 'Spieler'} ${fmt(p.x)} ${fmt(p.y)} ${fmt(p.z)}${where}${p.recording ? '' : ' · Aufnahme aus'}`;
+  const online = !!(p && p.active);
+  const g = typeof ctl !== 'undefined' && ctl.state && ctl.state.online ? ctl.state.game : null;
+  const mods = (online && p.mods) || {};
+  return {
+    online, recording: online && p.recording !== false, player: p,
+    litematica: !online ? null : g && g.layer ? !!g.layer.available : (mods.litematica ?? null),
+    printer: !online || !g ? null : !!(g.printer && g.printer.available),
+    baritone: online ? (mods.baritone ?? null) : null,
+  };
 }
+let statusAt = 0;
+function statusText(force) {
+  if (!force && Date.now() - statusAt < 200) return;   // Don't set the text 20 times per second
+  statusAt = Date.now();
+  const gs = gameStatus(), p = gs.player;
+  const status = $('#player-status');
+  if (!gs.online) {
+    status.className = 'dot off'; status.textContent = 'Spiel offline';
+  } else {
+    status.className = gs.recording ? 'dot' : 'dot paused';
+    const where = p.dim === state.dim && p.server === state.server ? '' : ` · ${p.dim.replace('the_', '')}`;
+    status.textContent = `${p.name || 'Spieler'} ${fmt(p.x)} ${fmt(p.y)} ${fmt(p.z)}${where}${gs.recording ? '' : ' · Aufnahme aus (F9)'}`;
+  }
+  const row = (label, v, yes, no) => `<li><span class="dot${v === true ? '' : v === false ? ' bad' : ' off'}">${label}</span><span class="muted">${v === true ? yes : v === false ? no : '–'}</span></li>`;
+  const html = `<li class="pc-pop-title">${gs.online ? 'Spiel verbunden' : 'Spiel offline'}</li>` +
+    (gs.online ? row('Aufnahme', gs.recording, 'läuft', 'aus, im Spiel F9') : '<li class="muted">Minecraft mit Webmatica starten</li>') +
+    row('Litematica', gs.litematica, 'gefunden', 'fehlt') +
+    row('Baritone', gs.baritone, 'gefunden', 'fehlt') +
+    row('Printer', gs.printer, 'gefunden', 'fehlt');
+  const pop = $('#pc-pop');
+  if (pop.dataset.html !== html) { pop.innerHTML = html; pop.dataset.html = html; }
+}
+setInterval(() => statusText(true), 1500);   // also when no positions arrive (offline)
 
 /* Head for the map: face + hat layer from the full skin. Rebuilt
  * as soon as the server reports a new skin version. */
