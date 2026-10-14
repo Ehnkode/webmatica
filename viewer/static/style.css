@@ -530,11 +530,16 @@ body.mode3d .tl-badge { position: fixed; z-index: 600; top: 112px; }
 @media (max-width: 1250px) { #sel-panel, #schem-panel { top: 112px; } .dock { top: 64px !important; left: 12px !important; transform: none !important; } .pop { top: 112px !important; } .activity { top: 112px; } .hint3d { top: 112px; } #cam-panel { top: 156px; } }
 
 /* Player at the bottom right */
-.player-chip { position: fixed; z-index: 1000; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 2px; padding: 3px; max-width: calc(50vw - 160px); }
+.player-chip { position: fixed; z-index: 1002; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 2px; padding: 3px; max-width: calc(50vw - 160px); }
 .pc-main { display: flex; align-items: center; gap: 8px; min-width: 0; border: 0; background: transparent; padding: 4px 8px 4px 4px; font-size: 12.5px; }
 .pc-main img { width: 22px; height: 22px; image-rendering: pixelated; border-radius: 4px; flex: none; }
 .pc-main img[hidden] { display: none; }
 .pc-main span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+.dot.bad::before { background: var(--danger); }
+.pc-pop { position: absolute; right: 0; background: var(--panel-solid); bottom: calc(100% + 6px); margin: 0; padding: 8px 12px; list-style: none; min-width: 210px; font-size: 12.5px; display: none; }
+.player-chip:hover .pc-pop, .player-chip:focus-within .pc-pop { display: block; }
+.pc-pop li { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0; }
+.pc-pop .pc-pop-title { font-weight: 700; margin-bottom: 2px; }
 .leaflet-bottom.leaflet-right { margin-bottom: 52px; }
 
 /* Bottom bar: view and tools on the map */
@@ -559,6 +564,7 @@ body:not(.mode3d) .only3d { display: none !important; }
 @media (max-width: 720px) {
   .search.open input { width: 140px; }
   .player-chip { bottom: auto; top: 112px; max-width: calc(100vw - 24px); }
+  .pc-pop { bottom: auto; top: calc(100% + 6px); }
   .rail-head { display: none; }
   .leaflet-control-zoom { display: none; }
 }
