@@ -214,6 +214,8 @@ public final class FarmTask {
                     }
                     walkTarget = at;
                     try {
+                        // picking up drops is walking: no digging through the base (unless allowed)
+                        BaritoneSafety.walkOnly();
                         walkOnto(at);
                     } catch (Throwable t) {
                         finish(countIds(p) > before, "Baritone: " + t.getClass().getSimpleName());
