@@ -1,8 +1,8 @@
 package io.github.ehnkode.webmatica;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.github.ehnkode.webmatica.viewer.AssetBuilder;
+import io.github.ehnkode.webmatica.viewer.Server;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.ChatFormatting;
@@ -10,43 +10,39 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.JarURLConnection;
 import java.net.Socket;
 import java.net.URI;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.zip.CRC32;
 
 /**
- * Starts the browser viewer from inside the game. The viewer ships in the mod jar
- * (folder {@code webmatica-viewer/}); on first use, or after a mod update, it is
- * copied to {@code <game folder>/webmatica-viewer/}. Then Python runs it there and the
- * browser opens. Nothing is downloaded except numpy and Pillow through pip,
- * and only if they are missing.
+ * Starts the browser viewer from inside the game. The viewer's server runs in the mod itself
+ * (package {@code viewer}); only the web page ships in the jar ({@code webmatica-viewer/static}).
+ * Block and item images belong to Mojang, so they are built once from the game jar into
+ * {@code <game folder>/webmatica-viewer/assets/<minecraft version>/}.
  */
 final class ViewerLauncher {
     static final String URL = "http://127.0.0.1:8770";
     private static final int PORT = 8770;
-    private static final String PYTHON_URL = "https://www.python.org/downloads/";
     private static final String BUNDLE = "webmatica-viewer";
-    private static final String STAMP = ".webmatica-version";
 
     private static final String OS = System.getProperty("os.name", "").toLowerCase();
     private static final boolean WINDOWS = OS.startsWith("windows");
 
     private static volatile boolean busy;
-    private static Process process;
+    private static Server server;
+    private static Path serverRecording;
 
     private ViewerLauncher() {
     }
@@ -72,23 +68,24 @@ final class ViewerLauncher {
         t.start();
     }
 
-    /** Ends a viewer this game started; one started by hand keeps running. After a crash the viewer notices the game is gone and quits by itself. */
-    static void shutdown() {
-        Process p = process;
-        if (p != null && p.isAlive()) {
-            p.descendants().forEach(ProcessHandle::destroy);
-            p.destroy();
+    /** Stops the viewer with the game. */
+    static synchronized void shutdown() {
+        if (server != null) {
+            server.stop();
+            server = null;
         }
     }
 
     private static void run(Minecraft mc) throws IOException, InterruptedException {
+        System.setProperty("java.awt.headless", "true");
         ModContainer mod = FabricLoader.getInstance().getModContainer("webmatica").orElseThrow();
-        Path src = mod.findPath(BUNDLE).orElseThrow(() -> new IOException("viewer missing from the mod jar"));
-        String version = mod.getMetadata().getVersion().getFriendlyString() + " " + fingerprint(src);
-        if (listening()) {
-            JsonObject running = runningStatus();
-            if (running != null && version.equals(str(running, "version"))) {
-                if (running.has("tabs") && running.get("tabs").getAsInt() > 0) {
+        Path web = mod.findPath(BUNDLE + "/static").orElseThrow(() -> new IOException("viewer missing from the mod jar"));
+        String version = mod.getMetadata().getVersion().getFriendlyString() + " " + fingerprint(web);
+        Path recording = RecordingTarget.root(mc).toAbsolutePath().normalize();
+
+        synchronized (ViewerLauncher.class) {
+            if (server != null && server.running() && recording.equals(serverRecording)) {
+                if (server.app.streams() > 0) {
                     // Each extra tab costs one of the browser's few connections to the viewer.
                     say(mc, "Viewer ist schon im Browser offen: " + URL, ChatFormatting.GREEN, URL);
                 } else {
@@ -96,109 +93,72 @@ final class ViewerLauncher {
                 }
                 return;
             }
-            // A viewer from an older mod build is still running: ask it to quit, then start the new one.
-            if (!quitRunning()) {
-                say(mc, "Ein alter Viewer läuft noch. Bitte Python im Task-Manager beenden und F10 erneut drücken.",
-                        ChatFormatting.RED, null);
-                return;
-            }
+            shutdown();                        // other recording folder (e.g. another profile): start anew
         }
-        Path app = mc.gameDirectory.toPath().toAbsolutePath().normalize().resolve(BUNDLE);
-        unpack(app, src, version);
-
-        List<String> py = findPython();
-        if (py == null) {
-            say(mc, "Für den Viewer fehlt Python 3.10 oder neuer. Hier herunterladen, beim Installieren „Add python.exe to PATH“ anhaken:",
-                    ChatFormatting.RED, null);
-            say(mc, PYTHON_URL, ChatFormatting.AQUA, PYTHON_URL);
+        if (listening() && !quitRunning()) {
+            // An older Python viewer (or something else) holds the port
+            say(mc, "Port 8770 ist belegt (alter Python-Viewer?). Bitte ihn beenden und F10 erneut drücken.", ChatFormatting.RED, null);
             return;
         }
-        Path log = app.resolve("viewer.log");
-        List<String> venv = List.of(app.resolve(WINDOWS ? ".venv/Scripts/python.exe" : ".venv/bin/python").toString());
-        if (Files.isRegularFile(Path.of(venv.get(0)))) {
-            py = venv;                         // set up by an earlier start (see below)
-        }
-        if (exec(app, log, py, "-c", "import numpy, PIL") != 0) {
-            say(mc, "Viewer: installiere numpy und Pillow …", ChatFormatting.YELLOW, null);
-            if (exec(app, log, py, "-m", "pip", "install", "--user", "-r", "requirements.txt") != 0) {
-                // Newer Linux and Homebrew Python refuse --user ("externally managed", PEP 668):
-                // use a private environment next to the viewer instead
-                if (py.equals(venv) || exec(app, log, py, "-m", "venv", ".venv") != 0
-                        || exec(app, log, venv, "-m", "pip", "install", "-r", "requirements.txt") != 0) {
-                    say(mc, "Viewer: numpy und Pillow ließen sich nicht installieren, Details in " + log, ChatFormatting.RED, null);
-                    return;
-                }
-                py = venv;
-            }
-        }
 
-        if (!Files.isRegularFile(app.resolve("viewer/assets/blocks.png"))) {
-            say(mc, "Viewer: erster Start, Blockbilder werden erzeugt (etwa eine Minute) …", ChatFormatting.YELLOW, null);
-        } else {
-            say(mc, "Viewer startet …", ChatFormatting.YELLOW, null);
-        }
-        List<String> cmd = new ArrayList<>(py);
-        cmd.add("-m");
-        cmd.add("viewer");
-        // The viewer watches the game's process and quits with it, even after a crash.
-        cmd.add("--parent-pid");
-        cmd.add(Long.toString(ProcessHandle.current().pid()));
-        process = new ProcessBuilder(cmd).directory(app.toFile())
-                .redirectErrorStream(true)
-                .redirectOutput(ProcessBuilder.Redirect.appendTo(log.toFile()))
-                .start();
-
-        // The first start builds the block images first, so allow a few minutes.
-        long until = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5);
-        while (System.currentTimeMillis() < until) {
-            if (listening()) {
-                browse(mc);
+        String mcVersion = FabricLoader.getInstance().getModContainer("minecraft")
+                .map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse("unknown");
+        Path assets = mc.gameDirectory.toPath().toAbsolutePath().normalize().resolve(BUNDLE).resolve("assets").resolve(mcVersion);
+        if (!AssetBuilder.ready(assets)) {
+            Path jar = gameJar(mcVersion);
+            if (jar == null) {
+                say(mc, "Viewer: Minecraft-Jar mit den Blockbildern nicht gefunden.", ChatFormatting.RED, null);
                 return;
             }
-            if (!process.isAlive()) {
-                say(mc, "Viewer wurde beendet, Details in " + log, ChatFormatting.RED, null);
-                return;
-            }
-            Thread.sleep(1000);
+            say(mc, "Viewer: erster Start, Blockbilder werden erzeugt …", ChatFormatting.YELLOW, null);
+            AssetBuilder.build(jar, assets, msg -> MapperClient.LOGGER.info("[webmatica] {}", msg));
         }
-        say(mc, "Viewer antwortet nicht, Details in " + log, ChatFormatting.RED, null);
+
+        Files.createDirectories(recording);
+        Server s = new Server(recording, recording.resolve(".viewer-cache"), assets, web, version, "127.0.0.1", PORT,
+                msg -> MapperClient.LOGGER.info("[webmatica] {}", msg));
+        int cpus = Runtime.getRuntime().availableProcessors();
+        s.start(Math.max(1, Math.min(4, cpus / 3)));       // the game needs the rest
+        synchronized (ViewerLauncher.class) {
+            server = s;
+            serverRecording = recording;
+        }
+        browse(mc);
     }
 
-    /** Copies the bundled viewer next to the game whenever it changed. Built block images stay. */
-    private static void unpack(Path app, Path src, String version) throws IOException {
-        Path stamp = app.resolve(STAMP);
-        if (Files.isRegularFile(stamp) && version.equals(Files.readString(stamp, StandardCharsets.UTF_8).trim())) {
-            return;
+    /** The jar holding the vanilla assets: the one the game loaded them from, else the launcher's copy. */
+    private static Path gameJar(String mcVersion) {
+        List<Path> cands = new ArrayList<>();
+        try {
+            URL u = Minecraft.class.getClassLoader().getResource("assets/minecraft/blockstates/stone.json");
+            if (u != null && u.getProtocol().equals("jar")) {
+                cands.add(Path.of(((JarURLConnection) u.openConnection()).getJarFileURL().toURI()));
+            }
+        } catch (Exception ignored) {
+            // try the others
         }
-        Path code = app.resolve("viewer");
-        Path assets = code.resolve("assets");
-        if (Files.isDirectory(code)) {
-            try (Stream<Path> old = Files.walk(code)) {
-                for (Path p : old.sorted(Comparator.reverseOrder()).toList()) {
-                    if (!p.startsWith(assets) && !p.equals(code)) {
-                        Files.deleteIfExists(p);
-                    }
-                }
+        try {
+            cands.add(Path.of(Minecraft.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
+        } catch (Exception ignored) {
+            // try the others
+        }
+        Path home = Path.of(System.getProperty("user.home"));
+        Path rel = Path.of("versions", mcVersion, mcVersion + ".jar");
+        String appdata = System.getenv("APPDATA");
+        if (appdata != null) {
+            cands.add(Path.of(appdata, ".minecraft").resolve(rel));
+        }
+        cands.add(home.resolve(".minecraft").resolve(rel));
+        cands.add(home.resolve("Library/Application Support/minecraft").resolve(rel));
+        for (Path c : cands) {
+            if (Files.isRegularFile(c) && AssetBuilder.hasAssets(c)) {
+                return c;
             }
         }
-        try (Stream<Path> files = Files.walk(src)) {
-            for (Path p : files.toList()) {
-                Path dst = app.resolve(src.relativize(p).toString().replace(src.getFileSystem().getSeparator(), File.separator));
-                if (Files.isDirectory(p)) {
-                    Files.createDirectories(dst);
-                } else {
-                    try (InputStream in = Files.newInputStream(p)) {
-                        Files.copy(in, dst, StandardCopyOption.REPLACE_EXISTING);
-                    }
-                }
-            }
-        }
-        Files.createDirectories(assets);
-        app.resolve("start-viewer.sh").toFile().setExecutable(true);
-        Files.writeString(stamp, version, StandardCharsets.UTF_8);
+        return null;
     }
 
-    /** Checksum over the bundled files, so a rebuilt jar with the same version also updates the copy. */
+    /** Checksum over the web page, so a rebuilt jar with the same version still reloads the browser. */
     private static String fingerprint(Path src) throws IOException {
         CRC32 crc = new CRC32();
         try (Stream<Path> files = Files.walk(src)) {
@@ -210,71 +170,7 @@ final class ViewerLauncher {
         return Long.toHexString(crc.getValue());
     }
 
-    /** The first Python 3.10+ found, as a command line. The Windows Store stub fails the check. */
-    private static List<String> findPython() {
-        boolean win = WINDOWS;
-        List<List<String>> cands = win
-                ? List.of(List.of("py", "-3"), List.of("python"), List.of("python3"))
-                : List.of(List.of("python3"), List.of("python"));
-        for (List<String> c : cands) {
-            List<String> cmd = new ArrayList<>(c);
-            cmd.add("-c");
-            cmd.add("import sys; print(sys.version_info >= (3, 10))");
-            try {
-                Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-                // Wait first: reading to the end would block forever on a hanging stub
-                if (!p.waitFor(20, TimeUnit.SECONDS)) {
-                    p.destroyForcibly();
-                    continue;
-                }
-                String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
-                if (p.exitValue() == 0 && out.endsWith("True")) {
-                    return c;
-                }
-            } catch (IOException | InterruptedException ignored) {
-                // not installed, try the next one
-            }
-        }
-        return null;
-    }
-
-    private static int exec(Path dir, Path log, List<String> py, String... args) throws IOException, InterruptedException {
-        List<String> cmd = new ArrayList<>(py);
-        cmd.addAll(List.of(args));
-        Process p = new ProcessBuilder(cmd).directory(dir.toFile())
-                .redirectErrorStream(true)
-                .redirectOutput(ProcessBuilder.Redirect.appendTo(log.toFile()))
-                .start();
-        if (!p.waitFor(10, TimeUnit.MINUTES)) {
-            p.destroy();
-            return -1;
-        }
-        return p.exitValue();
-    }
-
-    /** Status of the viewer on the port ({@code version}, {@code tabs}); null for one that predates /api/version. */
-    private static JsonObject runningStatus() {
-        try {
-            HttpURLConnection c = (HttpURLConnection) URI.create(URL + "/api/version").toURL().openConnection();
-            c.setConnectTimeout(1000);
-            c.setReadTimeout(2000);
-            if (c.getResponseCode() != 200) {
-                return null;
-            }
-            try (InputStream in = c.getInputStream()) {
-                return JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8)).getAsJsonObject();
-            }
-        } catch (IOException | RuntimeException e) {
-            return null;
-        }
-    }
-
-    private static String str(JsonObject o, String key) {
-        JsonElement v = o.get(key);
-        return v == null || v.isJsonNull() ? "" : v.getAsString();
-    }
-
-    /** Asks the running viewer to quit and waits until the port is free. */
+    /** Asks a viewer on the port (an older Python one) to quit and waits until the port is free. */
     private static boolean quitRunning() throws InterruptedException {
         try {
             HttpURLConnection c = (HttpURLConnection) URI.create(URL + "/api/quit").toURL().openConnection();
@@ -289,7 +185,10 @@ final class ViewerLauncher {
             if (c.getResponseCode() != 200) {
                 return false;
             }
-        } catch (IOException e) {
+            try (InputStream in = c.getInputStream()) {
+                JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+            }
+        } catch (IOException | RuntimeException e) {
             return !listening();
         }
         for (int i = 0; i < 50; i++) {
