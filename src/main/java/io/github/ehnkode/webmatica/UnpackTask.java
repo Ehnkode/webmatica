@@ -4,7 +4,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -13,7 +12,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -35,7 +33,7 @@ import net.minecraft.world.phys.Vec3;
  * The shulker is never placed inside the schematic frame (if one is given)
  * and only where there is room above to open it.
  */
-public final class UnpackTask {
+public final class UnpackTask extends BotTask<UnpackTask.Phase> {
 
     private static final UnpackTask INSTANCE = new UnpackTask();
     private static final int CLICK_EVERY = 3;
@@ -44,32 +42,24 @@ public final class UnpackTask {
         return INSTANCE;
     }
 
-    private enum Phase { IDLE, PLACE, OPEN, TAKE, BREAK, PICKUP }
+    enum Phase { IDLE, PLACE, OPEN, TAKE, BREAK, PICKUP }
 
-    private Phase phase = Phase.IDLE;
-    private String id;
     private final Map<String, Integer> want = new LinkedHashMap<>();
     private int[] box;            // x0 y0 z0 x1 y1 z1, must not be built on
     private BlockPos placed;
     private String shulkerId;
-    private long phaseStart;
-    private int tick;
     private int taken;
     private int tries;
-    private AbstractContainerMenu opened;
     private int shulkersLeft;
     private boolean walked;
 
-    public boolean busy() {
-        return phase != Phase.IDLE;
+    private UnpackTask() {
+        super(Phase.IDLE);
     }
 
     /** Client thread. */
     public void start(String cmdId, JsonObject cmd) {
-        if (busy()) {
-            finish(false, "abgebrochen, neuer Auftrag");
-        }
-        id = cmdId;
+        begin(cmdId);
         want.clear();
         for (JsonElement e : cmd.getAsJsonArray("items")) {
             JsonObject it = e.getAsJsonObject();
@@ -90,42 +80,9 @@ public final class UnpackTask {
         setPhase(Phase.PLACE);
     }
 
-    public void cancel() {
-        if (busy()) {
-            finish(false, "gestoppt");
-        }
-    }
-
-    private long frozenAt;
-
-    private void setPhase(Phase p) {
-        phase = p;
-        phaseStart = System.currentTimeMillis();
-    }
-
-    public void tick(Minecraft mc) {
-        if (phase == Phase.IDLE) {
-            return;
-        }
-        LocalPlayer p = mc.player;
+    @Override
+    protected void step(Minecraft mc, LocalPlayer p, long age) {
         ClientLevel w = mc.level;
-        if (p == null || w == null || mc.gameMode == null) {
-            finish(false, "nicht mehr im Spiel");
-            return;
-        }
-        if (AutoGuard.paused() || AutoGuard.eating()) {
-            // player nearby or eating: wait without the time limits running on
-            if (frozenAt == 0L) {
-                frozenAt = System.currentTimeMillis();
-            }
-            return;
-        }
-        if (frozenAt != 0L) {
-            phaseStart += System.currentTimeMillis() - frozenAt;
-            frozenAt = 0L;
-        }
-        long age = System.currentTimeMillis() - phaseStart;
-        tick++;
         switch (phase) {
             case PLACE -> {
                 if (placed != null) {
@@ -368,14 +325,8 @@ public final class UnpackTask {
         return n;
     }
 
-    private void finish(boolean ok, String why) {
-        Minecraft mc = Minecraft.getInstance();
-        String msg = "Auspacken: " + (taken > 0 ? taken + " Items" : "nichts") + " genommen" + (why != null ? " (" + why + ")" : "");
-        if (mc.player != null) {
-            Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(msg)).withStyle(ok ? ChatFormatting.GREEN : ChatFormatting.RED));
-        }
-        BaritoneBridge.report(id, ok, msg);
-        phase = Phase.IDLE;
-        opened = null;
+    @Override
+    protected void finish(boolean ok, String why) {
+        report(ok, "Auspacken: " + (taken > 0 ? taken + " Items" : "nichts") + " genommen" + (why != null ? " (" + why + ")" : ""));
     }
 }

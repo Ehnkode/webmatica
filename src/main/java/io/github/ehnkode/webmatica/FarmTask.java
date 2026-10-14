@@ -15,7 +15,6 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -38,7 +37,7 @@ import net.minecraft.world.phys.Vec3;
  * Chest: place a chest from the inventory next to you, put the given items
  * in and leave it (the viewer remembers it like any other chest).
  */
-public final class FarmTask {
+public final class FarmTask extends BotTask<FarmTask.Phase> {
 
     private static final FarmTask INSTANCE = new FarmTask();
     private static final int CLICK_EVERY = 3;
@@ -47,31 +46,25 @@ public final class FarmTask {
         return INSTANCE;
     }
 
-    private enum Phase { IDLE, BREAK, PICKUP, PLACE, OPEN, PUT }
+    enum Phase { IDLE, BREAK, PICKUP, PLACE, OPEN, PUT }
 
-    private Phase phase = Phase.IDLE;
-    private String id;
     private String label;
     private final Set<String> ids = new HashSet<>();
     private final Set<Integer> slots = new HashSet<>();    // chest: only these inventory slots
     private AABB area;
     private boolean pickup;
     private String fill;
-    private long phaseStart;
     private long breakLimit;
-    private long frozenAt;
-    private int tick;
     private int before;
     private int count;
     private int tries;
     private BlockPos placed;
     private BlockPos walkTarget;
-    private AbstractContainerMenu opened;
     private final Set<Integer> skipped = new HashSet<>();
     private final Set<Integer> skippedDrops = new HashSet<>();
 
-    public boolean busy() {
-        return phase != Phase.IDLE;
+    private FarmTask() {
+        super(Phase.IDLE);
     }
 
     /** Currently placing or filling a chest: don't eat then. */
@@ -81,10 +74,7 @@ public final class FarmTask {
 
     /** Client thread. kind "breakboxes" or "chestdump". */
     public void start(String cmdId, JsonObject cmd) {
-        if (busy()) {
-            finish(false, "abgebrochen, neuer Auftrag");
-        }
-        id = cmdId;
+        begin(cmdId);
         ids.clear();
         if (cmd.has("ids")) {
             for (JsonElement e : cmd.getAsJsonArray("ids")) {
@@ -148,39 +138,9 @@ public final class FarmTask {
         actionbar(mc, label + (fill != null ? ": füllt " : ": baut ") + boxes.size() + " Bereiche" + (fill != null ? " auf" : " ab"), ChatFormatting.AQUA);
     }
 
-    public void cancel() {
-        if (busy()) {
-            finish(false, "gestoppt");
-        }
-    }
-
-    private void setPhase(Phase p) {
-        phase = p;
-        phaseStart = System.currentTimeMillis();
-    }
-
-    public void tick(Minecraft mc) {
-        if (phase == Phase.IDLE) {
-            return;
-        }
-        LocalPlayer p = mc.player;
+    @Override
+    protected void step(Minecraft mc, LocalPlayer p, long age) {
         ClientLevel w = mc.level;
-        if (p == null || w == null || mc.gameMode == null) {
-            finish(false, "nicht mehr im Spiel");
-            return;
-        }
-        if (AutoGuard.paused() || AutoGuard.eating()) {
-            if (frozenAt == 0L) {
-                frozenAt = System.currentTimeMillis();
-            }
-            return;
-        }
-        if (frozenAt != 0L) {
-            phaseStart += System.currentTimeMillis() - frozenAt;
-            frozenAt = 0L;
-        }
-        long age = System.currentTimeMillis() - phaseStart;
-        tick++;
         switch (phase) {
             case BREAK -> {
                 if (age > 2500L && !BaritoneApi.builderActive()) {
@@ -396,7 +356,8 @@ public final class FarmTask {
         return best;
     }
 
-    private void finish(boolean ok, String why) {
+    @Override
+    protected void finish(boolean ok, String why) {
         Minecraft mc = Minecraft.getInstance();
         String msg;
         if (label != null && label.equals("Kiste")) {
@@ -410,15 +371,6 @@ public final class FarmTask {
         if (why != null) {
             msg += " (" + why + ")";
         }
-        actionbar(mc, msg, ok ? ChatFormatting.GREEN : ChatFormatting.RED);
-        BaritoneBridge.report(id, ok, msg);
-        phase = Phase.IDLE;
-        opened = null;
-    }
-
-    private static void actionbar(Minecraft mc, String s, ChatFormatting f) {
-        if (mc.player != null) {
-            Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(s)).withStyle(f));
-        }
+        report(ok, msg);
     }
 }
