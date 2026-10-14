@@ -132,10 +132,17 @@ public final class BaritoneBridge {
             return;
         }
         if ("goto".equals(kind)) {
-            BaritoneSafety.walkOnly();
-            int x = cmd.get("x").getAsInt(), z = cmd.get("z").getAsInt();
-            lines.add(cmd.has("y") && !cmd.get("y").isJsonNull() ? "goto " + x + " " + cmd.get("y").getAsInt() + " " + z : "goto " + x + " " + z);
-        } else if ("stop".equals(kind) || "pause".equals(kind) || "resume".equals(kind)) {
+            gotoPos(mc, id, cmd);
+            return;
+        }
+        if ("stop".equals(kind)) {
+            Walker.stop();
+            if (!Walker.baritoneInstalled()) {
+                report(id, true, "gestoppt");
+                return;
+            }
+        }
+        if ("stop".equals(kind) || "pause".equals(kind) || "resume".equals(kind)) {
             lines.add(kind);
         } else if ("clear".equals(kind)) {
             // clear build site: set selection and let Baritone empty it
@@ -176,6 +183,28 @@ public final class BaritoneBridge {
                     .withStyle(err == null ? ChatFormatting.AQUA : ChatFormatting.RED));
         }
         report(id, err == null, err == null ? "#" + line : err);
+    }
+
+    /** "goto" from the map: Baritone or the own engine, see {@link Walker}. */
+    private static void gotoPos(Minecraft mc, String id, JsonObject cmd) {
+        int x = cmd.get("x").getAsInt(), z = cmd.get("z").getAsInt();
+        Integer y = cmd.has("y") && !cmd.get("y").isJsonNull() ? cmd.get("y").getAsInt() : null;
+        String where = x + " " + (y != null ? y + " " : "") + z;
+        String err = null;
+        try {
+            BaritoneSafety.walkOnly();
+            Walker.gotoPos(x, y, z);
+        } catch (IllegalStateException e) {
+            err = e.getMessage();
+        } catch (Throwable t) {
+            Throwable c = t.getCause() != null ? t.getCause() : t;
+            err = c.getClass().getSimpleName() + ": " + c.getMessage();
+        }
+        String msg = err != null ? err : (Walker.usingBaritone() ? "Baritone läuft nach " : "läuft nach ") + where;
+        if (mc.player != null) {
+            Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(msg)).withStyle(err == null ? ChatFormatting.AQUA : ChatFormatting.RED));
+        }
+        report(id, err == null, msg);
     }
 
     static void report(String id, boolean ok, String msg) {
