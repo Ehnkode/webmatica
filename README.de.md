@@ -38,7 +38,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 - **Lager:** Jede Kiste, die du öffnest, wird gemerkt, auch der Inhalt von Shulkern. Such ein Item
   über alle Kisten, lass Baritone genau die gewählten Stacks holen oder dein Inventar dorthin
   einlagern, wo das Item schon liegt. Mit Stash-Finder.
-- **X-Ray:** nur die gesuchten Blöcke zeigen, in 3D und auf der Karte, und von Fund zu Fund springen.
+- **X-Ray:** nur die gesuchten Blöcke zeigen, in 3D und auf der Karte, und Baritone direkt zu einem Fund schicken.
 - **Außerdem:** Wegpunkte, Schilder, Zeitraffer der Änderungen (Export als GIF oder Video), Radar für
   Spieler in der Nähe, Suche nach Koordinaten oder Wegpunkten.
 
