@@ -38,6 +38,8 @@ public final class AutoGuard {
     private static int prevSlot = -1;
     private static int foodBefore;
     private static long eatStart;
+    private static int swapFrom = -1;     // inventory slot the food came from, -1 = no swap
+    private static int swapHot = -1;      // hotbar slot it went to
     private static long nextTry;
 
     private AutoGuard() {
@@ -135,6 +137,8 @@ public final class AutoGuard {
                 }
             }
             Mc.swap(mc, p.inventoryMenu.containerId, best, hot, p);
+            swapFrom = best;
+            swapHot = hot;
         }
         pausedForEating = !paused && BaritoneBridge.exec("pause");
         inv.setSelectedSlot(hot);
@@ -166,6 +170,12 @@ public final class AutoGuard {
     private static void endEat(Minecraft mc) {
         eating = false;
         mc.options.keyUse.setDown(false);
+        if (mc.player != null && swapFrom >= 0 && Mc.screen(mc) == null) {
+            // swap back: the food (or what is left of it) returns, the tool is in the hotbar again
+            Mc.swap(mc, mc.player.inventoryMenu.containerId, swapFrom, swapHot, mc.player);
+        }
+        swapFrom = -1;
+        swapHot = -1;
         if (mc.player != null && prevSlot >= 0) {
             mc.player.getInventory().setSelectedSlot(prevSlot);
         }

@@ -56,6 +56,8 @@ public final class PositionReporter {
     private long lastSkinSent = 0L;
     private String lastInv = null;
     private long lastInvSent = 0L;
+    private long lastInvScan = 0L;
+    private long lastBuilt = 0L;
 
     private PositionReporter() {
         this.thread = new Thread(this::loop, "webmatica-position");
@@ -90,8 +92,8 @@ public final class PositionReporter {
     }
 
     /**
-     * Called every client tick. Only builds the JSON when something
-     * has changed, and hands it to the sender thread.
+     * Called every client tick. Builds the JSON at most once per send interval
+     * (not 20 times a second) and hands it to the sender thread.
      */
     public void tick(Minecraft mc) {
         if (!enabled || mc == null) {
@@ -101,6 +103,11 @@ public final class PositionReporter {
         if (p == null || mc.level == null) {
             return;
         }
+        long built = System.currentTimeMillis();
+        if (built - lastBuilt < intervalMs) {
+            return;
+        }
+        lastBuilt = built;
 
         try {
             JsonObject o = new JsonObject();
@@ -116,7 +123,8 @@ public final class PositionReporter {
                 o.addProperty("name", mc.getUser().getName());
                 o.addProperty("uuid", mc.getUser().getProfileId() != null
                         ? mc.getUser().getProfileId().toString() : "");
-            } catch (Throwable ignored) {
+            } catch (Throwable t) {
+                failedOnce("name", t);
             }
 
             // Skin URL from the tab list entry (contains the signed
@@ -139,7 +147,8 @@ public final class PositionReporter {
                         }
                     }
                 }
-            } catch (Throwable ignored) {
+            } catch (Throwable t) {
+                failedOnce("skin", t);
             }
 
             // Pull the skin face from the client texture (independent of external
@@ -156,25 +165,30 @@ public final class PositionReporter {
                     o.addProperty("skinFull", skinFullB64);
                 }
             }
-            // Inventory: only send on change or every 5 s (the pack list subtracts it)
-            try {
-                JsonArray inv = new JsonArray();
-                net.minecraft.world.entity.player.Inventory pi = p.getInventory();
-                for (int i = 0; i < pi.getContainerSize(); i++) {
-                    net.minecraft.world.item.ItemStack st = pi.getItem(i);
-                    if (!st.isEmpty()) {
-                        JsonObject it = ContainerTracker.itemWithContents(st);
-                        it.addProperty("slot", i);
-                        inv.add(it);
+            // Inventory: looked at 4 times a second (shulker contents make it costly),
+            // sent on change, otherwise every 2 s (the pack list subtracts it)
+            if (nowMs - lastInvScan >= 250L) {
+                lastInvScan = nowMs;
+                try {
+                    JsonArray inv = new JsonArray();
+                    net.minecraft.world.entity.player.Inventory pi = p.getInventory();
+                    for (int i = 0; i < pi.getContainerSize(); i++) {
+                        net.minecraft.world.item.ItemStack st = pi.getItem(i);
+                        if (!st.isEmpty()) {
+                            JsonObject it = ContainerTracker.itemWithContents(st);
+                            it.addProperty("slot", i);
+                            inv.add(it);
+                        }
                     }
+                    String invJson = inv.toString();
+                    if (!invJson.equals(lastInv) || nowMs - lastInvSent > 2000L) {
+                        lastInv = invJson;
+                        lastInvSent = nowMs;
+                        o.add("inv", inv);
+                    }
+                } catch (Throwable t) {
+                    failedOnce("inventory", t);
                 }
-                String invJson = inv.toString();
-                if (!invJson.equals(lastInv) || nowMs - lastInvSent > 2000L) {
-                    lastInv = invJson;
-                    lastInvSent = nowMs;
-                    o.add("inv", inv);
-                }
-            } catch (Throwable ignored) {
             }
             // Radar: other players the client currently sees (only what the server sends anyway)
             try {
@@ -193,7 +207,8 @@ public final class PositionReporter {
                     others.add(q);
                 }
                 o.add("others", others);
-            } catch (Throwable ignored) {
+            } catch (Throwable t) {
+                failedOnce("radar", t);
             }
             o.addProperty("server", RecordingTarget.serverId(mc));
             o.addProperty("recording", RegionStore.getInstance().isEnabled());
@@ -202,6 +217,15 @@ public final class PositionReporter {
             payload.set(o.toString());
         } catch (Throwable t) {
             MapperClient.LOGGER.debug("[webmatica] Position-JSON fehlgeschlagen", t);
+        }
+    }
+
+    private final java.util.Set<String> failed = new java.util.HashSet<>();
+
+    /** A part of the JSON failed: log it once (it would fail every tick), then stay quiet. */
+    private void failedOnce(String part, Throwable t) {
+        if (failed.add(part)) {
+            MapperClient.LOGGER.warn("[webmatica] Positionsdaten: {} fehlt ({})", part, t.toString());
         }
     }
 
