@@ -47,6 +47,7 @@ public final class ServerSafe {
         FetchTask.getInstance().cancel();
         UnpackTask.getInstance().cancel();
         FarmTask.getInstance().cancel();
+        Walker.stop();
         try {
             BaritoneApi.execute("stop");
         } catch (Throwable ignored) {
