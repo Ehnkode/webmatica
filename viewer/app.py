@@ -397,7 +397,7 @@ def world_label(server: str) -> str:
     if server == LEGACY_SERVER:
         return "Alte Aufnahme (gemischt)"
     if server == "singleplayer":
-        # before 0.6.1 every singleplayer world landed in this one folder
+        # before 0.7.0 every singleplayer world landed in this one folder
         return "Einzelspieler (alle alten Welten gemischt)"
     if server.startswith("singleplayer-"):
         return "Einzelspieler: " + server[len("singleplayer-"):].replace("_", " ")
