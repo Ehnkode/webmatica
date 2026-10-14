@@ -362,6 +362,12 @@ async function set3d(on) {
   schedulePlayer();
 }
 
+/* World or dimension changed while in 3D: build the 3D view again for the new place. */
+function reload3d() {
+  mode3d = false;
+  set3d(true);
+}
+
 /* 3D: show the hint only briefly, settings behind the gear */
 let hint3dTimer = null;
 function showHint3d() {
