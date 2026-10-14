@@ -83,12 +83,12 @@ public final class AutoGuard {
     private static void tools(boolean on) {
         try {
             if (on && savedTools == null) {
-                savedTools = new Object[] {BaritoneSafety.get("itemSaver"), BaritoneSafety.get("itemSaverThreshold")};
-                BaritoneSafety.set("itemSaver", Boolean.TRUE);
-                BaritoneSafety.set("itemSaverThreshold", 10);
+                savedTools = new Object[] {BaritoneApi.get("itemSaver"), BaritoneApi.get("itemSaverThreshold")};
+                BaritoneApi.set("itemSaver", Boolean.TRUE);
+                BaritoneApi.set("itemSaverThreshold", 10);
             } else if (!on && savedTools != null) {
-                BaritoneSafety.set("itemSaver", savedTools[0]);
-                BaritoneSafety.set("itemSaverThreshold", savedTools[1]);
+                BaritoneApi.set("itemSaver", savedTools[0]);
+                BaritoneApi.set("itemSaverThreshold", savedTools[1]);
                 savedTools = null;
             }
         } catch (Throwable t) {
@@ -140,7 +140,7 @@ public final class AutoGuard {
             swapFrom = best;
             swapHot = hot;
         }
-        pausedForEating = !paused && BaritoneBridge.exec("pause");
+        pausedForEating = !paused && BaritoneApi.tryExecute("pause");
         inv.setSelectedSlot(hot);
         foodBefore = p.getFoodData().getFoodLevel();
         eatStart = now;
@@ -181,7 +181,7 @@ public final class AutoGuard {
         }
         prevSlot = -1;
         if (pausedForEating && !paused) {
-            BaritoneBridge.exec("resume");
+            BaritoneApi.tryExecute("resume");
         }
         pausedForEating = false;
     }

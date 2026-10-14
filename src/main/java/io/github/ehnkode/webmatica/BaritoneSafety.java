@@ -26,12 +26,12 @@ public final class BaritoneSafety {
             if (saved == null) {
                 Object[] s = new Object[KEYS.length];
                 for (int i = 0; i < KEYS.length; i++) {
-                    s[i] = get(KEYS[i]);
+                    s[i] = BaritoneApi.get(KEYS[i]);
                 }
                 saved = s;
             }
             for (String k : KEYS) {
-                set(k, Boolean.FALSE);
+                BaritoneApi.set(k, Boolean.FALSE);
             }
             since = System.currentTimeMillis();
         } catch (Throwable ignored) {
@@ -46,7 +46,7 @@ public final class BaritoneSafety {
         }
         try {
             for (int i = 0; i < KEYS.length; i++) {
-                set(KEYS[i], saved[i]);
+                BaritoneApi.set(KEYS[i], saved[i]);
             }
         } catch (Throwable ignored) {
         }
@@ -64,36 +64,11 @@ public final class BaritoneSafety {
             return;
         }
         try {
-            Object b = baritone();
-            Object pb = Class.forName("baritone.api.IBaritone").getMethod("getPathingBehavior").invoke(b);
-            boolean pathing = (Boolean) Class.forName("baritone.api.behavior.IPathingBehavior").getMethod("isPathing").invoke(pb);
-            Object proc = Class.forName("baritone.api.IBaritone").getMethod("getCustomGoalProcess").invoke(b);
-            boolean active = (Boolean) Class.forName("baritone.api.process.IBaritoneProcess").getMethod("isActive").invoke(proc);
-            if (!pathing && !active) {
+            if (!BaritoneApi.walking()) {
                 restore();
             }
         } catch (Throwable t) {
             restore();
         }
-    }
-
-    private static Object baritone() throws Exception {
-        Object provider = Class.forName("baritone.api.BaritoneAPI").getMethod("getProvider").invoke(null);
-        return Class.forName("baritone.api.IBaritoneProvider").getMethod("getPrimaryBaritone").invoke(provider);
-    }
-
-    private static Object setting(String key) throws Exception {
-        Object settings = Class.forName("baritone.api.BaritoneAPI").getMethod("getSettings").invoke(null);
-        return settings.getClass().getField(key).get(settings);
-    }
-
-    static Object get(String key) throws Exception {
-        Object s = setting(key);
-        return s.getClass().getField("value").get(s);
-    }
-
-    static void set(String key, Object v) throws Exception {
-        Object s = setting(key);
-        s.getClass().getField("value").set(s, v);
     }
 }

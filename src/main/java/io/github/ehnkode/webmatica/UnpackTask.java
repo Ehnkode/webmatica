@@ -247,13 +247,13 @@ public final class UnpackTask {
                     walked = true;
                     try {
                         BaritoneSafety.walkOnly();
-                        FetchTask.walkTo(placed);
+                        BaritoneApi.walkTo(placed);
                     } catch (Throwable ignored) {
                     }
                 }
                 if (back || age > 12_000L) {
                     if (walked) {
-                        FetchTask.stopBaritone();
+                        BaritoneApi.stop();
                         BaritoneSafety.restore();
                     }
                     finish(taken > 0, back ? null : "Shulker liegt noch am Boden bei "
