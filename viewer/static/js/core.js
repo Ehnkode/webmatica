@@ -104,6 +104,7 @@ const RegionLayer = L.GridLayer.extend({
   createTile(coords, done) {
     const img = document.createElement('img');
     img.alt = '';
+    img.className = 'region-tile';   // faint grid where nothing is recorded yet (see style.css)
     img.onload = () => done(null, img);
     img.onerror = () => done(null, img);
     img.src = this.tileUrl(coords);
@@ -235,6 +236,19 @@ map.on('mousemove', (e) => {
   clearTimeout(infoTimer);
   infoTimer = setTimeout(() => columnInfo(x, z), 120);
 });
+
+map.on('mouseout', () => { clearTimeout(infoTimer); $('#cursor').textContent = ''; $('#info').textContent = ''; });
+
+/* Scale: a bar of at most 100 px with a round number of blocks */
+function drawScale() {
+  const px = 2 ** map.getZoom();          // pixels per block
+  const nice = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000];
+  const n = nice.filter((v) => v * px <= 100).pop() || 1;
+  $('#scale i').style.width = `${Math.round(n * px)}px`;
+  $('#scale span').textContent = `${fmt(n)} ${n === 1 ? 'Block' : 'Blöcke'}`;
+}
+map.on('zoomend', drawScale);
+drawScale();
 
 async function columnInfo(x, z) {
   try {
