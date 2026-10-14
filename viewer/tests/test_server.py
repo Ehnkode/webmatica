@@ -201,6 +201,15 @@ class ServerTest(unittest.TestCase):
         self.assertIn("error", res)
         self.post_json("/api/editor/new", {"name": "local-ok"}, headers={"Origin": "http://localhost:8770"})
 
+    def test_foreign_host_is_refused(self):
+        # DNS rebinding: a foreign domain resolved to 127.0.0.1 sends its own name as Host
+        code, _, _ = self.request("/api/player", headers={"Host": "evil.example:8770"})
+        self.assertEqual(code, 403)
+        self.post_json("/api/editor/new", {"name": "evil"}, 403, headers={"Host": "evil.example:8770"})
+        for host in ("localhost:8770", "127.0.0.1:8770", "192.168.1.5:8770", "[::1]:8770"):
+            code, _, _ = self.request("/api/version", headers={"Host": host})
+            self.assertEqual(code, 200, host)
+
     def test_invalid_json_and_unknown_paths(self):
         code, _, _ = self.request("/api/editor/new", raw=b"{not json")
         self.assertEqual(code, 400)
