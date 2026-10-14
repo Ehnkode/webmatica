@@ -165,14 +165,16 @@
     </div>
     <div class="card">
       <div class="card-title">3 · Wenn das Inventar voll ist</div>
-      <select id="fm-chest"></select>
+      <select id="fm-chest"><option value="">Kiste aus dem Inventar aufstellen</option></select>
       <p class="hint">Werkzeug, Essen, Kisten und die Hotbar bleiben bei dir.</p>
     </div>
     <div class="card hero">
+      <ul id="fm-check" class="checklist"></ul>
       <button id="fm-go" class="primary big" disabled>▶ Farmen starten</button>
       <div id="fm-info" class="ab-info muted"></div>
       <ol id="fm-log" class="ab-log"></ol>
       <div class="guard fm-guard">
+        <p class="hint">Schutz, gilt für alle Automationen (dieselben Schalter wie unter <a href="#" data-goto-tab="settings">Optionen</a>):</p>
         <label class="check"><input type="checkbox" data-guard="radar"> Pause bei Spielern in der Nähe</label>
         <label class="check"><input type="checkbox" data-guard="eat"> Automatisch essen</label>
         <label class="check"><input type="checkbox" data-guard="tools"> Werkzeug nicht kaputtmachen</label>
@@ -229,7 +231,7 @@
       <p class="hint gd-note">Aus lassen, solange du in deiner Basis bist, sonst gräbt Baritone durch Wände. Weit weg von der Basis spart es Umwege.</p>
       <label class="check" title="Wenn alles steht: falsch gedrehte und überflüssige Blöcke im Rahmen abbauen und richtig neu setzen"><input type="checkbox" data-guard="fix"> Am Ende falsche Blöcke korrigieren</label>
       <label class="check" title="Wenn alles steht: übrig gebliebene Baumaterialien in Kisten bringen, in denen dieses Item schon liegt"><input type="checkbox" data-guard="leftovers"> Reste nach dem Bauen zurück in die Kisten</label>
-      <p class="hint">Gilt nur, solange der Autobau läuft. Wird gespeichert.</p>
+      <p class="hint">Gilt für Autobau, Einlagern, Farmen und Ebnen, solange sie laufen (Durchgraben auch beim Hinlaufen über die Karte). Wird gespeichert.</p>
     </div>
     </div>
     <div class="card">
@@ -311,6 +313,7 @@
     <div class="card hero">
       <div class="card-title">Autobau</div>
       <p class="hint">Holt fehlendes Material aus deinen Kisten (auch aus Shulkern), baut, holt Nachschub, bis alles steht.</p>
+      <ul id="ab-check" class="checklist"></ul>
       <button id="ab-toggle" class="primary big">▶ Automatisch holen und bauen</button>
       <div id="ab-info" class="ab-info muted"></div>
       <ol id="ab-log" class="ab-log"></ol>

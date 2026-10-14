@@ -621,3 +621,15 @@ body.xray-on:not(.mode3d) #map .leaflet-tile-pane { filter: brightness(0.38) sat
 .fl-row .sw-orange { background: var(--warn); }
 .spawn-legend #spawn-light { margin-left: auto; }
 .spawn-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* Start check above an automation's start button */
+.checklist { list-style: none; margin: 4px 0 10px; padding: 0; font-size: 12.5px; }
+.checklist[hidden], .checklist:empty { display: none; }
+.checklist li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0 3px 20px; position: relative; }
+.checklist li::before { position: absolute; left: 0; top: 3px; width: 16px; text-align: center; font-weight: 700; }
+.checklist li.ok::before { content: "✓"; color: var(--accent); }
+.checklist li.bad::before { content: "✕"; color: var(--danger); }
+.checklist li.warn::before { content: "!"; color: var(--warn); }
+.checklist li.bad span { color: var(--fg); }
+.checklist li.ok span { color: var(--muted); }
+.checklist button.small { padding: 2px 8px; font-size: 12px; flex: none; }
