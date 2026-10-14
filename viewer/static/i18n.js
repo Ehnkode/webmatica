@@ -5,7 +5,16 @@
   const KEY = 'webmatica.lang';
   let lang = null;
   try { lang = localStorage.getItem(KEY); } catch (e) { /* ignore */ }
-  if (lang !== 'de' && lang !== 'en') lang = /^de\b/i.test(navigator.language || '') ? 'de' : 'en';
+  if (lang !== 'de' && lang !== 'en') {
+    // No choice saved yet: follow the game language, English if it is unknown
+    lang = 'en';
+    try {
+      const x = new XMLHttpRequest();
+      x.open('GET', '/api/lang', false);
+      x.send();
+      if (x.status === 200 && /^de/i.test(JSON.parse(x.responseText).game || '')) lang = 'de';
+    } catch (e) { /* ignore */ }
+  }
 
   const I18N = window.I18N = {
     lang,

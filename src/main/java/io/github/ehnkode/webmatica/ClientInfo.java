@@ -41,6 +41,9 @@ final class ClientInfo {
             }
             o.addProperty("minecraft", FabricLoader.getInstance().getModContainer("minecraft")
                     .map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse(""));
+            if (mc.options != null) {
+                o.addProperty("language", mc.options.languageCode);
+            }
             o.addProperty("updated", System.currentTimeMillis());
             Path dir = Path.of(System.getProperty("user.home"), ".webmatica");
             Files.createDirectories(dir);

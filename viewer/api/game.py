@@ -12,7 +12,7 @@ import time
 from ..app import PLAYER_STALE, VERSION
 from ..autobuild import AutoBuild
 from ..extras import Containers
-from .. import farm, spawn
+from .. import farm, firstrun, spawn
 from .router import routes
 
 AREA = ("x0", "z0", "x1", "z1", "y0", "y1")
@@ -21,6 +21,12 @@ AREA = ("x0", "z0", "x1", "z1", "y0", "y1")
 @routes.get("/api/version")
 def version(h, p, q):
     return h.json({"version": VERSION, "tabs": h.app.streams})
+
+
+@routes.get("/api/lang")
+def lang(h, p, q):
+    # Game language (e.g. "de_de") as the mod last wrote it; the page's default language
+    return h.json({"game": firstrun.client_info().get("language") or None})
 
 
 @routes.post("/api/quit")
