@@ -121,6 +121,9 @@ def schem(h, p, q):
     h.wfile.write(data)
 
 
+XRAY_SAFE = "Server-safe ist an: X-Ray ist aus (Optionen)"
+
+
 @routes.get("/api/mesh/", prefix=True)
 def mesh(h, p, q):
     parts = _path_parts(p)
@@ -137,6 +140,8 @@ def mesh(h, p, q):
         names = xray.parse_names(q.get("xray", [""])[0])
     except ValueError as e:
         return h.fail(400, str(e))
+    if names and h.app.control.safe(parts[0]):
+        return h.fail(403, XRAY_SAFE)
     at = q.get("at", [""])[0] or None
     if at and not DATE.fullmatch(at):
         return h.fail(400, "Datum: JJJJ-MM-TT")
@@ -190,6 +195,8 @@ def xray_find(h, p, q):
         return h.fail(400, str(e))
     if not names:
         return h.json({"names": [], "counts": [], "pts": [], "chunks": 0})
+    if h.app.control.safe(q["srv"][0]):
+        return h.fail(403, XRAY_SAFE)
     return h.json(h.app.xray_find(dim, cx, cz, r, names))
 
 

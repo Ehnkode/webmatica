@@ -29,6 +29,9 @@ public final class BaritoneBridge {
         return INSTANCE;
     }
 
+    /** What still works in server-safe: stopping the bot and marking chests. */
+    private static final java.util.Set<String> SAFE_KINDS = java.util.Set.of("highlight", "stop", "pause", "resume");
+
     private volatile String serverId;
     private Thread thread;
 
@@ -88,6 +91,12 @@ public final class BaritoneBridge {
         String id = cmd.has("id") ? cmd.get("id").getAsString() : "";
         String kind = cmd.has("kind") ? cmd.get("kind").getAsString() : "";
         java.util.List<String> lines = new java.util.ArrayList<>();
+        if (ServerSafe.on() && !SAFE_KINDS.contains(kind)) {
+            Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr("Server-safe ist an: Bot-Funktionen sind aus"))
+                    .withStyle(ChatFormatting.RED));
+            report(id, false, "Server-safe ist an: Bot-Funktionen sind aus");
+            return;
+        }
         if ("fetch".equals(kind) || "store".equals(kind)) {
             FetchTask.getInstance().start(id, cmd);
             return;

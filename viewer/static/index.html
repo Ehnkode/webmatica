@@ -235,6 +235,11 @@
     </div>
     </div>
     <div class="card">
+      <div class="card-title">Server-safe <span id="safe-sum" class="muted"></span></div>
+      <label class="check"><input type="checkbox" id="opt-safe"> Server-safe auf diesem Server</label>
+      <p class="hint">Für öffentliche Server: schaltet ab, was dort meist verboten ist (Baritone, Autobau, Farmen, Ebnen, Holen und Einlagern, Litematica Printer, X-Ray). Der Printer setzt dann nur, was du auch von Hand könntest: keine vorgetäuschte Blickrichtung, nur sichtbare Flächen, normale Reichweite, nur aus der Hotbar, höchstens 5 Blöcke pro Sekunde. Wird pro Server gespeichert.</p>
+    </div>
+    <div class="card">
       <div class="card-title">Hilfe</div>
       <div class="sp-row"><button id="opt-keys">Tastenkürzel</button></div>
     </div>
@@ -335,8 +340,16 @@
       <button id="bd-clear" class="danger" title="Alles im Schematic-Rahmen abbauen">Freiräumen</button>
     </div>
     </details>
+    <div class="card">
+      <div class="card-title">Printer <span id="wp-sum" class="muted"></span></div>
+      <p class="hint">Setzt die Blöcke der Schematics mit „Ins Spiel“, sobald du in der Nähe bist, Schicht für Schicht von unten. Braucht kein Litematica. Eine Taste dafür kannst du im Spiel unter Steuerung belegen.</p>
+      <div class="sp-row"><button id="wp-toggle" class="pr-toggle">Printer: ?</button></div>
+      <label class="slider">Reichweite <input type="range" id="wp-range" min="1" max="6" step="0.5"><span id="wp-range-v" class="mono"></span></label>
+      <label class="slider" title="Mit Server-safe höchstens 5">Blöcke pro Sekunde <input type="range" id="wp-bps" min="1" max="20" step="1"><span id="wp-bps-v" class="mono"></span></label>
+      <div id="wp-info" class="muted"></div>
+    </div>
     <details class="fold" data-fold="printer">
-    <summary>Printer</summary>
+    <summary>Litematica Printer</summary>
     <div class="sp-row"><button id="pr-toggle" class="pr-toggle">Printer: ?</button></div>
     <label class="slider">Reichweite <input type="range" id="pr-range" min="1" max="6" step="0.5"><span id="pr-range-v" class="mono"></span></label>
     <label class="slider" title="Ticks zwischen zwei Blöcken: kleiner = schneller, größer = sicherer gegen Kicks">Pause zwischen Blöcken <input type="range" id="pr-interval" min="0" max="20" step="1"><span id="pr-interval-v" class="mono"></span></label>
@@ -489,7 +502,7 @@
 <script src="/static/vendor/leaflet/leaflet.js"></script>
 <script src="/static/interp.js"></script>
 <!-- The page's ES modules. Each one first imports the file before it, so loading the last one
-     runs them all in this order: core world sidebar places player selection schematics materials chests gif history keyboard automation radar farm xray start -->
+     runs them all in this order: core world sidebar places player selection schematics materials chests gif history keyboard automation radar farm xray safe start -->
 <script type="module" src="/static/js/start.js"></script>
 </body>
 </html>

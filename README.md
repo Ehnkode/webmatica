@@ -37,6 +37,11 @@ Litematica and Baritone. Works on any server or Singleplayer.
 - **Storage:** every chest you open is remembered, shulker contents included. Search an item across
   all chests, let Baritone fetch exactly the stacks you picked, or store your inventory where each
   item already is. Stash finder included.
+- **Printer:** places a schematic's blocks as soon as you are near them, no Litematica needed.
+  It turns your head only towards the server, so stairs and logs come out the right way.
+- **Server-safe** (options, per server): for public servers. Turns off Baritone, every automation,
+  the Litematica Printer and X-ray; the printer then only places what you could by hand (no faked look
+  direction, only visible faces, at most 5 blocks per second).
 - **X-Ray:** show only the blocks you search for, in 3D and on the map, and send Baritone straight to a find.
 - **More:** waypoints, signs, a timelapse of what changed (export as GIF or video), radar for nearby
   players, search for coordinates or waypoints.
@@ -45,7 +50,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
 
 - Minecraft 1.21.11, 26.1, 26.2 or 26.3 with Fabric Loader and Fabric API
 - Python 3.10+
-- Optional: [Baritone](https://github.com/cabaletta/baritone), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib), Litematica Printer
+- Optional: [Baritone](https://github.com/cabaletta/baritone), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib), Litematica Printer (Webmatica has its own printer that works without them)
 
 ## Install
 
