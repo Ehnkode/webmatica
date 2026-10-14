@@ -53,7 +53,7 @@ and `safe`.
 
 ```json
 {"seq": 3, "safe": false, "web": {"on": true, "range": 4.5, "bps": 10}, "layer": {"mode": "range", "min": 64, "max": 64},
- "guard": {"eat": true, "tools": true, "dig": false}}
+ "guard": {"eat": true, "tools": true, "dig": false, "engine": "auto"}}
 ```
 
 * `safe`: server-safe for this server (stored in `.viewer/safety.json`). The mod
@@ -75,7 +75,7 @@ is on): target blocks of the "In game" placements in a cube around the player,
 
 | kind | what the mod does |
 |---|---|
-| goto {x, y?, z} | Baritone walks there (no digging unless `guard.dig`) |
+| goto {x, y?, z} | walks there: Baritone (no digging unless `guard.dig`) or the own engine, per `guard.engine` |
 | fetch / store | FetchTask: take items from chests / put inventory into chests |
 | unpack | UnpackTask: empty shulker boxes |
 | breakboxes {boxes, pickup} | FarmTask: break the blocks in the boxes, pick the drops up |

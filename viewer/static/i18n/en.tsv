@@ -637,7 +637,7 @@ kein Skin	no skin
 Kein Skin von der Mod: einmalig per Spielername holen (mc-heads.net).	No skin from the mod: fetch it once by player name (mc-heads.net).
 # --- messages from the mod (shown in the viewer)
 Baritone nicht gefunden	Baritone not found
-Baritone findet keinen Weg zur Kiste, ohne etwas abzubauen	Baritone finds no path to the chest without breaking blocks
+Kein Weg zur Kiste gefunden, ohne etwas abzubauen	No path to the chest found without breaking blocks
 Baritone hat „{}“ abgelehnt	Baritone rejected "{}"
 Baritone hat "{}" abgelehnt	Baritone rejected "{}"
 Schematic ist nicht in Litematica (erst "Ins Spiel")	Schematic is not in Litematica (turn on "In game" first)
@@ -1197,3 +1197,17 @@ Litematica Printer aus (Webmatica-Printer läuft)	Litematica Printer off (Webmat
 Printer AN	Printer ON
 Printer AUS	Printer OFF
 Spiel verbunden, meldet sich noch nicht	Game connected, not reporting yet
+Baritone kommt nicht weiter, eigene Engine läuft weiter	Baritone is stuck, the own engine takes over
+Baritone steckt fest, eigene Engine läuft weiter	Baritone is stuck, the own engine takes over
+Wer läuft beim Holen, Einlagern, Einsammeln und Hinlaufen über die Karte	Who walks when fetching, storing, collecting and going somewhere from the map
+Laufen mit	Walk with
+Automatisch	Automatic
+Immer eigene Engine	Always own engine
+Nur Baritone	Baritone only
+Automatisch: Baritone, wenn installiert. Fehlt Baritone oder steckt es fest, läuft die eigene Engine. Die gräbt nie und baut nichts, Abbauen beim Farmen und Ebnen braucht weiter Baritone.	Automatic: Baritone if installed. If Baritone is missing or stuck, the own engine walks. It never digs or builds; breaking blocks for farming and flattening still needs Baritone.
+eigene Engine	own engine
+nur Baritone	Baritone only
+Baritone läuft nach {} {} {}	Baritone walking to {} {} {}
+Baritone läuft nach {} {}	Baritone walking to {} {}
+läuft nach {} {} {}	walking to {} {} {}
+läuft nach {} {}	walking to {} {}

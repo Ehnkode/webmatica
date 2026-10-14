@@ -161,12 +161,12 @@ public final class FarmTask extends BotTask<FarmTask.Phase> {
                 }
                 ItemEntity next = nearestDrop(p, w);
                 if (next == null || age > 90_000L || p.getInventory().getFreeSlot() < 0) {
-                    BaritoneApi.stop();
+                    Walker.stop();
                     finish(true, p.getInventory().getFreeSlot() < 0 ? "Inventar voll" : null);
                     return;
                 }
                 BlockPos at = next.blockPosition();
-                if (!at.equals(walkTarget) || !BaritoneApi.goalActive()) {
+                if (!at.equals(walkTarget) || !Walker.active()) {
                     if (at.equals(walkTarget)) {
                         skippedDrops.add(next.getId());   // couldn't reach it twice
                         walkTarget = null;
@@ -176,7 +176,7 @@ public final class FarmTask extends BotTask<FarmTask.Phase> {
                     try {
                         // picking up drops is walking: no digging through the base (unless allowed)
                         BaritoneSafety.walkOnly();
-                        BaritoneApi.walkOnto(at);
+                        Walker.walkOnto(at);
                     } catch (Throwable t) {
                         finish(countIds(p) > before, "Baritone: " + t.getClass().getSimpleName());
                     }
