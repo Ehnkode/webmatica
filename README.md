@@ -20,7 +20,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
 
 | | |
 |---|---|
-| ![Desert village in 3D](docs/village.jpg) | ![Right-click the map and Baritone walks there](docs/goto.gif) |
+| ![Desert village in 3D](docs/village.jpg) | ![Right-click the map and you walk there](docs/goto.gif) |
 | ![Click a chest to see its contents, search all chests](docs/storage.gif) | ![Place a schematic in the world and move it](docs/place.gif) |
 | ![Cutting through a schematic layer by layer](docs/editor-cut.gif) | ![Building a house in the schematic editor](docs/build.gif) |
 
@@ -35,8 +35,12 @@ Litematica and Baritone. Works on any server or Singleplayer.
   schematic. Materials come from your chests, leftovers go back, and it pauses when a player comes
   close. A queue builds several schematics in a row.
 - **Storage:** every chest you open is remembered, shulker contents included. Search an item across
-  all chests, let Baritone fetch exactly the stacks you picked, or store your inventory where each
+  all chests, fetch exactly the stacks you picked, or store your inventory where each
   item already is. Stash finder included.
+- **Own walking engine:** right-click the map and you walk there; fetching, storing and picking up
+  drops walk the same way. Works without Baritone: it finds its way over stairs, slabs and drops,
+  around walls, lava and deep water, and never breaks or places a block. With Baritone installed,
+  Baritone walks and the own engine takes over when it gets stuck (option "Walk with").
 - **Printer:** places a schematic's blocks as soon as you are near them, no Litematica needed.
   It turns your head only towards the server, so stairs and logs come out the right way.
 - **Server-safe** (options, per server): for public servers. Turns off Baritone, every automation
@@ -50,7 +54,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
 
 - Minecraft 1.21.11, 26.1, 26.2 or 26.3 with Fabric Loader and Fabric API
 - Python 3.10+
-- Optional: [Baritone](https://github.com/cabaletta/baritone), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib)
+- Optional: [Baritone](https://github.com/cabaletta/baritone) (only for building, farming and flattening; walking works without it), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib)
 
 ## Install
 
