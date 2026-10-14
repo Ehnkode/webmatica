@@ -60,7 +60,7 @@ class App:
         self.inventory = None          # last player inventory from the mod
         self.commands = Commands()
         self.history = History(recording)
-        self.control = Control()
+        self.control = Control(recording)
         self.radar = Radar(recording)
         self.lids = LidLog(recording)
         self.editor = Editor(self.placements, self.rec)

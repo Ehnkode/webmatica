@@ -1139,3 +1139,39 @@ wartet, bis die Aufnahme die Baustelle gespeichert hat …	waiting until the rec
 {} Blöcke der Schematic wurden noch nie aufgezeichnet (Aufnahme an? Einmal über die Baustelle laufen, dann neu starten)	{} blocks of the schematic were never recorded (recording on? Walk over the site once, then restart)
 pausiert: Aufnahme ist aus (im Spiel F9 drücken)	paused: recording is off (press F9 in game)
 {} Blöcke abbauen	Break {} blocks
+# --- Webmatica printer and server-safe
+Litematica Printer	Litematica Printer
+Setzt die Blöcke der Schematics mit „Ins Spiel“, sobald du in der Nähe bist, Schicht für Schicht von unten. Braucht kein Litematica. Eine Taste dafür kannst du im Spiel unter Steuerung belegen.	Places the blocks of the schematics set to “In game” as soon as you are near them, layer by layer from the bottom. Doesn't need Litematica. You can bind a key for it in game under Controls.
+Blöcke pro Sekunde	Blocks per second
+Mit Server-safe höchstens 5	At most 5 with server-safe
+{} (Server-safe)	{} (server-safe)
+an, server-safe	on, server-safe
+an	on
+Spiel meldet sich noch nicht	Game hasn't reported yet
+Keine Schematic ist „Ins Spiel“ geschaltet	No schematic is set to “In game”
+{} gesetzt	{} placed
+{} offen in der Nähe	{} open nearby
+{} falsche Blöcke im Weg (werden nicht abgebaut)	{} wrong blocks in the way (not broken)
+{} gerade nicht erreichbar oder nur mit anderer Blickrichtung	{} out of reach right now or only from another look direction
+{} ohne Halt	{} with nothing to place against
+fehlt: {}	missing: {}
+Server-safe	Server-safe
+Server-safe auf diesem Server	Server-safe on this server
+Für öffentliche Server: schaltet ab, was dort meist verboten ist (Baritone, Autobau, Farmen, Ebnen, Holen und Einlagern, Litematica Printer, X-Ray). Der Printer setzt dann nur, was du auch von Hand könntest: keine vorgetäuschte Blickrichtung, nur sichtbare Flächen, normale Reichweite, nur aus der Hotbar, höchstens 5 Blöcke pro Sekunde. Wird pro Server gespeichert.	For public servers: turns off what is usually forbidden there (Baritone, auto-build, farming, flattening, fetching and storing, Litematica Printer, X-ray). The printer then only places what you could place by hand: no faked look direction, only visible faces, normal reach, only from the hotbar, at most 5 blocks per second. Saved per server.
+X-Ray ist aus (Server-safe)	X-ray is off (server-safe)
+Erst eine Welt wählen	Choose a world first
+Server-safe an: Bot-Funktionen und X-Ray sind aus	Server-safe on: bot features and X-ray are off
+Server-safe aus	Server-safe off
+Server-safe: {}	Server-safe: {}
+Server-safe ist an: X-Ray ist aus (Optionen)	Server-safe is on: X-ray is off (options)
+Server-safe ist an: Bot-Funktionen sind aus (Optionen)	Server-safe is on: bot features are off (options)
+Server-safe ist an: der Litematica Printer bleibt aus, nimm den Webmatica-Printer	Server-safe is on: the Litematica Printer stays off, use the Webmatica printer
+gestoppt (Server-safe eingeschaltet)	stopped (server-safe turned on)
+gestoppt (Server-safe ist an)	stopped (server-safe is on)
+Server-safe AN: Bot-Funktionen aus	Server-safe ON: bot features off
+Server-safe AUS	Server-safe OFF
+Server-safe ist an: Bot-Funktionen sind aus	Server-safe is on: bot features are off
+Litematica Printer aus (Server-safe)	Litematica Printer off (server-safe)
+Litematica Printer aus (Webmatica-Printer läuft)	Litematica Printer off (Webmatica printer is running)
+Printer AN	Printer ON
+Printer AUS	Printer OFF

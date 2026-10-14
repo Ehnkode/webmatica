@@ -163,8 +163,19 @@ def commands(h, p, q):
     return h.json(h.app.commands.pop(q["srv"][0]))
 
 
+# Commands that are fine on any server: they only stop the bot or mark chests
+SAFE_COMMANDS = {"highlight", "stop", "pause", "resume"}
+SAFE_MSG = "Server-safe ist an: Bot-Funktionen sind aus (Optionen)"
+
+
+def server_safe(h, srv) -> bool:
+    return h.app.control.safe(str(srv))
+
+
 @routes.post("/api/commands")
 def push_command(h, req):
+    if req.get("kind") not in SAFE_COMMANDS and server_safe(h, req.get("srv")):
+        return h.fail(403, SAFE_MSG)
     try:
         if req.get("kind") == "stop":
             h.app.auto.stop(str(req.get("srv")), "gestoppt (Stopp-Knopf)")
@@ -200,8 +211,25 @@ def control(h, p, q):
 @routes.post("/api/control")
 def push_control(h, req):
     try:
-        return h.json(h.app.control.push(req))
+        srv = str(req["srv"])
+        safe = bool(req["safe"]) if "safe" in req else server_safe(h, srv)
+        if safe and (req.get("printer") or {}).get("on"):
+            return h.fail(403, "Server-safe ist an: der Litematica Printer bleibt aus, nimm den Webmatica-Printer")
+        res = h.app.control.push(req)
+        if req.get("safe"):
+            h.app.auto.stop(srv, "gestoppt (Server-safe eingeschaltet)")
+        return h.json(res)
     except (KeyError, TypeError, ValueError) as e:
+        return h.fail(400, str(e))
+
+
+@routes.get("/api/printer/blocks")
+def printer_blocks(h, p, q):
+    """Target blocks around the player for the mod's own printer."""
+    try:
+        return h.json(h.app.placements.printer_blocks(
+            q["srv"][0], q["dim"][0], int(q["x"][0]), int(q["y"][0]), int(q["z"][0]), int(q.get("r", ["8"])[0])))
+    except (KeyError, ValueError) as e:
         return h.fail(400, str(e))
 
 
@@ -239,6 +267,9 @@ def start_auto(h, req):
     auto = h.app.auto
     try:
         srv = str(req["srv"])
+        starts = req.get("store") or req.get("startQueue") or req.get("farm") or req.get("pid")
+        if starts and server_safe(h, srv):
+            return h.fail(403, SAFE_MSG)
         if req.get("store"):
             return h.json(auto.start_store(srv, bool(req.get("hotbar"))))
         if req.get("startQueue"):
@@ -263,6 +294,8 @@ def start_auto(h, req):
 def fix(h, req):
     """Have wrong/rotated (and with extra: superfluous) blocks of a placement broken."""
     app = h.app
+    if server_safe(h, req.get("srv")):
+        return h.fail(403, SAFE_MSG)
     try:
         res = app.placements.verify(str(req["pid"]), app.rec)
         pts = AutoBuild.fix_points(res, bool(req.get("extra")))

@@ -41,7 +41,9 @@ player opens one; lids other players open.
 
 **POST /api/litematica/status**: which placements arrived in Litematica.
 
-**POST /api/control/status**: in-game Printer / layer state, with the `seq` it has applied.
+**POST /api/control/status**: in-game Printer / layer state, with the `seq` it has applied,
+plus `web` (Webmatica printer: `on, range, bps, placed, todo, wrong, blocked, noItem, missing`)
+and `safe`.
 
 **POST /api/commands/result** `{id, ok, msg}`: outcome of a command.
 
@@ -55,10 +57,20 @@ player opens one; lids other players open.
 ```
 
 * `printer` holds only the changed Printer settings and is sent until the mod confirms that `seq` in /api/control/status.
+* `safe`: server-safe for this server (stored in `.viewer/safety.json`). The mod
+  then refuses every command except highlight / pause / resume / stop, stops
+  running tasks and keeps the Litematica Printer off; the viewer answers bot
+  requests and X-ray with 403.
+* `web`: Webmatica's own printer `{"on", "range", "bps"}`, sent on every poll.
+  The in-game key posts `{"srv", "web": {"on": ...}}` to /api/control itself.
 * `guard` comes from the protection switches. `eat` and `tools` only apply
   while an automation runs; `dig` always applies (also when walking from the
   map). Without an answer for 5 s the mod falls back to "no guard" and walking
   never breaks blocks.
+
+**GET /api/printer/blocks?srv=&dim=&x=&y=&z=&r=** (Webmatica printer, while it
+is on): target blocks of the "In game" placements in a cube around the player,
+`{"palette": ["minecraft:oak_stairs[facing=north,...]", ...], "blocks": [x, y, z, index, ...]}`.
 
 **GET /api/commands?srv=** returns the waiting commands and removes them. Kinds:
 
@@ -109,6 +121,9 @@ POST /api/commands                       drop a command      POST /api/commands/
 GET  /api/auto?srv=                      auto-build state    POST /api/auto {srv, pid} start / {srv} stop
 GET  /api/control?srv=                   Printer/layer target state for the mod   POST /api/control (browser)
 POST /api/control/status                 mod reports in-game Printer/layer   GET /api/control/state?srv=
+POST /api/control {srv, safe}            server-safe on/off for that server
+POST /api/control {srv, web: {on, range, bps}}   Webmatica printer
+GET  /api/printer/blocks?srv=&dim=&x=&y=&z=&r=   target blocks around the player (mod)
 GET/POST /api/auto/settings              auto-build protection: radar, radarDist, friends, eat, tools, leftovers, fix
 POST /api/auto {srv, queue: [pid]}       set the queue
 POST /api/auto {srv, farm: {area, dim, targets, chest, placeChest}}   start farming

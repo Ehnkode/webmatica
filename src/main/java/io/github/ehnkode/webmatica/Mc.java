@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -97,6 +98,11 @@ public final class Mc {
         *///?} else {
         p.swing(hand);
         //?}
+    }
+
+    /** Tells the server where the player looks, without moving the camera. */
+    public static ServerboundMovePlayerPacket rotation(LocalPlayer p, float yaw, float pitch) {
+        return new ServerboundMovePlayerPacket.Rot(yaw, pitch, p.onGround(), p.horizontalCollision);
     }
 
     /** Non-empty stacks inside a shulker or bundle component. */
