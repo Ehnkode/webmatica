@@ -1,11 +1,15 @@
 # Webmatica
+[![Latest Release](https://img.shields.io/github/v/release/Ehnkode/webmatica?style=flat-square&color=blue)](https://github.com/Ehnkode/webmatica/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.11%20--%2026.3-informational?style=flat-square&logo=minecraft)](https://github.com/Ehnkode/webmatica/releases)
+[![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue?style=flat-square&logo=python)](https://www.python.org/)
 
 [English](README.md) · **Deutsch**
 
 Deine Minecraft-Welt im Browser: Karte, 3D-Ansicht, Kisten und Schematics, dazu Litematica und
 Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
-![Ein Haus im Schematic-Editor bauen](docs/build.gif)
+![Webmatica im Überblick](docs/showcase.gif)
 
 - **Mod** (Fabric, Minecraft 1.21.11 bis 26.3, nur Client): speichert jeden Chunk, den du siehst, als normale
   Regiondateien und merkt sich Kisteninhalte. Schickt nichts an den Server oder in den Chat.
@@ -18,7 +22,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 |---|---|
 | ![Wüstendorf in 3D](docs/village.de.jpg) | ![Rechtsklick auf die Karte, Baritone läuft hin](docs/goto.gif) |
 | ![Kiste anklicken, Inhalt sehen, alle Kisten durchsuchen](docs/storage.gif) | ![Schematic in der Welt platzieren und verschieben](docs/place.gif) |
-| ![Schematic Schicht für Schicht aufschneiden](docs/editor-cut.gif) | ![Bereich mit Baritone ebnen](docs/automation.de.jpg) |
+| ![Schematic Schicht für Schicht aufschneiden](docs/editor-cut.gif) | ![Ein Haus im Schematic-Editor bauen](docs/build.gif) |
 
 - **Karte und 3D** von allem, was du gesehen hast, mit echten Blockmodellen, weichem Licht,
   Schatten und Fernsicht bis 65.000 Blöcke. Live-Position, Spur, Verfolger-Kamera und Mob-Spawns.
@@ -61,6 +65,10 @@ du das Spiel schließt. Ohne Spiel startest du ihn mit `start-viewer.bat` in die
 ```bash
 ./gradlew buildAll    # eine Jar pro Minecraft-Version in build/libs/
 ```
+
+## Wie es entsteht
+
+Webmatica entsteht mit KI-Unterstützung (Claude). Ideen, Richtung, Tests im Spiel und alle Entscheidungen kommen von mir, beim Schreiben von Code und Texten hilft die KI.
 
 ## Hinweise
 

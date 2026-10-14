@@ -1,11 +1,15 @@
 # Webmatica
+[![Latest Release](https://img.shields.io/github/v/release/Ehnkode/webmatica?style=flat-square&color=blue)](https://github.com/Ehnkode/webmatica/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.11%20--%2026.3-informational?style=flat-square&logo=minecraft)](https://github.com/Ehnkode/webmatica/releases)
+[![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue?style=flat-square&logo=python)](https://www.python.org/)
 
 **English** · [Deutsch](README.de.md)
 
 Your Minecraft world in the browser: map, 3D view, chests and schematics, plus remote control for
 Litematica and Baritone. Works on any server or Singleplayer.
 
-![Building a house in the schematic editor](docs/build.gif)
+![Webmatica showcase](docs/showcase.gif)
 
 - **Mod** (Fabric, Minecraft 1.21.11 to 26.3, client only): saves every chunk you see as normal region files and
   remembers chest contents. Sends nothing to the server or the chat.
@@ -18,7 +22,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
 |---|---|
 | ![Desert village in 3D](docs/village.jpg) | ![Right-click the map and Baritone walks there](docs/goto.gif) |
 | ![Click a chest to see its contents, search all chests](docs/storage.gif) | ![Place a schematic in the world and move it](docs/place.gif) |
-| ![Cutting through a schematic layer by layer](docs/editor-cut.gif) | ![Flatten an area with Baritone](docs/automation.jpg) |
+| ![Cutting through a schematic layer by layer](docs/editor-cut.gif) | ![Building a house in the schematic editor](docs/build.gif) |
 
 - **Map and 3D** of everything you have seen, with real block models, smooth light, shadows and a
   far view of up to 65,000 blocks. Live position, trail, follow camera and mob spawn spots.
@@ -60,6 +64,10 @@ close the game. To use it without the game, run `start-viewer.bat` in that folde
 ```bash
 ./gradlew buildAll    # one jar per Minecraft version in build/libs/
 ```
+
+## How it's made
+
+Webmatica is built with the help of AI (Claude). The idea, the direction, testing in the game and all decisions are mine, the AI helps write code and text.
 
 ## Notes
 
