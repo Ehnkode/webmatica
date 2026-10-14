@@ -71,6 +71,8 @@ close the game. To use it without the game, run `start-viewer.bat` in that folde
 ./gradlew buildAll    # one jar per Minecraft version in build/libs/
 ```
 
+Game tests in the dev client (printer, walking, fetching): `./gradlew :1.21.11:runClient -Pautotest=all -Pautoquit`, see [docs/testing.md](docs/testing.md).
+
 ## How it's made
 
 Webmatica is built with the help of AI (Claude). The idea, the direction, testing in the game and all decisions are mine, the AI helps write code and text.

@@ -18,7 +18,12 @@ dependencies {
 
 loom {
     runConfigs.named("client") {
-        runDirectory = rootProject.file("run/$minecraftVersion")
+        runDirectory = rootProject.file("run/${project.name}")
+        // Game tests (AutoTest): ./gradlew runClient -Pautotest=all -Pautoquit
+        if (project.hasProperty("autotest")) {
+            vmArg("-Dwebmatica.autotest=${project.property("autotest")}")
+            vmArg("-Dwebmatica.autotest.quit=${project.hasProperty("autoquit")}")
+        }
     }
 }
 
