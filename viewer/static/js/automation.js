@@ -47,7 +47,7 @@ function renderGuard() {
   $$('[data-guard]').forEach((c) => { c.checked = !!g[c.dataset.guard]; });
   if (document.activeElement !== $('#gd-dist')) $('#gd-dist').value = g.radarDist;
   if (document.activeElement !== $('#gd-friends')) $('#gd-friends').value = (g.friends || []).join(', ');
-  const on = [g.radar && 'Spieler-Pause', g.eat && 'Essen', g.tools && 'Werkzeug', g.fix && 'Korrektur', g.leftovers && 'Reste'].filter(Boolean);
+  const on = [g.radar && 'Spieler-Pause', g.eat && 'Essen', g.tools && 'Werkzeug', g.fix && 'Korrektur', g.leftovers && 'Reste', g.dig && 'Graben erlaubt'].filter(Boolean);
   $('#gd-sum').textContent = on.length ? '· ' + on.join(', ') : '· alles aus';
 }
 async function saveGuard(patch) {

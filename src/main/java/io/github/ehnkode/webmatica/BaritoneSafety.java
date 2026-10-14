@@ -5,6 +5,8 @@ package io.github.ehnkode.webmatica;
  * otherwise it takes the shortest path straight through the base. The user's own
  * allowBreak/allowPlace values are saved and restored as soon as Baritone is
  * done or a build command (Litematica, clearing) arrives.
+ * The viewer option "dig" (guard switch) lifts this: then Baritone may dig on
+ * the way, e.g. when you are far away from your own base.
  */
 public final class BaritoneSafety {
 
@@ -17,6 +19,9 @@ public final class BaritoneSafety {
 
     /** Client thread. */
     public static void walkOnly() {
+        if (digAllowed()) {
+            return;
+        }
         try {
             if (saved == null) {
                 Object[] s = new Object[KEYS.length];
@@ -46,6 +51,12 @@ public final class BaritoneSafety {
         } catch (Throwable ignored) {
         }
         saved = null;
+    }
+
+    /** The viewer's "Baritone may dig on the way" switch (off when the viewer doesn't answer). */
+    private static boolean digAllowed() {
+        com.google.gson.JsonObject g = BuildControl.getInstance().guard();
+        return g != null && g.has("dig") && g.get("dig").getAsBoolean();
     }
 
     public static void tick() {
