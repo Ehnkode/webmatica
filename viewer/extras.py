@@ -289,10 +289,10 @@ class Commands:
                     self.results.pop(k)
 
 
-# ------------------------------------------------------------------ Printer + Litematica layers
+# ------------------------------------------------------------------ Printer, server-safe, Litematica layers
 
 class Control:
-    """Desired state for Printer and Litematica layers (per server).
+    """Desired state for the Webmatica printer, server-safe and Litematica layers (per server).
 
     The browser changes parts of it, each change increments ``seq``; the mod
     applies the state as soon as it sees a new number, and reports the real
@@ -300,10 +300,7 @@ class Control:
     the lowest layer of the chosen schematic in which something is still missing.
     """
 
-    PRINTER_KEYS = {"on": bool, "range": float, "interval": int, "air": bool, "interact": bool,
-                    "strip": bool, "fluids": bool}
     # Webmatica's own printer: on/off, reach in blocks, blocks per second
-    WEB_KEYS = {"on": bool, "range": float, "bps": float}
     WEB_DEFAULTS = {"on": False, "range": 4.5, "bps": 10.0}
     AUTO_EVERY = 3.0
 
@@ -347,21 +344,13 @@ class Control:
             pass
 
     def _st(self, srv: str) -> dict:
-        return self.state.setdefault(srv, {"seq": int(time.time()), "printer": {}, "layer": None, "auto": None})
+        return self.state.setdefault(srv, {"seq": int(time.time()), "layer": None, "auto": None})
 
     def push(self, req: dict) -> dict:
         srv = str(req["srv"])
         with self.lock:
             st = self._st(srv)
             changed = False
-            if isinstance(req.get("printer"), dict):
-                pr = {}
-                for k, conv in self.PRINTER_KEYS.items():
-                    if k in req["printer"]:
-                        pr[k] = conv(req["printer"][k])
-                st["printer"] = pr          # only what changed, otherwise hotkey changes get overwritten
-                changed = True
-                st["printer_seq"] = st["seq"] + 1
             if "safe" in req:
                 self.saved["safe"][srv] = bool(req["safe"])
                 self._save()
@@ -404,9 +393,7 @@ class Control:
     def for_mod(self, srv: str) -> dict:
         with self.lock:
             st = self._st(srv)
-            # Keep sending the Printer change only until the mod has confirmed it
-            done = int((self.status.get(srv) or {}).get("seq", -1)) >= st.get("printer_seq", 0)
-            return {"seq": st["seq"], "printer": None if done else (st["printer"] or None), "layer": st["layer"],
+            return {"seq": st["seq"], "layer": st["layer"],
                     "safe": self.safe(srv), "web": self.web(srv)}
 
     def set_status(self, req: dict):

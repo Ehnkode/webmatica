@@ -16,7 +16,7 @@ version differences live in `Mc.java` and `//?` comments.
 | `RegionStore`, `ChunkSnapshot`, `WorldChunkMixin`, `RecordingTarget` | write seen chunks as region files, one folder per world |
 | `PositionReporter` | POST /api/position several times a second (position, inventory, mods found, other players) |
 | `ContainerTracker`, `ChestLidTracker` | chest contents when opened, lids opened by others |
-| `BuildControl` | polls /api/control: Printer and layer settings, the guard switches, server-safe, Webmatica printer |
+| `BuildControl` | polls /api/control: printer and layer settings, the guard switches, server-safe |
 | `WebPrinter` | Webmatica's own printer: target blocks from /api/printer/blocks, places them within reach (server-safe: only what a player could do by hand) |
 | `ServerSafe` | the server-safe switch: stops the bot tasks when it turns on |
 | `BaritoneBridge` | polls /api/commands and hands each command to a task or to Baritone |
@@ -42,7 +42,7 @@ the web page and runs the automations' logic. The mod only executes steps.
 | `workers.py` | 3D meshes and X-ray in worker processes, pre-rendering, the automation loop |
 | `core/` | reading the recording: region files and NBT (`world`, `nbt`, `chunk`), map tiles (`tiles`, `colors`), 3D meshes (`mesher`, `models`), schematics (`schem`, `schematic`) |
 | `autobuild.py`, `automation/` | auto-build, storing, farming and flattening: the step loop in `autobuild.py`, one module per mode |
-| `extras.py` | smaller stores: commands queue, chests, Printer/layer control, history, radar, lids |
+| `extras.py` | smaller stores: commands queue, chests, printer/server-safe/layer control, history, radar, lids |
 | `placements.py`, `editor.py` | placed schematics and the schematic editor |
 | `farm.py`, `spawn.py`, `xray.py` | area scans, mob spawn spots, X-ray search |
 | `static/` | the web page (see below) |
