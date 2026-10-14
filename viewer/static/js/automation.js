@@ -1,4 +1,4 @@
-/* Webmatica map UI: Building automation: Baritone, printers, auto-build, guard switches, storing. */
+/* Webmatica map UI: Building automation: Baritone, printer, auto-build, guard switches, storing. */
 import './keyboard.js';   // runs before this file (load order, see index.html)
 import { $, $$, api, esc, fmt, renderChecklist, state, toast } from './core.js';
 import { baritone } from './places.js';
@@ -148,15 +148,15 @@ async function control(body) {
 function renderBuild() {
   const c = ctl.state;
   const g = c && c.game;
-  const pr = g && g.printer, ly = g && g.layer;
+  const ly = g && g.layer;
   const pl = selPl();
   const gs = gameStatus();
   let txt;
   if (!gs.online) txt = 'Spiel offline (Status unten rechts)';
-  else if (!c || !c.online) txt = 'Spiel verbunden, Litematica und Printer melden sich noch nicht';
+  else if (!c || !c.online) txt = 'Spiel verbunden, meldet sich noch nicht';
   else {
     const parts = [];
-    parts.push(pr && pr.available ? `Printer ${pr.on ? '<b class="ok">AN</b>' : 'aus'}` : 'kein Printer gefunden');
+    parts.push(`Printer ${c.web && c.web.on ? '<b class="ok">AN</b>' : 'aus'}`);
     if (ly && ly.available) {
       parts.push(ly.mode === 'ALL' ? 'Litematica: alle Schichten' : ly.mode === 'SINGLE_LAYER' ? `Litematica: Schicht Y ${ly.single}` :
         ly.mode === 'LAYER_RANGE' ? `Litematica: Y ${ly.min} bis ${ly.max}` : `Litematica: ${ly.mode.toLowerCase()}`);
@@ -168,16 +168,6 @@ function renderBuild() {
   statusText(true);
   // Only update the slider when nobody is dragging it right now
   const idle = Date.now() - ctl.pending > 2500;
-  const ok = !!(pr && pr.available);
-  $('#pr-toggle').textContent = ok ? (pr.on ? 'Printer AN, klicken zum Ausschalten' : 'Printer aus, klicken zum Einschalten') : 'Printer: nicht verbunden';
-  $('#pr-toggle').classList.toggle('on', ok && pr.on);
-  for (const el of $$('#pr-range, #pr-interval, [data-pr]')) el.disabled = !ok;
-  if (ok && idle) {
-    $('#pr-range').value = pr.range; $('#pr-interval').value = pr.interval;
-    $$('[data-pr]').forEach((cb) => { cb.checked = !!pr[cb.dataset.pr]; });
-  }
-  $('#pr-range-v').textContent = Number($('#pr-range').value).toFixed(1);
-  $('#pr-interval-v').textContent = $('#pr-interval').value + ' Ticks';
   renderWebPrinter(c, g, idle);
   const auto = c && pl && c.auto === pl.id;
   $('#ly-auto').checked = !!auto;
@@ -222,15 +212,6 @@ $('#wp-bps').addEventListener('input', () => { ctl.pending = Date.now(); renderB
 $('#wp-range').addEventListener('change', (e) => control({ web: { range: Number(e.target.value) } }));
 $('#wp-bps').addEventListener('change', (e) => control({ web: { bps: Number(e.target.value) } }));
 
-$('#pr-toggle').addEventListener('click', () => {
-  const pr = ctl.state && ctl.state.game && ctl.state.game.printer;
-  if (pr && pr.available) control({ printer: { on: !pr.on } });
-});
-$('#pr-range').addEventListener('input', () => { ctl.pending = Date.now(); renderBuild(); });
-$('#pr-interval').addEventListener('input', () => { ctl.pending = Date.now(); renderBuild(); });
-$('#pr-range').addEventListener('change', (e) => control({ printer: { range: Number(e.target.value) } }));
-$('#pr-interval').addEventListener('change', (e) => control({ printer: { interval: Number(e.target.value) } }));
-$$('[data-pr]').forEach((cb) => cb.addEventListener('change', () => control({ printer: { [cb.dataset.pr]: cb.checked } })));
 $('#ly-all').addEventListener('click', () => control({ layer: { mode: 'all' }, auto: null }));
 const setLayer = (y) => { $('#ly-y').value = y; control({ layer: { mode: 'range', min: y, max: y }, auto: null }); };
 $('#ly-set').addEventListener('click', () => setLayer(Number($('#ly-y').value)));

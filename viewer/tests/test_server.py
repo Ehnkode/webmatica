@@ -198,7 +198,6 @@ class ServerTest(unittest.TestCase):
         self.post_json("/api/auto", {"srv": srv, "pid": "nope"}, 403)
         self.post_json("/api/auto", {"srv": srv, "store": True}, 403)
         self.post_json("/api/fix", {"srv": srv, "pid": "nope"}, 403)
-        self.post_json("/api/control", {"srv": srv, "printer": {"on": True}}, 403)
         self.post_json("/api/control", {"srv": srv, "web": {"on": True, "bps": 50}})  # own printer stays allowed
         web = self.get_json(f"/api/control?srv={srv}")["web"]
         self.assertEqual((web["on"], web["bps"]), (True, 20.0))

@@ -310,7 +310,6 @@ ol.tour .btns button { font-size: 12px; padding: 2px 8px; }
 #side label.slider input { width: 100%; }
 #schem-panel label.slider input { flex: 1; min-width: 60px; }
 #schem-panel label.slider .mono { min-width: 54px; text-align: right; }
-.pr-flags { display: grid; gap: 2px; margin: 4px 0; }
 .ly-y { width: 64px; }
 
 /* Radar */

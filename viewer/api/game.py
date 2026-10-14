@@ -197,7 +197,7 @@ def command_result(h, req):
     return h.json({"ok": True})
 
 
-# ------------------------------------------------------------------ Printer / layer control
+# ------------------------------------------------------------------ Printer, server-safe, layer control
 
 @routes.get("/api/control")
 def control(h, p, q):
@@ -212,9 +212,6 @@ def control(h, p, q):
 def push_control(h, req):
     try:
         srv = str(req["srv"])
-        safe = bool(req["safe"]) if "safe" in req else server_safe(h, srv)
-        if safe and (req.get("printer") or {}).get("on"):
-            return h.fail(403, "Server-safe ist an: der Litematica Printer bleibt aus, nimm den Webmatica-Printer")
         res = h.app.control.push(req)
         if req.get("safe"):
             h.app.auto.stop(srv, "gestoppt (Server-safe eingeschaltet)")
