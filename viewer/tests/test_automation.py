@@ -199,3 +199,71 @@ class RadarTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FakeContainers:
+    def __init__(self, chests):
+        self.chests = chests
+
+    def list(self, srv):
+        return list(self.chests)
+
+
+def chest(x, z, items=(), slots=27, dim="overworld", block="minecraft:chest"):
+    return {"key": f"{SRV}|{dim}|{x},64,{z}", "server": SRV, "dim": dim, "x": x, "y": 64, "z": z, "block": block,
+            "title": "Chest", "slots": slots, "items": [{"id": i, "count": 64, "slot": n} for n, i in enumerate(items)]}
+
+
+def full_inventory(used, extra=()):
+    return [{"id": "minecraft:cobblestone", "count": 64, "slot": s} for s in range(used)] + list(extra)
+
+
+class FarmDepositTest(unittest.TestCase):
+    def make(self, chests=(), used=36, extra=()):
+        app = fake_app(verify_result())
+        app.containers = FakeContainers(chests)
+        app.inventory = {"server": SRV, "items": full_inventory(used, extra)}
+        ab = AutoBuild(app)
+        ab.state[SRV] = {"pid": None, "mode": "farm", "phase": "fplan", "info": "", "log": [], "cmd": None,
+                         "ts": time.monotonic(), "dim": "overworld", "chest": None, "place": True}
+        return app, ab
+
+    def test_nothing_to_deposit_into_keeps_mining(self):
+        # 34 of 36 slots used, no chest anywhere: no reason to stop yet
+        app, ab = self.make(used=34)
+        self.assertFalse(ab._can_deposit(SRV, ab.state[SRV], app.player))
+
+    def test_full_without_chest_says_how_full(self):
+        app, ab = self.make(used=36)
+        ab._farm_deposit(SRV, ab.state[SRV], 0.0, app.player, 0)
+        st = ab.state[SRV]
+        self.assertEqual(st["phase"], "error")
+        self.assertIn("36/36", st["info"])
+
+    def test_uses_a_known_chest_nearby(self):
+        app, ab = self.make([chest(300, 300), chest(110, 105, ["minecraft:dirt"])], used=34)
+        st = ab.state[SRV]
+        self.assertTrue(ab._can_deposit(SRV, st, app.player))
+        ab._farm_deposit(SRV, st, 0.0, app.player, 2)
+        self.assertEqual(st["phase"], "deposit")
+        self.assertEqual((st["chest"]["x"], st["chest"]["z"]), (110, 105))
+        cmd = app.commands.queue[SRV][-1]
+        self.assertEqual((cmd["kind"], cmd["x"], cmd["z"]), ("store", 110, 105))
+
+    def test_far_full_and_ender_chests_are_not_used(self):
+        far = chest(100 + 500, 100)
+        stuffed = chest(105, 100, ["minecraft:dirt"] * 27)
+        ender = chest(101, 100, block="minecraft:ender_chest", dim="overworld")
+        app, ab = self.make([far, stuffed, ender], used=34)
+        self.assertIsNone(ab._near_chest(SRV, ab.state[SRV], app.player))
+
+
+class StorePlanTest(unittest.TestCase):
+    def test_only_chests_nearby_with_coordinates(self):
+        app = fake_app(verify_result())
+        app.containers = FakeContainers([chest(120, 100, ["minecraft:cobblestone"]),
+                                         chest(5000, 100, ["minecraft:cobblestone"] * 3)])
+        app.inventory = {"server": SRV, "items": full_inventory(12)}
+        plan = AutoBuild(app).store_plan(SRV)
+        self.assertEqual([(s["x"], s["dist"]) for s in plan["stops"]], [(120, 20)])
+        self.assertIn("120 64 100", plan["stops"][0]["name"])

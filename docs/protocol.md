@@ -123,6 +123,7 @@ POST /api/control/status                 mod reports printer/layer state   GET /
 POST /api/control {srv, safe}            server-safe on/off for that server
 POST /api/control {srv, web: {on, range, bps}}   Webmatica printer
 GET  /api/printer/blocks?srv=&dim=&x=&y=&z=&r=   target blocks around the player (mod)
+GET  /api/auto/storeplan?srv=&hotbar=0|1 which chests (within 128 blocks) "store inventory" would walk to
 GET/POST /api/auto/settings              auto-build protection: radar, radarDist, friends, eat, tools, leftovers, fix
 POST /api/auto {srv, queue: [pid]}       set the queue
 POST /api/auto {srv, farm: {area, dim, targets, chest, placeChest}}   start farming

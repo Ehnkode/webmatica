@@ -95,7 +95,7 @@ async function baritone(cmd) {
     const c = await jsonPost('/api/commands', { srv: p.server || state.server, ...cmd });
     toast({ goto: `Baritone läuft nach ${cmd.x} ${cmd.z} …`, stop: 'Baritone wird gestoppt …', litematica: 'Baritone fängt an zu bauen …',
       clear: 'Baritone räumt den Bauplatz frei …', pause: 'Baritone pausiert …', resume: 'Baritone macht weiter …',
-      highlight: 'Kisten werden im Spiel markiert …', fetch: 'Baritone holt die Items …' }[cmd.kind] || 'Baritone …');
+      highlight: 'Kisten werden im Spiel markiert …', fetch: 'Baritone holt die Items …', store: 'Baritone lagert die Items ein …' }[cmd.kind] || 'Baritone …');
     const long = cmd.kind === 'fetch' || cmd.kind === 'store';
     if (long || cmd.kind === 'goto' || cmd.kind === 'litematica' || cmd.kind === 'clear') {
       act.manual = { kind: cmd.kind, since: Date.now(), text: { goto: `läuft nach ${cmd.x} ${cmd.z}`, fetch: 'holt Items aus einer Kiste',

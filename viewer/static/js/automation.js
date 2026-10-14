@@ -115,8 +115,15 @@ $('#st-go').addEventListener('click', async () => {
     await pollStore();
     if (storeUi.running) { await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv }) }); }
     else {
-      if (!confirm('Inventar einlagern?\n\nBaritone läuft zu deinen Kisten und legt jeden Stack dorthin, wo dieses Item schon liegt. Was in keine Kiste passt, bleibt bei dir.' + ($('#st-hotbar').checked ? '' : '\n\nDie Hotbar bleibt, wie sie ist.'))) return;
-      await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv, store: true, hotbar: $('#st-hotbar').checked }) });
+      const hotbar = $('#st-hotbar').checked;
+      const plan = await api('/api/auto/storeplan?' + new URLSearchParams({ srv, hotbar: hotbar ? '1' : '0' }));
+      if (!plan.stops.length) {
+        toast(`Einlagern: keine Kiste im Umkreis von ${plan.radius} m hat deine Items. Öffne die Kiste im Spiel einmal oder wähle sie auf der Karte und lagere dort ein.`);
+        return;
+      }
+      const where = plan.stops.slice(0, 8).map((s) => `· ${s.n} Stacks → ${s.name} (${s.dist} m)`).join('\n') + (plan.stops.length > 8 ? `\n· und ${plan.stops.length - 8} weitere Kisten` : '');
+      if (!confirm(`Inventar einlagern?\n\nBaritone bringt jeden Stack in eine Kiste im Umkreis von ${plan.radius} m, in der dieses Item schon liegt:\n${where}` + (plan.left.length ? `\n\nBleibt bei dir (keine passende Kiste): ${plan.left.slice(0, 6).join(', ')}` : '') + (hotbar ? '' : '\n\nDie Hotbar bleibt, wie sie ist.'))) return;
+      await api('/api/auto', { method: 'POST', body: JSON.stringify({ srv, store: true, hotbar }) });
       if (!storeUi.timer) storeUi.timer = setInterval(pollStore, 1500);
     }
   } catch (e) { toast('Einlagern: ' + e.message); }
