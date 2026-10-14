@@ -1157,7 +1157,7 @@ Keine Schematic ist „Ins Spiel“ geschaltet	No schematic is set to “In game
 fehlt: {}	missing: {}
 Server-safe	Server-safe
 Server-safe auf diesem Server	Server-safe on this server
-Für öffentliche Server: schaltet ab, was dort meist verboten ist (Baritone, Autobau, Farmen, Ebnen, Holen und Einlagern, Litematica Printer, X-Ray). Der Printer setzt dann nur, was du auch von Hand könntest: keine vorgetäuschte Blickrichtung, nur sichtbare Flächen, normale Reichweite, nur aus der Hotbar, höchstens 5 Blöcke pro Sekunde. Wird pro Server gespeichert.	For public servers: turns off what is usually forbidden there (Baritone, auto-build, farming, flattening, fetching and storing, Litematica Printer, X-ray). The printer then only places what you could place by hand: no faked look direction, only visible faces, normal reach, only from the hotbar, at most 5 blocks per second. Saved per server.
+Für öffentliche Server: schaltet ab, was dort meist verboten ist (Baritone, Autobau, Farmen, Ebnen, Holen und Einlagern, X-Ray, einen installierten Litematica Printer). Der Printer setzt dann nur, was du auch von Hand könntest: keine vorgetäuschte Blickrichtung, nur sichtbare Flächen, normale Reichweite, nur aus der Hotbar, höchstens 5 Blöcke pro Sekunde. Wird pro Server gespeichert.	For public servers: turns off what is usually forbidden there (Baritone, auto-build, farming, flattening, fetching and storing, X-ray, an installed Litematica Printer). The printer then only places what you could place by hand: no faked look direction, only visible faces, normal reach, only from the hotbar, at most 5 blocks per second. Saved per server.
 X-Ray ist aus (Server-safe)	X-ray is off (server-safe)
 Erst eine Welt wählen	Choose a world first
 Server-safe an: Bot-Funktionen und X-Ray sind aus	Server-safe on: bot features and X-ray are off
@@ -1165,7 +1165,6 @@ Server-safe aus	Server-safe off
 Server-safe: {}	Server-safe: {}
 Server-safe ist an: X-Ray ist aus (Optionen)	Server-safe is on: X-ray is off (options)
 Server-safe ist an: Bot-Funktionen sind aus (Optionen)	Server-safe is on: bot features are off (options)
-Server-safe ist an: der Litematica Printer bleibt aus, nimm den Webmatica-Printer	Server-safe is on: the Litematica Printer stays off, use the Webmatica printer
 gestoppt (Server-safe eingeschaltet)	stopped (server-safe turned on)
 gestoppt (Server-safe ist an)	stopped (server-safe is on)
 Server-safe AN: Bot-Funktionen aus	Server-safe ON: bot features off
@@ -1175,3 +1174,4 @@ Litematica Printer aus (Server-safe)	Litematica Printer off (server-safe)
 Litematica Printer aus (Webmatica-Printer läuft)	Litematica Printer off (Webmatica printer is running)
 Printer AN	Printer ON
 Printer AUS	Printer OFF
+Spiel verbunden, meldet sich noch nicht	Game connected, not reporting yet

@@ -16,15 +16,17 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 
 /**
- * Control the Printer and Litematica layers from the web page, plus
- * Webmatica's own printer and the server-safe switch.
+ * Control from the web page: Webmatica's own printer, the server-safe switch
+ * and which layers Litematica shows.
  *
- * The viewer holds the desired state (Printer on/off, range, speed, which
+ * The viewer holds the desired state (printer on/off, range, speed, which
  * layer Litematica shows) with a sequence number. When the number changes,
  * the state is applied here on the client thread. The real in-game state is
  * sent back so the web page also sees changes made via hotkey.
  *
- * All via reflection: without Printer or Litematica only that part is missing.
+ * Litematica via reflection: without it only the layers are missing. A
+ * Litematica Printer, if installed, is only ever switched off (server-safe, or
+ * while Webmatica's printer runs).
  */
 public final class BuildControl {
 
@@ -152,7 +154,6 @@ public final class BuildControl {
         JsonObject st = new JsonObject();
         st.addProperty("server", serverId);
         st.addProperty("seq", appliedSeq);
-        st.add("printer", printerState());
         st.add("layer", layerState());
         st.add("web", WebPrinter.getInstance().status());
         st.addProperty("safe", ServerSafe.on());
@@ -174,38 +175,6 @@ public final class BuildControl {
 
     private String apply(JsonObject w) {
         StringBuilder msg = new StringBuilder();
-        if (w.has("printer") && w.get("printer").isJsonObject()) {
-            JsonObject p = w.getAsJsonObject("printer");
-            try {
-                if (p.has("on") && !(ServerSafe.on() && p.get("on").getAsBoolean())) {
-                    boolean on = p.get("on").getAsBoolean();
-                    setCfg("PRINT_MODE", "setBooleanValue", boolean.class, on);
-                    msg.append("Printer ").append(on ? "AN" : "AUS");
-                }
-                if (p.has("range")) {
-                    setCfg("PRINTING_RANGE", "setDoubleValue", double.class, p.get("range").getAsDouble());
-                }
-                if (p.has("interval")) {
-                    setCfg("PRINTING_INTERVAL", "setIntegerValue", int.class, p.get("interval").getAsInt());
-                }
-                if (p.has("air")) {
-                    setCfg("PRINT_IN_AIR", "setBooleanValue", boolean.class, p.get("air").getAsBoolean());
-                }
-                if (p.has("interact")) {
-                    setCfg("INTERACT_BLOCKS", "setBooleanValue", boolean.class, p.get("interact").getAsBoolean());
-                }
-                if (p.has("strip")) {
-                    setCfg("STRIP_LOGS", "setBooleanValue", boolean.class, p.get("strip").getAsBoolean());
-                }
-                if (p.has("fluids")) {
-                    setCfg("REPLACE_FLUIDS_SOURCE_BLOCKS", "setBooleanValue", boolean.class, p.get("fluids").getAsBoolean());
-                }
-            } catch (ClassNotFoundException e) {
-                msg.append("Printer nicht gefunden");
-            } catch (Throwable t) {
-                MapperClient.LOGGER.warn("[webmatica] Printer-Einstellung fehlgeschlagen", t);
-            }
-        }
         if (w.has("layer") && w.get("layer").isJsonObject()) {
             JsonObject l = w.getAsJsonObject("layer");
             try {
@@ -272,24 +241,6 @@ public final class BuildControl {
     private static Object getCfg(String field, String getter) throws Exception {
         Object c = cfg(field);
         return c.getClass().getMethod(getter).invoke(c);
-    }
-
-    private static JsonObject printerState() {
-        JsonObject o = new JsonObject();
-        try {
-            o.addProperty("on", (Boolean) getCfg("PRINT_MODE", "getBooleanValue"));
-            o.addProperty("range", (Double) getCfg("PRINTING_RANGE", "getDoubleValue"));
-            o.addProperty("interval", (Integer) getCfg("PRINTING_INTERVAL", "getIntegerValue"));
-            o.addProperty("air", (Boolean) getCfg("PRINT_IN_AIR", "getBooleanValue"));
-            o.addProperty("interact", (Boolean) getCfg("INTERACT_BLOCKS", "getBooleanValue"));
-            o.addProperty("strip", (Boolean) getCfg("STRIP_LOGS", "getBooleanValue"));
-            o.addProperty("fluids", (Boolean) getCfg("REPLACE_FLUIDS_SOURCE_BLOCKS", "getBooleanValue"));
-            o.addProperty("available", true);
-        } catch (Throwable t) {
-            o = new JsonObject();
-            o.addProperty("available", false);
-        }
-        return o;
     }
 
     private static JsonObject layerState() {

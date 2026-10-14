@@ -62,6 +62,8 @@ public final class RegionStore {
     // --- client thread only ---
     /** Chunk key -> time of last change. */
     private final Map<Long, Long> dirty = new HashMap<>();
+    /** The level the keys in {@link #dirty} belong to. */
+    private ClientLevel dirtyLevel;
     private volatile boolean enabled = true;
 
     // --- IO thread only ---
@@ -104,20 +106,23 @@ public final class RegionStore {
      */
     public void onChunkLoad(ClientLevel world, LevelChunk chunk) {
         if (enabled) {
+            switchTo(world);
             dirty.put(Mc.pack(chunk.getPos()), System.currentTimeMillis());
         }
     }
 
     /** Chunk leaves view distance: save pending changes immediately. */
     public void onChunkUnload(ClientLevel world, LevelChunk chunk) {
-        if (enabled && dirty.remove(Mc.pack(chunk.getPos())) != null) {
+        if (enabled && world == dirtyLevel && dirty.remove(Mc.pack(chunk.getPos())) != null) {
             submit(world, chunk);
         }
     }
 
     /** A block in this chunk has changed. */
     public void markDirty(int chunkX, int chunkZ) {
-        if (enabled) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (enabled && level != null) {
+            switchTo(level);
             dirty.put(Mc.pack(chunkX, chunkZ), System.currentTimeMillis());
         }
     }
@@ -125,7 +130,7 @@ public final class RegionStore {
     /** Every client tick: write settled changes. */
     public void tick(Minecraft mc) {
         ClientLevel world = mc.level;
-        if (world == null || dirty.isEmpty()) {
+        if (world == null || dirty.isEmpty() || world != dirtyLevel) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -149,19 +154,33 @@ public final class RegionStore {
 
     /** Disconnected: write what is still pending, then close files. */
     public void onDisconnect() {
-        onWorldChange(Minecraft.getInstance().level);
+        switchTo(null);
+    }
+
+    /** The client tick saw a new level (joined, or changed dimension). */
+    public void onWorldChange(ClientLevel now) {
+        if (now != null) {
+            switchTo(now);
+        }
     }
 
     /**
-     * Dimension changed or disconnected: pending chunks of {@code old} are written
-     * right away (without the settle delay), then the files are closed. Without
-     * {@code old} (already gone) the pending changes are dropped.
+     * Chunks now come from {@code level}: pending chunks of the previous level are
+     * written right away (without the settle delay), then the files are closed.
+     *
+     * Called from the chunk events themselves, not only from the client tick: on
+     * joining, the first chunks arrive before the first tick sees the new level,
+     * and must not be thrown away with the old level's list.
      */
-    public void onWorldChange(ClientLevel old) {
-        if (old != null && enabled) {
-            flushAll(old);
+    private void switchTo(ClientLevel level) {
+        if (level == dirtyLevel) {
+            return;
+        }
+        if (dirtyLevel != null && enabled) {
+            flushAll(dirtyLevel);
         }
         dirty.clear();
+        dirtyLevel = level;
         io.submit(this::closeAll);
     }
 
