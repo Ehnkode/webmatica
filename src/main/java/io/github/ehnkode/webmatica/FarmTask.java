@@ -138,7 +138,7 @@ public final class FarmTask {
         lines.add(fill != null ? "sel fill " + fill : "sel cleararea");
         BaritoneSafety.restore();
         for (String l : lines) {
-            if (!BaritoneBridge.exec(l)) {
+            if (!BaritoneApi.tryExecute(l)) {
                 finish(false, "Baritone hat \"" + l + "\" abgelehnt");
                 return;
             }
@@ -183,7 +183,7 @@ public final class FarmTask {
         tick++;
         switch (phase) {
             case BREAK -> {
-                if (age > 2500L && !builderActive()) {
+                if (age > 2500L && !BaritoneApi.builderActive()) {
                     walkTarget = null;
                     if (pickup) {
                         setPhase(Phase.PICKUP);
@@ -191,7 +191,7 @@ public final class FarmTask {
                         finish(true, null);
                     }
                 } else if (age > breakLimit) {
-                    FetchTask.stopBaritone();
+                    BaritoneApi.stop();
                     finish(countIds(p) > before, "Zeit abgelaufen");
                 }
             }
@@ -201,12 +201,12 @@ public final class FarmTask {
                 }
                 ItemEntity next = nearestDrop(p, w);
                 if (next == null || age > 90_000L || p.getInventory().getFreeSlot() < 0) {
-                    FetchTask.stopBaritone();
+                    BaritoneApi.stop();
                     finish(true, p.getInventory().getFreeSlot() < 0 ? "Inventar voll" : null);
                     return;
                 }
                 BlockPos at = next.blockPosition();
-                if (!at.equals(walkTarget) || !goalActive()) {
+                if (!at.equals(walkTarget) || !BaritoneApi.goalActive()) {
                     if (at.equals(walkTarget)) {
                         skippedDrops.add(next.getId());   // couldn't reach it twice
                         walkTarget = null;
@@ -216,7 +216,7 @@ public final class FarmTask {
                     try {
                         // picking up drops is walking: no digging through the base (unless allowed)
                         BaritoneSafety.walkOnly();
-                        walkOnto(at);
+                        BaritoneApi.walkOnto(at);
                     } catch (Throwable t) {
                         finish(countIds(p) > before, "Baritone: " + t.getClass().getSimpleName());
                     }
@@ -394,37 +394,6 @@ public final class FarmTask {
             }
         }
         return best;
-    }
-
-    // ------------------------------------------------------------ Baritone (API via reflection)
-
-    private static Object baritone() throws Exception {
-        Object provider = Class.forName("baritone.api.BaritoneAPI").getMethod("getProvider").invoke(null);
-        return Class.forName("baritone.api.IBaritoneProvider").getMethod("getPrimaryBaritone").invoke(provider);
-    }
-
-    private static boolean active(String getter) {
-        try {
-            Object proc = Class.forName("baritone.api.IBaritone").getMethod(getter).invoke(baritone());
-            return (Boolean) Class.forName("baritone.api.process.IBaritoneProcess").getMethod("isActive").invoke(proc);
-        } catch (Throwable t) {
-            return false;
-        }
-    }
-
-    private static boolean builderActive() {
-        return active("getBuilderProcess");
-    }
-
-    private static boolean goalActive() {
-        return active("getCustomGoalProcess");
-    }
-
-    private static void walkOnto(BlockPos target) throws Exception {
-        Object goal = Class.forName("baritone.api.pathing.goals.GoalBlock").getConstructor(BlockPos.class).newInstance(target);
-        Object proc = Class.forName("baritone.api.IBaritone").getMethod("getCustomGoalProcess").invoke(baritone());
-        Class.forName("baritone.api.process.ICustomGoalProcess")
-                .getMethod("setGoalAndPath", Class.forName("baritone.api.pathing.goals.Goal")).invoke(proc, goal);
     }
 
     private void finish(boolean ok, String why) {

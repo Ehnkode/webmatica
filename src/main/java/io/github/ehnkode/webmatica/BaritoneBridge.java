@@ -19,7 +19,7 @@ import net.minecraft.network.chat.Component;
  * the map, stop) and hands them to Baritone's command manager, as if you had
  * typed "#goto x z". Nothing is ever sent to the server chat.
  *
- * Baritone only via reflection: without Baritone the viewer reports that, nothing more.
+ * Baritone only through BaritoneApi: without Baritone the viewer reports that, nothing more.
  */
 public final class BaritoneBridge {
 
@@ -150,14 +150,8 @@ public final class BaritoneBridge {
         String err = null;
         String line = String.join(" · #", lines);
         try {
-            Object provider = Class.forName("baritone.api.BaritoneAPI").getMethod("getProvider").invoke(null);
-            // call through the API interfaces: the implementations are not public
-            Object baritone = Class.forName("baritone.api.IBaritoneProvider").getMethod("getPrimaryBaritone").invoke(provider);
-            Object cm = Class.forName("baritone.api.IBaritone").getMethod("getCommandManager").invoke(baritone);
-            java.lang.reflect.Method exec = Class.forName("baritone.api.command.manager.ICommandManager").getMethod("execute", String.class);
             for (String l : lines) {
-                Object ok = exec.invoke(cm, l);
-                if (Boolean.FALSE.equals(ok)) {
+                if (!BaritoneApi.execute(l)) {
                     err = "Baritone hat \"" + l + "\" abgelehnt";
                     break;
                 }
@@ -173,19 +167,6 @@ public final class BaritoneBridge {
                     .withStyle(err == null ? ChatFormatting.AQUA : ChatFormatting.RED));
         }
         report(id, err == null, err == null ? "#" + line : err);
-    }
-
-    /** Client thread: run a Baritone command line without "#", silently. */
-    static boolean exec(String line) {
-        try {
-            Object provider = Class.forName("baritone.api.BaritoneAPI").getMethod("getProvider").invoke(null);
-            Object baritone = Class.forName("baritone.api.IBaritoneProvider").getMethod("getPrimaryBaritone").invoke(provider);
-            Object cm = Class.forName("baritone.api.IBaritone").getMethod("getCommandManager").invoke(baritone);
-            Object ok = Class.forName("baritone.api.command.manager.ICommandManager").getMethod("execute", String.class).invoke(cm, line);
-            return !Boolean.FALSE.equals(ok);
-        } catch (Throwable t) {
-            return false;
-        }
     }
 
     static void report(String id, boolean ok, String msg) {

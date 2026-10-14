@@ -108,7 +108,7 @@ public final class FetchTask {
         } else {
             try {
                 BaritoneSafety.walkOnly();
-                walkTo(pos);
+                BaritoneApi.walkTo(pos);
                 setPhase(Phase.WALK);
                 actionbar(mc, "läuft zur Kiste bei " + pos.getX() + " " + pos.getY() + " " + pos.getZ(), ChatFormatting.AQUA);
             } catch (ClassNotFoundException e) {
@@ -167,16 +167,16 @@ public final class FetchTask {
         switch (phase) {
             case WALK -> {
                 if (near(p)) {
-                    stopBaritone();
+                    BaritoneApi.stop();
                     setPhase(Phase.OPEN);
                 } else if (age > 180_000L) {
-                    stopBaritone();
+                    BaritoneApi.stop();
                     finish(false, "Kiste nicht erreicht (3 min)");
-                } else if (age > 3000L && !baritoneActive()) {
+                } else if (age > 3000L && !BaritoneApi.goalActive()) {
                     // Baritone is done but too far away: try once more, then give up
                     if (openTries++ < 2) {
                         try {
-                            walkTo(pos);
+                            BaritoneApi.walkTo(pos);
                         } catch (Throwable ignored) {
                         }
                         phaseStart = System.currentTimeMillis() - 1000L;
@@ -366,40 +366,6 @@ public final class FetchTask {
     private static void actionbar(Minecraft mc, String s, ChatFormatting f) {
         if (mc.player != null) {
             Mc.actionbar(mc, Component.literal("[Webmatica] " + Lang.tr(s)).withStyle(f));
-        }
-    }
-
-    // ------------------------------------------------------------ Baritone (API via reflection)
-
-    private static Object baritone() throws Exception {
-        Object provider = Class.forName("baritone.api.BaritoneAPI").getMethod("getProvider").invoke(null);
-        return Class.forName("baritone.api.IBaritoneProvider").getMethod("getPrimaryBaritone").invoke(provider);
-    }
-
-    static void walkTo(BlockPos target) throws Exception {
-        Object b = baritone();
-        Object goal = Class.forName("baritone.api.pathing.goals.GoalGetToBlock").getConstructor(BlockPos.class).newInstance(target);
-        Object proc = Class.forName("baritone.api.IBaritone").getMethod("getCustomGoalProcess").invoke(b);
-        Class.forName("baritone.api.process.ICustomGoalProcess")
-                .getMethod("setGoalAndPath", Class.forName("baritone.api.pathing.goals.Goal")).invoke(proc, goal);
-    }
-
-    private static boolean baritoneActive() {
-        try {
-            Object b = baritone();
-            Object proc = Class.forName("baritone.api.IBaritone").getMethod("getCustomGoalProcess").invoke(b);
-            return (Boolean) Class.forName("baritone.api.process.IBaritoneProcess").getMethod("isActive").invoke(proc);
-        } catch (Throwable t) {
-            return false;
-        }
-    }
-
-    static void stopBaritone() {
-        try {
-            Object b = baritone();
-            Object pb = Class.forName("baritone.api.IBaritone").getMethod("getPathingBehavior").invoke(b);
-            Class.forName("baritone.api.behavior.IPathingBehavior").getMethod("cancelEverything").invoke(pb);
-        } catch (Throwable ignored) {
         }
     }
 }

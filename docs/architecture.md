@@ -19,6 +19,7 @@ version differences live in `Mc.java` and `//?` comments.
 | `BuildControl` | polls /api/control: Printer and layer settings, the guard switches |
 | `BaritoneBridge` | polls /api/commands and hands each command to a task or to Baritone |
 | `FetchTask`, `UnpackTask`, `FarmTask` | multi-step bot jobs (fetch/store, empty shulkers, break and pick up) |
+| `BaritoneApi` | every call into Baritone (reflection through its API interfaces): commands, settings, walking, state |
 | `BaritoneSafety` | walk without breaking blocks unless the guard allows digging; restore Baritone's settings |
 | `AutoGuard` | eat and save tools while an automation runs; pause and resume |
 | `LitematicaBridge`, `Highlighter` | placements into Litematica (reflection), particles on chests |
