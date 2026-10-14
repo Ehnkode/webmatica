@@ -44,6 +44,9 @@ public class MapperClient implements ClientModInitializer {
         printerKey = Mc.registerKey("key.webmatica.printer", InputConstants.UNKNOWN.getValue(), category);
 
         ClientTickEvents.END_CLIENT_TICK.register(MapperClient::onEndTick);
+        if (System.getProperty("webmatica.autotest") != null) {
+            AutoTest.install();
+        }
 
         PositionReporter.getInstance().start();
         LitematicaBridge.getInstance().start();
