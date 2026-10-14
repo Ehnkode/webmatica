@@ -3,11 +3,12 @@ storing the drops in a chest when the inventory is full."""
 
 from __future__ import annotations
 
+import math
 import re
 import time
 
 from .. import farm
-from .common import FREE_MIN, KEEP, MAIN_SLOTS, MINE_BATCH, MINE_TIMEOUT, SETTLE, _full
+from .common import FREE_MIN, KEEP, MAIN_SLOTS, MINE_BATCH, MINE_TIMEOUT, SETTLE, STORE_RADIUS, _full
 
 
 class FarmMode:
@@ -31,7 +32,7 @@ class FarmMode:
             c = next((c for c in self.app.containers.list(srv) if c.get("key") == req["chest"]), None)
             if c is None:
                 raise ValueError("Kiste unbekannt")
-            chest = {"x": c["x"], "y": c["y"], "z": c["z"], "name": c.get("title") or f"{c['x']} {c['y']} {c['z']}", "own": False}
+            chest = {"x": c["x"], "y": c["y"], "z": c["z"], "name": f"{c.get('title') or 'Kiste'} bei {c['x']} {c['y']} {c['z']}", "own": False}
         with self.lock:
             self.state[srv] = {"pid": None, "mode": "farm", "phase": "fplan", "info": "", "log": [], "cmd": None,
                                "ts": time.monotonic(), "next": 0.0, "fetched": 0, "not_before": 0.0,
@@ -76,9 +77,10 @@ class FarmMode:
                 x, y, z = map(int, m.groups())
                 st["chest"] = {"x": x, "y": y, "z": z, "name": f"neue Kiste {x} {y} {z}", "own": True}
             if not r["ok"] or "Kiste voll" in r["msg"]:
-                if st.get("chest") and "Kiste voll" in r["msg"]:
-                    st["chest"] = None                     # place a new one next time
-                if not r["ok"] and not st.get("place"):
+                if st.get("chest") and ("Kiste voll" in r["msg"] or st["chest"].get("auto")):
+                    st.setdefault("full", set()).add((st["chest"]["x"], st["chest"]["y"], st["chest"]["z"]))
+                    st["chest"] = None                     # another chest (or place a new one) next time
+                if not r["ok"] and not st.get("place") and not st.get("auto_chest"):
                     return self._end(srv, "error", "Einlagern ging nicht: " + r["msg"])
                 st["deposit_fails"] = st.get("deposit_fails", 0) + 1
                 if st["deposit_fails"] >= 3:
@@ -115,8 +117,8 @@ class FarmMode:
             with self.lock:
                 st["info"] = "wartet auf dein Inventar …"
             return
-        if free < FREE_MIN:
-            return self._farm_deposit(srv, st, now)
+        if free < FREE_MIN and (free <= 0 or self._can_deposit(srv, st, p)):
+            return self._farm_deposit(srv, st, now, p, free)
         pts = farm.positions(self.app.rec, dim, st["area"], set(open_), (p["x"], p["y"], p["z"]),
                              limit=MINE_BATCH, skip=st["skip"])
         if not pts:
@@ -127,22 +129,50 @@ class FarmMode:
         todo = ", ".join(f"{n}× {k.split(':')[-1]}" for k, n in open_.items())
         self._log(srv, f"baut {len(pts)} Blöcke ab bei {pts[0][0]} {pts[0][1]} {pts[0][2]} (noch {todo})")
 
-    def _farm_deposit(self, srv: str, st: dict, now: float) -> None:
+    def _can_deposit(self, srv: str, st: dict, p: dict) -> bool:
+        """Is there somewhere to put the drops? Otherwise mining goes on until the inventory is really full."""
+        if st.get("chest") or self._near_chest(srv, st, p):
+            return True
         inv = self.app.inventory or {}
+        return bool(st.get("place")) and any(it.get("id") == "minecraft:chest" for it in inv.get("items") or [])
+
+    def _near_chest(self, srv: str, st: dict, p: dict):
+        """The nearest remembered chest with free slots (same dimension, within STORE_RADIUS)."""
+        full = st.get("full") or set()
+        best, best_d = None, STORE_RADIUS
+        for c in self.app.containers.list(srv):
+            if c.get("dim") != st["dim"] or str(c.get("block", "")).endswith(("shulker_box", "ender_chest")):
+                continue
+            if (c["x"], c["y"], c["z"]) in full or int(c.get("slots") or 27) - len(c.get("items") or []) <= 0:
+                continue
+            d = math.dist((c["x"], c["y"], c["z"]), (p["x"], p["y"], p["z"]))
+            if d < best_d:
+                best, best_d = c, d
+        return best
+
+    def _farm_deposit(self, srv: str, st: dict, now: float, p: dict | None = None, free: int = 0) -> None:
+        inv = self.app.inventory or {}
+        used = MAIN_SLOTS - free
         put = [{"slot": it["slot"], "id": it["id"]} for it in inv.get("items") or []
                if it.get("slot") is not None and 9 <= it["slot"] < MAIN_SLOTS and not KEEP.search(it["id"])]
         if not put:
-            return self._end(srv, "error", "Inventar voll, aber nichts zum Einlagern (nur Werkzeug/Essen)")
+            return self._end(srv, "error", f"Inventar voll ({used}/{MAIN_SLOTS} Plätze belegt), aber nichts zum Einlagern (nur Werkzeug/Essen/Hotbar)")
         ch = st.get("chest")
+        if not ch and p is not None:
+            c = self._near_chest(srv, st, p)
+            if c is not None:
+                ch = st["chest"] = {"x": c["x"], "y": c["y"], "z": c["z"], "own": False, "auto": True,
+                                    "name": f"Kiste bei {c['x']} {c['y']} {c['z']}"}
+                st["auto_chest"] = True
         if ch:
             cid = self._push(srv, {"kind": "store", "x": ch["x"], "y": ch["y"], "z": ch["z"], "put": put})
             self._set(srv, phase="deposit", cmd=cid)
-            return self._log(srv, f"Inventar voll: bringt {len(put)} Stacks zu {ch['name']}")
-        if not st.get("place"):
-            return self._end(srv, "error", "Inventar voll und keine Kiste gewählt")
-        has_chest = any(it.get("id") == "minecraft:chest" for it in inv.get("items") or [])
+            dist = f" ({math.dist((ch['x'], ch['y'], ch['z']), (p['x'], p['y'], p['z'])):.0f} m)" if p else ""
+            return self._log(srv, f"Inventar fast voll ({used}/{MAIN_SLOTS}): bringt {len(put)} Stacks zu {ch['name']}{dist}")
+        has_chest = st.get("place") and any(it.get("id") == "minecraft:chest" for it in inv.get("items") or [])
         if not has_chest:
-            return self._end(srv, "error", "Inventar voll und keine Kiste dabei (Kiste mitnehmen oder eine wählen)")
+            return self._end(srv, "error", f"Inventar voll ({used}/{MAIN_SLOTS} Plätze belegt) und keine Kiste in der Nähe "
+                                           f"oder im Inventar (Kiste mitnehmen oder eine wählen)")
         cid = self._push(srv, {"kind": "chestdump", "slots": [x["slot"] for x in put]})
         self._set(srv, phase="deposit", cmd=cid)
-        self._log(srv, f"Inventar voll: stellt eine Kiste auf und packt {len(put)} Stacks hinein")
+        self._log(srv, f"Inventar fast voll ({used}/{MAIN_SLOTS}): stellt eine Kiste auf und packt {len(put)} Stacks hinein")
