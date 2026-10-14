@@ -626,14 +626,10 @@ Baritone hat „{}“ abgelehnt	Baritone rejected "{}"
 Baritone hat "{}" abgelehnt	Baritone rejected "{}"
 Schematic ist nicht in Litematica (erst "Ins Spiel")	Schematic is not in Litematica (turn on "In game" first)
 Inventar voll	Inventory full
-Kiste geht nicht auf	Chest doesn't open
 Kiste nicht erreicht (3 min)	Chest not reached (3 min)
 Kiste voll	Chest full
 Kiste wurde geschlossen	Chest was closed
 Kiste wurde geschlossen, nichts genommen	Chest was closed, nothing taken
-abgebrochen, neuer Auftrag	cancelled, new job
-nicht mehr im Spiel	no longer in the game
-Zeit abgelaufen	Time is up
 läuft zur Kiste bei {} {} {}	walking to the chest at {} {} {}
 {} Items genommen	{} items taken
 {} Items eingelagert	{} items stored
@@ -691,7 +687,6 @@ Baritone stoppen	Stop Baritone
 Ein-/Ausblenden	Show/hide
 Liste als Text kopieren	Copy list as text
 Abhaken	Tick off
-Anhalten	Stop
 niemand	nobody
 Rechtsklick	Right-click
 drehen, spiegeln	rotate, mirror
@@ -859,7 +854,6 @@ Löcher auffüllen mit	Fill holes with
 z. B. dirt	e.g. dirt
 {} Blöcke abtragen (Y {} bis {})	{} blocks to remove (Y {} to {})
 {} Löcher füllen (ab Y {})	{} holes to fill (from Y {})
-{} dabei	{} with you
 Es fehlen {} Blöcke, nimm mehr mit.	{} blocks are missing, bring more.
 Trägt ab: noch {} Blöcke.	Removing: {} blocks left.
 Füllt auf: noch {} Löcher.	Filling: {} holes left.
