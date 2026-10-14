@@ -6,35 +6,47 @@ from __future__ import annotations
 import math
 import time
 
-from .common import FETCH_TIMEOUT, MAIN_SLOTS, _full
+from .common import FETCH_TIMEOUT, MAIN_SLOTS, STORE_RADIUS, _full
 
 
 class StoreMode:
     """Phase store (mode store) or return (after a build), one chest per command."""
 
-    def start_store(self, srv: str, hotbar: bool = False) -> dict:
-        """Storing: each stack from the inventory into a chest that already holds this item."""
+    def store_plan(self, srv: str, hotbar: bool = False) -> dict:
+        """Preview for the confirm dialog: which chests storing would walk to, and what stays."""
         p = self._player(srv)
         inv = self.app.inventory or {}
         if p is None or inv.get("server") not in (None, srv):
             raise ValueError("Spiel nicht verbunden")
-        stops, left = self._plan_store(srv, p, inv.get("items") or [], hotbar)
+        stops, left = self._plan_store(srv, p, inv.get("items") or [], hotbar, STORE_RADIUS)
+        return {"stops": [{k: s[k] for k in ("x", "y", "z", "name", "dist")} | {"n": len(s["put"])} for s in stops],
+                "left": left, "radius": STORE_RADIUS}
+
+    def start_store(self, srv: str, hotbar: bool = False) -> dict:
+        """Storing: each stack from the inventory into a chest nearby that already holds this item."""
+        p = self._player(srv)
+        inv = self.app.inventory or {}
+        if p is None or inv.get("server") not in (None, srv):
+            raise ValueError("Spiel nicht verbunden")
+        stops, left = self._plan_store(srv, p, inv.get("items") or [], hotbar, STORE_RADIUS)
         with self.lock:
             self.state[srv] = {"pid": None, "mode": "store", "phase": "store", "info": "", "log": [], "cmd": None,
                                "ts": time.monotonic(), "next": 0.0, "fetched": 0, "stops": stops, "fails": 0,
                                "bad": {}, "not_before": 0.0}
         n = sum(len(s["put"]) for s in stops)
-        self._log(srv, f"Einlagern: {n} Stacks in {len(stops)} Kisten" +
+        self._log(srv, f"Einlagern: {n} Stacks in {len(stops)} Kisten im Umkreis von {STORE_RADIUS:.0f} m" +
                   (f", ohne passende Kiste: {', '.join(left[:6])}" if left else ""))
         if not stops:
-            self._end(srv, "done", "nichts einzulagern" + (f" (ohne passende Kiste: {', '.join(left[:6])})" if left else ""))
+            self._end(srv, "done", f"nichts einzulagern: keine Kiste im Umkreis von {STORE_RADIUS:.0f} m hat diese Items" + (f" (ohne passende Kiste: {', '.join(left[:6])})" if left else ""))
         return self.view(srv)
 
-    def _plan_store(self, srv: str, p: dict, items: list, hotbar: bool):
+    def _plan_store(self, srv: str, p: dict, items: list, hotbar: bool, radius: float | None = None):
         chests = []
         for c in self.app.containers.list(srv):
             if c.get("dim") != p.get("dim") or c.get("block", "").endswith("shulker_box"):
                 continue
+            if radius is not None and math.dist((c["x"], c["y"], c["z"]), (p["x"], p["y"], p["z"])) > radius:
+                continue                       # far away (other base, old chest): Baritone would wander off
             ids: dict[str, int] = {}
             for it in c.get("items") or []:
                 ids[it["id"]] = ids.get(it["id"], 0) + it["count"]
@@ -67,8 +79,10 @@ class StoreMode:
         while todo:
             ch = min(todo, key=lambda ch: math.hypot(ch["c"]["x"] - cur[0], ch["c"]["z"] - cur[1]))
             todo.remove(ch)
-            stops.append({"x": ch["c"]["x"], "y": ch["c"]["y"], "z": ch["c"]["z"], "put": ch["put"],
-                          "name": ch["c"].get("title") or f"{ch['c']['x']} {ch['c']['y']} {ch['c']['z']}"})
+            c = ch["c"]
+            stops.append({"x": c["x"], "y": c["y"], "z": c["z"], "put": ch["put"],
+                          "dist": round(math.dist((c["x"], c["y"], c["z"]), (p["x"], p["y"], p["z"]))),
+                          "name": f"{c.get('title') or 'Kiste'} bei {c['x']} {c['y']} {c['z']}"})
             cur = (ch["c"]["x"], ch["c"]["z"])
         return stops, sorted(set(left))
 
@@ -97,7 +111,7 @@ class StoreMode:
         cid = self._push(srv, {"kind": "store", "x": stop["x"], "y": stop["y"], "z": stop["z"], "put": stop["put"]})
         with self.lock:
             st["cmd"], st["ts"] = cid, time.monotonic()
-        self._log(srv, f"bringt {len(stop['put'])} Stacks zu {stop['name']}")
+        self._log(srv, f"bringt {len(stop['put'])} Stacks zu {stop['name']} ({stop['dist']} m vom Start)")
 
     def _finish(self, srv: str, st: dict, p, msg: str) -> None:
         """Finished building: leftover materials back into the chests (if enabled)."""
