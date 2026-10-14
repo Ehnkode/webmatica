@@ -109,6 +109,7 @@ POST /api/commands                       drop a command      POST /api/commands/
 GET  /api/auto?srv=                      auto-build state    POST /api/auto {srv, pid} start / {srv} stop
 GET  /api/control?srv=                   Printer/layer target state for the mod   POST /api/control (browser)
 POST /api/control/status                 mod reports in-game Printer/layer   GET /api/control/state?srv=
+GET  /api/auto/storeplan?srv=&hotbar=0|1 which chests (within 128 blocks) "store inventory" would walk to
 GET/POST /api/auto/settings              auto-build protection: radar, radarDist, friends, eat, tools, leftovers, fix
 POST /api/auto {srv, queue: [pid]}       set the queue
 POST /api/auto {srv, farm: {area, dim, targets, chest, placeChest}}   start farming
