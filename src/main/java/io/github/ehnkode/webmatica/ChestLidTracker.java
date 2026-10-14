@@ -57,7 +57,7 @@ public final class ChestLidTracker {
         }
         boolean open = data > 0;
         String id = BuiltInRegistries.BLOCK.getKey(block).toString();
-        MapperClient.LOGGER.info("Truhe bei [{}, {}, {}] wurde {} ({} Spieler)", pos.getX(), pos.getY(), pos.getZ(),
+        MapperClient.LOGGER.debug("Truhe bei [{}, {}, {}] wurde {} ({} Spieler)", pos.getX(), pos.getY(), pos.getZ(),
                 open ? "GEÖFFNET" : "GESCHLOSSEN", data);
         LidEvent e = new LidEvent(pos.immutable(), id, open, data, System.currentTimeMillis());
         synchronized (recent) {

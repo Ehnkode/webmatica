@@ -1337,9 +1337,15 @@ def main(argv=None):
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
+        app.save_trail()
+        app.radar.save()
+        app.lids.save()
         print("\nstopped")
         return
-    # Ended through /api/quit or with the game: stop the worker processes and leave right away.
+    # Ended through /api/quit or with the game: save, stop the worker processes and leave right away.
+    app.save_trail()
+    app.radar.save()
+    app.lids.save()
     print("stopped for an update")
     if app.mesh_pool is not None:
         app.mesh_pool.shutdown(wait=False, cancel_futures=True)
