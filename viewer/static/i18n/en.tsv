@@ -1096,3 +1096,52 @@ alles hell	all lit
 Erst Bereich wählen und Fackeln angeben	First pick an area and enter torches
 Wo Monster spawnen können: rot jederzeit, orange nur nachts. Auf der Karte die oberste offene Stelle jeder Spalte, ab mittlerer Zoomstufe.	Where monsters can spawn: red any time, orange only at night. On the map the topmost open spot of each column, from medium zoom on.
 Hier spawnt nichts (oder die Aufnahme hat noch kein Licht: einmal neu hinfliegen).	Nothing spawns here (or the recording has no light yet: fly there once more).
+# --- Game status, checklists, dig toggle, wrong-block preview (test-welten)
+Spiel offline	Game offline
+Spiel verbunden	Game connected
+Spiel offline: Minecraft mit Webmatica starten	Game offline: start Minecraft with Webmatica
+Spiel offline (Status unten rechts)	Game offline (status bottom right)
+Spiel verbunden, Litematica und Printer melden sich noch nicht	Game connected, Litematica and Printer not reporting yet
+Minecraft mit Webmatica starten	Start Minecraft with Webmatica
+Aufnahme	Recording
+aus, im Spiel F9	off, press F9 in game
+gefunden	found
+Aufnahme läuft	Recording is on
+Aufnahme ist aus: im Spiel F9 drücken	Recording is off: press F9 in game
+{} fehlt im Spiel	{} missing in game
+Baritone und Litematica	Baritone and Litematica
+Baritone: unbekannt (ältere Mod-Version)	Baritone: unknown (older mod version)
+Baritone und Litematica gefunden	Baritone and Litematica found
+Baritone gefunden	Baritone found
+{} Aufnahme aus (F9)	{} recording off (F9)
+Schematic ist im Spiel (Litematica)	Schematic is in the game (Litematica)
+Schematic ist noch nicht im Spiel	Schematic is not in the game yet
+{} % der Baustelle noch nie aufgezeichnet: Baritone läuft erst hin	{} % of the site never recorded: Baritone walks there first
+Baustelle ist aufgezeichnet	Site is recorded
+{} Items in keiner bekannten Kiste ({})	{} items in no known chest ({})
+Material für {} Blöcke liegt in deinen Kisten oder im Inventar	Material for {} blocks is in your chests or inventory
+Nichts fehlt im aufgezeichneten Teil	Nothing missing in the recorded part
+Alles gebaut	Everything built
+Erst die rot markierten Punkte oben erledigen	First fix the points marked red above
+Bereich gewählt	Area chosen
+Noch kein Bereich gewählt (oben unter 1)	No area chosen yet (above under 1)
+Unterwegs durchgraben erlaubt	Allow digging through on the way
+Graben erlaubt	Digging allowed
+Aus lassen, solange du in deiner Basis bist, sonst gräbt Baritone durch Wände. Weit weg von der Basis spart es Umwege.	Keep it off while you are in your base, otherwise Baritone digs through walls. Far from the base it saves detours.
+Beim Einsammeln und Laufen darf Baritone Blöcke abbauen. Nur einschalten, wenn du nicht in deiner Basis bist.	Baritone may break blocks while picking up and walking. Only turn on when you are not in your base.
+Beim Laufen, Holen und Einsammeln darf Baritone Blöcke abbauen und den kürzesten Weg graben	While walking, fetching and picking up, Baritone may break blocks and dig the shortest way
+Gilt für Autobau, Einlagern, Farmen und Ebnen, solange sie laufen (Durchgraben auch beim Hinlaufen über die Karte). Wird gespeichert.	Applies to auto build, storing, farming and flattening while they run (digging through also when walking there from the map). Saved.
+Schutz, gilt für alle Automationen (dieselben Schalter wie unter	Protection, applies to all automations (same switches as under
+diese Hilfe	this help
+Falsche Blöcke zeigen und abbauen ({})	Show and break wrong blocks ({})
+Zeigt die Blöcke erst in 3D, abgebaut wird nach dem Bestätigen	Shows the blocks in 3D first, breaking starts after you confirm
+Blöcke, wo die Schematic Luft hat (Wasser und Pflanzen zählen nicht)	Blocks where the schematic has air (water and plants don't count)
+In 3D markiert:	Marked in 3D:
+werden abgebaut und eingesammelt.	will be broken and picked up.
+alle zeigen ({})	show all ({})
+weniger zeigen	show less
+läuft zur Baustelle, {} Blöcke dort wurden noch nie aufgezeichnet	walking to the site, {} blocks there were never recorded
+wartet, bis die Aufnahme die Baustelle gespeichert hat …	waiting until the recording has saved the site …
+{} Blöcke der Schematic wurden noch nie aufgezeichnet (Aufnahme an? Einmal über die Baustelle laufen, dann neu starten)	{} blocks of the schematic were never recorded (recording on? Walk over the site once, then restart)
+pausiert: Aufnahme ist aus (im Spiel F9 drücken)	paused: recording is off (press F9 in game)
+{} Blöcke abbauen	Break {} blocks
