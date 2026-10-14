@@ -40,7 +40,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
   einlagern, wo das Item schon liegt. Mit Stash-Finder.
 - **Eigene Lauf-Engine:** Rechtsklick auf die Karte und du läufst hin; Holen, Einlagern und
   Einsammeln laufen genauso. Klappt ohne Baritone: Sie findet den Weg über Treppen, Stufen und
-  Abgründe, um Mauern, Lava und tiefes Wasser herum, und baut nie einen Block ab oder setzt einen.
+  Abgründe, um Mauern, Lava und tiefes Wasser herum.
   Ist Baritone installiert, läuft Baritone, und die eigene Engine übernimmt, wenn es feststeckt
   (Option „Laufen mit“).
 - **Printer:** setzt die Blöcke einer Schematic, sobald du in der Nähe bist, auch ohne Litematica.
