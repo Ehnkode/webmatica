@@ -16,7 +16,8 @@ UNSEEN_WAIT = 8.0        # s at the site for the recording to catch never-seen c
 RADAR_CLEAR = 15.0       # s without players nearby, then it continues
 RUNNING = ("plan", "fetch", "build", "approach", "unpack", "return", "fix", "fplan", "mine", "deposit")
 DEFAULTS = {"radar": True, "radarDist": 64, "friends": [], "eat": False, "tools": True, "leftovers": True, "fix": True,
-            "dig": False}
+            "dig": False, "engine": "auto"}
+ENGINES = ("auto", "native", "baritone")   # who walks: Baritone if installed, own engine, only Baritone
 FIX_ROUNDS = 2
 MINE_BATCH = 48
 MINE_TIMEOUT = 360.0     # s for one mining job

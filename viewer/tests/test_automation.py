@@ -116,6 +116,13 @@ class AutoBuildTest(unittest.TestCase):
         ab.stop(SRV)
         self.assertTrue(ab.guard(SRV)["dig"], "applies to walking from the map too")
 
+    def test_engine_switch_reaches_the_mod(self):
+        app, ab = self.make(verify_result())
+        self.assertEqual(ab.guard(SRV)["engine"], "auto")
+        self.assertEqual(ab.set_settings({"engine": "native"})["engine"], "native")
+        self.assertEqual(ab.guard(SRV)["engine"], "native")
+        self.assertEqual(ab.set_settings({"engine": "teleport"})["engine"], "auto", "unknown values fall back")
+
 
 class FakeChunk:
     def __init__(self, blocks):

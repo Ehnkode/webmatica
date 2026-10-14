@@ -229,10 +229,17 @@
       <label class="check" title="Baritones Werkzeugschutz (itemSaver): ein Werkzeug mit weniger als 10 Haltbarkeit wird nicht mehr benutzt"><input type="checkbox" data-guard="tools"> Werkzeug nicht kaputtmachen</label>
       <label class="check" title="Beim Laufen, Holen und Einsammeln darf Baritone Blöcke abbauen und den kürzesten Weg graben"><input type="checkbox" data-guard="dig"> Unterwegs durchgraben erlaubt</label>
       <p class="hint gd-note">Aus lassen, solange du in deiner Basis bist, sonst gräbt Baritone durch Wände. Weit weg von der Basis spart es Umwege.</p>
+      <label class="gd-row" title="Wer läuft beim Holen, Einlagern, Einsammeln und Hinlaufen über die Karte">Laufen mit <select id="gd-engine"><option value="auto">Automatisch</option><option value="native">Immer eigene Engine</option><option value="baritone">Nur Baritone</option></select></label>
+      <p class="hint gd-note">Automatisch: Baritone, wenn installiert. Fehlt Baritone oder steckt es fest, läuft die eigene Engine. Die gräbt nie und baut nichts, Abbauen beim Farmen und Ebnen braucht weiter Baritone.</p>
       <label class="check" title="Wenn alles steht: falsch gedrehte und überflüssige Blöcke im Rahmen abbauen und richtig neu setzen"><input type="checkbox" data-guard="fix"> Am Ende falsche Blöcke korrigieren</label>
       <label class="check" title="Wenn alles steht: übrig gebliebene Baumaterialien in Kisten bringen, in denen dieses Item schon liegt"><input type="checkbox" data-guard="leftovers"> Reste nach dem Bauen zurück in die Kisten</label>
       <p class="hint">Gilt für Autobau, Einlagern, Farmen und Ebnen, solange sie laufen (Durchgraben auch beim Hinlaufen über die Karte). Wird gespeichert.</p>
     </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Server-safe <span id="safe-sum" class="muted"></span></div>
+      <label class="check"><input type="checkbox" id="opt-safe"> Server-safe auf diesem Server</label>
+      <p class="hint">Für öffentliche Server: schaltet ab, was dort meist verboten ist (Baritone, Autobau, Farmen, Ebnen, Holen und Einlagern, X-Ray, einen installierten Litematica Printer). Der Printer setzt dann nur, was du auch von Hand könntest: keine vorgetäuschte Blickrichtung, nur sichtbare Flächen, normale Reichweite, nur aus der Hotbar, höchstens 5 Blöcke pro Sekunde. Wird pro Server gespeichert.</p>
     </div>
     <div class="card">
       <div class="card-title">Hilfe</div>
@@ -335,18 +342,14 @@
       <button id="bd-clear" class="danger" title="Alles im Schematic-Rahmen abbauen">Freiräumen</button>
     </div>
     </details>
-    <details class="fold" data-fold="printer">
-    <summary>Printer</summary>
-    <div class="sp-row"><button id="pr-toggle" class="pr-toggle">Printer: ?</button></div>
-    <label class="slider">Reichweite <input type="range" id="pr-range" min="1" max="6" step="0.5"><span id="pr-range-v" class="mono"></span></label>
-    <label class="slider" title="Ticks zwischen zwei Blöcken: kleiner = schneller, größer = sicherer gegen Kicks">Pause zwischen Blöcken <input type="range" id="pr-interval" min="0" max="20" step="1"><span id="pr-interval-v" class="mono"></span></label>
-    <div class="pr-flags">
-      <label class="check"><input type="checkbox" data-pr="air"> in der Luft setzen</label>
-      <label class="check"><input type="checkbox" data-pr="interact"> Blöcke einstellen (Repeater, Türen …)</label>
-      <label class="check"><input type="checkbox" data-pr="strip"> Stämme entrinden</label>
-      <label class="check"><input type="checkbox" data-pr="fluids"> Wasser/Lava ersetzen</label>
+    <div class="card">
+      <div class="card-title">Printer <span id="wp-sum" class="muted"></span></div>
+      <p class="hint">Setzt die Blöcke der Schematics mit „Ins Spiel“, sobald du in der Nähe bist, Schicht für Schicht von unten. Braucht kein Litematica. Eine Taste dafür kannst du im Spiel unter Steuerung belegen.</p>
+      <div class="sp-row"><button id="wp-toggle" class="pr-toggle">Printer: ?</button></div>
+      <label class="slider">Reichweite <input type="range" id="wp-range" min="1" max="6" step="0.5"><span id="wp-range-v" class="mono"></span></label>
+      <label class="slider" title="Mit Server-safe höchstens 5">Blöcke pro Sekunde <input type="range" id="wp-bps" min="1" max="20" step="1"><span id="wp-bps-v" class="mono"></span></label>
+      <div id="wp-info" class="muted"></div>
     </div>
-    </details>
     <details class="fold" data-fold="layers">
     <summary>Schichten in Litematica</summary>
     <div class="sp-row">
@@ -494,7 +497,7 @@
 <script src="/static/vendor/leaflet/leaflet.js"></script>
 <script src="/static/interp.js"></script>
 <!-- The page's ES modules. Each one first imports the file before it, so loading the last one
-     runs them all in this order: core world sidebar places player selection schematics materials chests gif history keyboard automation radar farm xray start -->
+     runs them all in this order: core world sidebar places player selection schematics materials chests gif history keyboard automation radar farm xray safe start -->
 <script type="module" src="/static/js/start.js"></script>
 </body>
 </html>

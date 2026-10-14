@@ -168,6 +168,45 @@ class ServerTest(unittest.TestCase):
         self.assertTrue(self.post_json("/api/schematics/delete", {"id": pl["id"]})["ok"])
         self.assertNotIn(pl["id"], [p["id"] for p in self.get_json("/api/schematics")])
 
+    def test_printer_blocks(self):
+        stairs = sch._norm_state("minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]")
+        ids = np.zeros((1, 1, 3), np.int64)
+        ids[0, 0, 0] = BLOCKS.id("minecraft:stone")
+        ids[0, 0, 2] = BLOCKS.id(stairs)
+        code, _, data = self.request("/api/schematics/upload?name=printer.schem", raw=write(ids, "p"))
+        self.assertEqual(code, 200, data)
+        f = json.loads(data)["file"]
+        pl = self.post_json("/api/schematics/place", {"file": f, "server": "p.test", "dim": "overworld",
+                                                      "x": 10, "y": 70, "z": 10})
+        q = "/api/printer/blocks?srv=p.test&dim=overworld&x=11&y=70&z=10&r=4"
+        self.assertEqual(self.get_json(q)["blocks"], [])          # not "In game" yet
+        self.post_json("/api/schematics/update", {"id": pl["id"], "ingame": True})
+        res = self.get_json(q)
+        got = {tuple(res["blocks"][i:i + 3]): res["palette"][res["blocks"][i + 3]] for i in range(0, len(res["blocks"]), 4)}
+        self.assertEqual(got, {(10, 70, 10): "minecraft:stone", (12, 70, 10): stairs})   # air left out
+        self.assertEqual(self.get_json("/api/printer/blocks?srv=p.test&dim=overworld&x=100&y=70&z=10&r=4")["blocks"], [])
+        self.assertEqual(self.get_json(q.replace("overworld", "the_nether"))["blocks"], [])
+
+    def test_server_safe(self):
+        srv = "safe.test"
+        goto = {"srv": srv, "kind": "goto", "x": 1, "z": 2}
+        self.assertFalse(self.get_json(f"/api/control?srv={srv}")["safe"])
+        self.assertTrue(self.post_json("/api/control", {"srv": srv, "safe": True})["safe"])
+        self.assertTrue(self.get_json(f"/api/control?srv={srv}")["safe"])
+        self.assertIn("Server-safe", self.post_json("/api/commands", goto, 403)["error"])
+        self.post_json("/api/commands", {"srv": srv, "kind": "stop"})                 # stopping always works
+        self.post_json("/api/auto", {"srv": srv, "pid": "nope"}, 403)
+        self.post_json("/api/auto", {"srv": srv, "store": True}, 403)
+        self.post_json("/api/fix", {"srv": srv, "pid": "nope"}, 403)
+        self.post_json("/api/control", {"srv": srv, "web": {"on": True, "bps": 50}})  # own printer stays allowed
+        web = self.get_json(f"/api/control?srv={srv}")["web"]
+        self.assertEqual((web["on"], web["bps"]), (True, 20.0))
+        self.assertFalse(self.get_json(f"/api/control?srv={SRV}")["safe"])           # per server
+        self.post_json("/api/control", {"srv": srv, "safe": False})
+        self.post_json("/api/commands", goto)
+        with open(os.path.join(self.app.rec.root, ".viewer", "safety.json"), encoding="utf-8") as fh:
+            self.assertEqual(json.load(fh)["safe"][srv], False)
+
     # ------------------------------------------------------------------ containers, waypoints
 
     def test_containers(self):

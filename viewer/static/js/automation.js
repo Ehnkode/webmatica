@@ -82,8 +82,10 @@ function renderGuard() {
   if (!g) return;
   $$('[data-guard]').forEach((c) => { c.checked = !!g[c.dataset.guard]; });
   if (document.activeElement !== $('#gd-dist')) $('#gd-dist').value = g.radarDist;
+  $('#gd-engine').value = g.engine || 'auto';
   if (document.activeElement !== $('#gd-friends')) $('#gd-friends').value = (g.friends || []).join(', ');
-  const on = [g.radar && 'Spieler-Pause', g.eat && 'Essen', g.tools && 'Werkzeug', g.fix && 'Korrektur', g.leftovers && 'Reste', g.dig && 'Graben erlaubt'].filter(Boolean);
+  const on = [g.radar && 'Spieler-Pause', g.eat && 'Essen', g.tools && 'Werkzeug', g.fix && 'Korrektur', g.leftovers && 'Reste', g.dig && 'Graben erlaubt',
+    g.engine === 'native' && 'eigene Engine', g.engine === 'baritone' && 'nur Baritone'].filter(Boolean);
   $('#gd-sum').textContent = on.length ? '· ' + on.join(', ') : '· alles aus';
 }
 async function saveGuard(patch) {
@@ -92,6 +94,7 @@ async function saveGuard(patch) {
 }
 $$('[data-guard]').forEach((c) => c.addEventListener('change', () => saveGuard({ [c.dataset.guard]: c.checked })));
 $('#gd-dist').addEventListener('change', (e) => saveGuard({ radarDist: Number(e.target.value) || 64 }));
+$('#gd-engine').addEventListener('change', (e) => saveGuard({ engine: e.target.value }));
 $('#gd-friends').addEventListener('change', (e) => saveGuard({ friends: e.target.value.split(',') }));
 api('/api/auto/settings').then((g) => { guard.cfg = g; renderGuard(); }).catch(() => {});
 
@@ -155,15 +158,15 @@ async function control(body) {
 function renderBuild() {
   const c = ctl.state;
   const g = c && c.game;
-  const pr = g && g.printer, ly = g && g.layer;
+  const ly = g && g.layer;
   const pl = selPl();
   const gs = gameStatus();
   let txt;
   if (!gs.online) txt = 'Spiel offline (Status unten rechts)';
-  else if (!c || !c.online) txt = 'Spiel verbunden, Litematica und Printer melden sich noch nicht';
+  else if (!c || !c.online) txt = 'Spiel verbunden, meldet sich noch nicht';
   else {
     const parts = [];
-    parts.push(pr && pr.available ? `Printer ${pr.on ? '<b class="ok">AN</b>' : 'aus'}` : 'kein Printer gefunden');
+    parts.push(`Printer ${c.web && c.web.on ? '<b class="ok">AN</b>' : 'aus'}`);
     if (ly && ly.available) {
       parts.push(ly.mode === 'ALL' ? 'Litematica: alle Schichten' : ly.mode === 'SINGLE_LAYER' ? `Litematica: Schicht Y ${ly.single}` :
         ly.mode === 'LAYER_RANGE' ? `Litematica: Y ${ly.min} bis ${ly.max}` : `Litematica: ${ly.mode.toLowerCase()}`);
@@ -175,16 +178,7 @@ function renderBuild() {
   statusText(true);
   // Only update the slider when nobody is dragging it right now
   const idle = Date.now() - ctl.pending > 2500;
-  const ok = !!(pr && pr.available);
-  $('#pr-toggle').textContent = ok ? (pr.on ? 'Printer AN, klicken zum Ausschalten' : 'Printer aus, klicken zum Einschalten') : 'Printer: nicht verbunden';
-  $('#pr-toggle').classList.toggle('on', ok && pr.on);
-  for (const el of $$('#pr-range, #pr-interval, [data-pr]')) el.disabled = !ok;
-  if (ok && idle) {
-    $('#pr-range').value = pr.range; $('#pr-interval').value = pr.interval;
-    $$('[data-pr]').forEach((cb) => { cb.checked = !!pr[cb.dataset.pr]; });
-  }
-  $('#pr-range-v').textContent = Number($('#pr-range').value).toFixed(1);
-  $('#pr-interval-v').textContent = $('#pr-interval').value + ' Ticks';
+  renderWebPrinter(c, g, idle);
   const auto = c && pl && c.auto === pl.id;
   $('#ly-auto').checked = !!auto;
   if (idle && document.activeElement !== $('#ly-y')) {
@@ -196,15 +190,38 @@ function renderBuild() {
   $('#bd-build').title = pl && pl.ingame ? 'Baritone baut die Schematic aus Litematica (#litematica)' : 'Erst „Ins Spiel“ einschalten';
 }
 
-$('#pr-toggle').addEventListener('click', () => {
-  const pr = ctl.state && ctl.state.game && ctl.state.game.printer;
-  if (pr && pr.available) control({ printer: { on: !pr.on } });
+/* Webmatica's own printer: the viewer holds the settings, the mod reports what it does */
+function renderWebPrinter(c, g, idle) {
+  const want = c && c.web, have = g && g.web;
+  const on = !!(want && want.on);
+  $('#wp-toggle').textContent = !want ? 'Printer: ?' : on ? 'Printer an' : 'Printer aus';
+  $('#wp-toggle').classList.toggle('on', on);
+  if (want && idle) { $('#wp-range').value = want.range; $('#wp-bps').value = want.bps; }
+  const safe = !!(c && c.safe);
+  $('#wp-range-v').textContent = Number($('#wp-range').value).toFixed(1);
+  $('#wp-bps-v').textContent = safe && Number($('#wp-bps').value) > 5 ? '5 (Server-safe)' : $('#wp-bps').value;
+  $('#wp-sum').textContent = on ? (safe ? '· an, server-safe' : '· an') : '';
+  const parts = [];
+  if (on && !have) parts.push('Spiel meldet sich noch nicht');
+  if (on && have) {
+    if (!schem.list.some((p) => p.ingame)) parts.push('Keine Schematic ist „Ins Spiel“ geschaltet');
+    parts.push(`${fmt(have.placed)} gesetzt`);
+    if (have.todo) parts.push(`${fmt(have.todo)} offen in der Nähe`);
+    if (have.wrong) parts.push(`${fmt(have.wrong)} falsche Blöcke im Weg (werden nicht abgebaut)`);
+    if (have.blocked) parts.push(safe ? `${fmt(have.blocked)} gerade nicht erreichbar oder nur mit anderer Blickrichtung` : `${fmt(have.blocked)} ohne Halt`);
+    if (have.noItem) parts.push(`fehlt: ${have.missing.map((m) => esc(m.split(':').pop())).join(', ')}`);
+  }
+  $('#wp-info').innerHTML = parts.join(' · ');
+}
+$('#wp-toggle').addEventListener('click', () => {
+  const want = ctl.state && ctl.state.web;
+  if (want) control({ web: { on: !want.on } });
 });
-$('#pr-range').addEventListener('input', () => { ctl.pending = Date.now(); renderBuild(); });
-$('#pr-interval').addEventListener('input', () => { ctl.pending = Date.now(); renderBuild(); });
-$('#pr-range').addEventListener('change', (e) => control({ printer: { range: Number(e.target.value) } }));
-$('#pr-interval').addEventListener('change', (e) => control({ printer: { interval: Number(e.target.value) } }));
-$$('[data-pr]').forEach((cb) => cb.addEventListener('change', () => control({ printer: { [cb.dataset.pr]: cb.checked } })));
+$('#wp-range').addEventListener('input', () => { ctl.pending = Date.now(); renderBuild(); });
+$('#wp-bps').addEventListener('input', () => { ctl.pending = Date.now(); renderBuild(); });
+$('#wp-range').addEventListener('change', (e) => control({ web: { range: Number(e.target.value) } }));
+$('#wp-bps').addEventListener('change', (e) => control({ web: { bps: Number(e.target.value) } }));
+
 $('#ly-all').addEventListener('click', () => control({ layer: { mode: 'all' }, auto: null }));
 const setLayer = (y) => { $('#ly-y').value = y; control({ layer: { mode: 'range', min: y, max: y }, auto: null }); };
 $('#ly-set').addEventListener('click', () => setLayer(Number($('#ly-y').value)));
