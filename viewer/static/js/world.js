@@ -53,7 +53,7 @@ function select(server, dim, layer, keepView) {
   loadHistoryDates();
   loadTrail();
   saveHash();
-  if (mode3d) { mode3d = false; set3d(true); }
+  if (mode3d) reload3d();
   else if (typeof xray2dSoon === 'function') xray2dSoon(0);
 }
 
