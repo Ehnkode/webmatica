@@ -23,6 +23,8 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
 #map { position: fixed; inset: 0; background: #0b0c0f; }
 .leaflet-container { background: #0b0c0f; font: inherit; }
 .leaflet-tile { image-rendering: pixelated; }
+/* Not recorded yet: a faint grid instead of plain black, so it reads as "never seen" */
+.region-tile { background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px); background-size: 25% 25%; }
 .leaflet-control-zoom { border: none !important; box-shadow: var(--shadow) !important; }
 .leaflet-control-zoom a { background: var(--panel-solid) !important; color: var(--fg) !important; border-color: var(--line) !important; }
 
@@ -36,6 +38,9 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
 }
 .bar { position: fixed; z-index: 1000; display: flex; align-items: center; gap: 8px; padding: 6px; }
 .top-left { top: 12px; left: 12px; flex-wrap: wrap; max-width: calc(100vw - 24px); }
+.bottom-left #cursor:empty, .bottom-left #info:empty { display: none; }
+.scale { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.scale i { display: inline-block; height: 6px; border: 1.5px solid var(--muted); border-top: 0; }
 .bottom-left { bottom: 12px; left: 12px; padding: 6px 10px; gap: 14px; max-width: calc(50vw - 200px); overflow: hidden; white-space: nowrap; }
 
 .brand { display: flex; align-items: center; gap: 7px; font-weight: 700; letter-spacing: 0.02em; padding: 0 6px 0 4px; }
@@ -149,7 +154,7 @@ body.selecting #map { cursor: crosshair; }
 #view3d { position: fixed; inset: 0; z-index: 500; background: #000; }
 #view3d[hidden] { display: none; }
 #view3d canvas { display: block; width: 100%; height: 100%; outline: none; }
-.hint3d { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); padding: 6px 12px;
+.hint3d { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); padding: 6px 12px;
   font-size: 12.5px; color: var(--muted); display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 24px); }
 .hint3d b { color: var(--fg); font-weight: 600; }
 .hint3d label { display: inline-flex; gap: 6px; align-items: center; color: var(--fg); }
@@ -399,11 +404,11 @@ details.fold > :last-child { margin-bottom: 10px; }
 
 @media (max-width: 720px) {
   .rail { top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; flex-direction: row; overflow-x: auto; }
-  .rail button { flex: 1 0 52px; }
-  .rail-sep { display: none; }
+  .rail button { flex: 1 1 0; min-width: 0; padding: 7px 0 5px; font-size: 10px; }
+  .rail-sep, .rail-grow, #btn-help { display: none; }   /* shortcuts need a keyboard; 7 areas fit a phone */
   .bottom-left { bottom: 92px; }
 }
-@media (min-width: 900px) { .hint3d { max-width: calc(100vw - 600px); } }
+@media (min-width: 900px) { .hint3d { max-width: calc(100vw - 560px); } }
 
 /* Missing items in the material tab */
 .miss-card { margin-bottom: 10px; }
@@ -527,7 +532,7 @@ body.mode3d .tl-badge { position: fixed; z-index: 600; top: 112px; }
 .search input { width: 0; min-width: 0; padding: 5px 0; border: 0; background: transparent; opacity: 0; transition: width .18s, opacity .18s, padding .18s; }
 .search.open input { width: 220px; padding: 5px 8px; opacity: 1; background: rgba(0,0,0,.25); border: 1px solid var(--line-strong); }
 .search input:focus-visible { outline: none; border-color: var(--accent); }
-@media (max-width: 1250px) { #sel-panel, #schem-panel { top: 112px; } .dock { top: 64px !important; left: 12px !important; transform: none !important; } .pop { top: 112px !important; } .activity { top: 112px; } .hint3d { top: 112px; } #cam-panel { top: 156px; } }
+@media (max-width: 1250px) { #sel-panel, #schem-panel { top: 112px; } .dock { top: 64px !important; left: 12px !important; transform: none !important; } .pop { top: 112px !important; } .activity { top: 112px; } #cam-panel { top: 156px; } }
 
 /* Player at the bottom right */
 .player-chip { position: fixed; z-index: 1002; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 2px; padding: 3px; max-width: calc(50vw - 160px); }
@@ -563,7 +568,11 @@ body:not(.mode3d) .only3d { display: none !important; }
 .pop .hint { margin: 8px 0 0; }
 @media (max-width: 720px) {
   .search.open input { width: 140px; }
+  /* Phone: only the status dot (and head) under the bar; tap shows the details */
   .player-chip { bottom: auto; top: 112px; max-width: calc(100vw - 24px); }
+  .pc-main { padding: 4px; }
+  .pc-main span { font-size: 0; }
+  .pc-main span::before { margin-right: 0; }
   .pc-pop { bottom: auto; top: calc(100% + 6px); }
   .rail-head { display: none; }
   .leaflet-control-zoom { display: none; }

@@ -52,6 +52,18 @@ function onPlayer(p) {
   radarUpdate(state.player);
   statusText();
   followWorld(p);
+  startOnPlayer(p);
+}
+
+/* First start without a saved view: once the game is there, show the player instead of
+ * the whole recording (unless you moved the map yourself already). */
+const startView = { done: !!readHash() };
+map.on('dragstart', () => { startView.done = true; });
+$('#map').addEventListener('wheel', () => { startView.done = true; }, { passive: true });
+function startOnPlayer(p) {
+  if (startView.done || mode3d || !p || !p.active || p.server !== state.server || p.dim !== state.dim) return;
+  startView.done = true;
+  map.setView(toLatLng(p.x, p.z), Math.max(map.getZoom(), 1));
 }
 
 /* When you join another world or server in game, the viewer switches to it once
@@ -274,6 +286,7 @@ function readHash() {
 
 let view3d = null;
 let mode3d = false;
+const side3d = { reopen: false };
 
 async function set3d(on) {
   if (on === mode3d) return;
@@ -323,6 +336,9 @@ async function set3d(on) {
   mode3d = on;
   $('#btn-3d').classList.toggle('on', on);
   $('#btn-2d').classList.toggle('on', !on);
+  // The sidebar would cover a quarter of the 3D view: fold it away, bring it back in 2D
+  if (on && !$('#side').hidden) { side3d.reopen = true; toggleSide(false); }
+  else if (!on && side3d.reopen) { side3d.reopen = false; if ($('#side').hidden) toggleSide(true); }
   if (on) showHint3d();
   if (state.follow) setFollow(false);
   if (sel.on) setSelect(false);
@@ -338,9 +354,12 @@ function showHint3d() {
   const h = $('.hint3d');
   h.classList.remove('gone');
   clearTimeout(hint3dTimer);
-  hint3dTimer = setTimeout(() => h.classList.add('gone'), 8000);
+  hint3dTimer = setTimeout(() => h.classList.add('gone'), 5000);
 }
 $('.hint3d').addEventListener('mouseenter', showHint3d);
+document.addEventListener('keydown', (e) => {   // H: show the controls again
+  if (mode3d && (e.key === 'h' || e.key === 'H') && !e.target.closest('input, textarea, select')) showHint3d();
+});
 
 /* Minimap in 3D: small 2D map around the camera, the arrow shows the view direction */
 const mini = { map: null, layer: null, me: null, zoom: 0, timer: null, hidden: false };
