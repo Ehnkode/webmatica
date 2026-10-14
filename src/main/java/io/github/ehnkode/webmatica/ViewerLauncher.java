@@ -114,11 +114,21 @@ final class ViewerLauncher {
             return;
         }
         Path log = app.resolve("viewer.log");
+        List<String> venv = List.of(app.resolve(WINDOWS ? ".venv/Scripts/python.exe" : ".venv/bin/python").toString());
+        if (Files.isRegularFile(Path.of(venv.get(0)))) {
+            py = venv;                         // set up by an earlier start (see below)
+        }
         if (exec(app, log, py, "-c", "import numpy, PIL") != 0) {
             say(mc, "Viewer: installiere numpy und Pillow …", ChatFormatting.YELLOW, null);
             if (exec(app, log, py, "-m", "pip", "install", "--user", "-r", "requirements.txt") != 0) {
-                say(mc, "Viewer: numpy und Pillow ließen sich nicht installieren, Details in " + log, ChatFormatting.RED, null);
-                return;
+                // Newer Linux and Homebrew Python refuse --user ("externally managed", PEP 668):
+                // use a private environment next to the viewer instead
+                if (py.equals(venv) || exec(app, log, py, "-m", "venv", ".venv") != 0
+                        || exec(app, log, venv, "-m", "pip", "install", "-r", "requirements.txt") != 0) {
+                    say(mc, "Viewer: numpy und Pillow ließen sich nicht installieren, Details in " + log, ChatFormatting.RED, null);
+                    return;
+                }
+                py = venv;
             }
         }
 
@@ -212,8 +222,13 @@ final class ViewerLauncher {
             cmd.add("import sys; print(sys.version_info >= (3, 10))");
             try {
                 Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+                // Wait first: reading to the end would block forever on a hanging stub
+                if (!p.waitFor(20, TimeUnit.SECONDS)) {
+                    p.destroyForcibly();
+                    continue;
+                }
                 String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
-                if (p.waitFor(20, TimeUnit.SECONDS) && p.exitValue() == 0 && out.endsWith("True")) {
+                if (p.exitValue() == 0 && out.endsWith("True")) {
                     return c;
                 }
             } catch (IOException | InterruptedException ignored) {
