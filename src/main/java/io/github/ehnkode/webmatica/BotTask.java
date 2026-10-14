@@ -90,6 +90,7 @@ abstract class BotTask<P extends Enum<P>> {
     protected void report(boolean ok, String msg) {
         actionbar(Minecraft.getInstance(), msg, ok ? ChatFormatting.GREEN : ChatFormatting.RED);
         BaritoneBridge.report(id, ok, msg);
+        Walker.stop();
         phase = idle;
         opened = null;
     }

@@ -110,7 +110,7 @@ Wegpunkt, Hinlaufen, Kiste …	Waypoint, walk there, chest …
 Rechtsklick auf die Karte setzt einen Wegpunkt.	Right-click the map to set a waypoint.
 Noch keine Wegpunkte in dieser Dimension.	No waypoints in this dimension yet.
 Hinlaufen	Walk there
-Hierhin laufen (Baritone)	Walk here (Baritone)
+Hierhin laufen	Walk here
 Hinfliegen	Fly there
 Hierher	Here
 Auf der Karte zeigen	Show on map
@@ -280,8 +280,8 @@ Stellt Litematica immer auf die unterste Schicht, in der noch Blöcke fehlen, un
 rechnet …	calculating …
 Automatik läuft für eine andere Schematic	Automatic mode is running for another schematic
 Printer	Printer
-Printer AN, klicken zum Ausschalten	Printer ON, click to turn off
-Printer aus, klicken zum Einschalten	Printer off, click to turn on
+Printer an	Printer on
+Printer aus	Printer off
 Printer: nicht verbunden	Printer: not connected
 Printer: ?	Printer: ?
 Printer {}	Printer {}
@@ -637,7 +637,7 @@ kein Skin	no skin
 Kein Skin von der Mod: einmalig per Spielername holen (mc-heads.net).	No skin from the mod: fetch it once by player name (mc-heads.net).
 # --- messages from the mod (shown in the viewer)
 Baritone nicht gefunden	Baritone not found
-Baritone findet keinen Weg zur Kiste, ohne etwas abzubauen	Baritone finds no path to the chest without breaking blocks
+Kein Weg zur Kiste gefunden, ohne etwas abzubauen	No path to the chest found without breaking blocks
 Baritone hat „{}“ abgelehnt	Baritone rejected "{}"
 Baritone hat "{}" abgelehnt	Baritone rejected "{}"
 Schematic ist nicht in Litematica (erst "Ins Spiel")	Schematic is not in Litematica (turn on "In game" first)
@@ -699,7 +699,7 @@ Block	Block
 richtig	correct
 wartet	waiting
 Blöcke	blocks
-Baritone stoppen	Stop Baritone
+Laufen stoppen	Stop walking
 Ein-/Ausblenden	Show/hide
 Liste als Text kopieren	Copy list as text
 Abhaken	Tick off
@@ -1161,3 +1161,59 @@ wartet, bis die Aufnahme die Baustelle gespeichert hat …	waiting until the rec
 {} Blöcke der Schematic wurden noch nie aufgezeichnet (Aufnahme an? Einmal über die Baustelle laufen, dann neu starten)	{} blocks of the schematic were never recorded (recording on? Walk over the site once, then restart)
 pausiert: Aufnahme ist aus (im Spiel F9 drücken)	paused: recording is off (press F9 in game)
 {} Blöcke abbauen	Break {} blocks
+# --- Webmatica printer and server-safe
+Litematica Printer	Litematica Printer
+Setzt die Blöcke der Schematics mit „Ins Spiel“, sobald du in der Nähe bist, Schicht für Schicht von unten. Braucht kein Litematica. Eine Taste dafür kannst du im Spiel unter Steuerung belegen.	Places the blocks of the schematics set to “In game” as soon as you are near them, layer by layer from the bottom. Doesn't need Litematica. You can bind a key for it in game under Controls.
+Blöcke pro Sekunde	Blocks per second
+Mit Server-safe höchstens 5	At most 5 with server-safe
+{} (Server-safe)	{} (server-safe)
+an, server-safe	on, server-safe
+an	on
+Spiel meldet sich noch nicht	Game hasn't reported yet
+Keine Schematic ist „Ins Spiel“ geschaltet	No schematic is set to “In game”
+{} gesetzt	{} placed
+{} offen in der Nähe	{} open nearby
+{} falsche Blöcke im Weg (werden nicht abgebaut)	{} wrong blocks in the way (not broken)
+{} gerade nicht erreichbar oder nur mit anderer Blickrichtung	{} out of reach right now or only from another look direction
+{} ohne Halt	{} with nothing to place against
+fehlt: {}	missing: {}
+Server-safe	Server-safe
+Server-safe auf diesem Server	Server-safe on this server
+Für öffentliche Server: schaltet ab, was dort meist verboten ist (Baritone, Autobau, Farmen, Ebnen, Holen und Einlagern, X-Ray, einen installierten Litematica Printer). Der Printer setzt dann nur, was du auch von Hand könntest: keine vorgetäuschte Blickrichtung, nur sichtbare Flächen, normale Reichweite, nur aus der Hotbar, höchstens 5 Blöcke pro Sekunde. Wird pro Server gespeichert.	For public servers: turns off what is usually forbidden there (Baritone, auto-build, farming, flattening, fetching and storing, X-ray, an installed Litematica Printer). The printer then only places what you could place by hand: no faked look direction, only visible faces, normal reach, only from the hotbar, at most 5 blocks per second. Saved per server.
+X-Ray ist aus (Server-safe)	X-ray is off (server-safe)
+Erst eine Welt wählen	Choose a world first
+Server-safe an: Bot-Funktionen und X-Ray sind aus	Server-safe on: bot features and X-ray are off
+Server-safe aus	Server-safe off
+Server-safe: {}	Server-safe: {}
+Server-safe ist an: X-Ray ist aus (Optionen)	Server-safe is on: X-ray is off (options)
+Server-safe ist an: Bot-Funktionen sind aus (Optionen)	Server-safe is on: bot features are off (options)
+gestoppt (Server-safe eingeschaltet)	stopped (server-safe turned on)
+gestoppt (Server-safe ist an)	stopped (server-safe is on)
+Server-safe AN: Bot-Funktionen aus	Server-safe ON: bot features off
+Server-safe AUS	Server-safe OFF
+Server-safe ist an: Bot-Funktionen sind aus	Server-safe is on: bot features are off
+Litematica Printer aus (Server-safe)	Litematica Printer off (server-safe)
+Litematica Printer aus (Webmatica-Printer läuft)	Litematica Printer off (Webmatica printer is running)
+Printer AN	Printer ON
+Printer AUS	Printer OFF
+Spiel verbunden, meldet sich noch nicht	Game connected, not reporting yet
+Baritone kommt nicht weiter, eigene Engine läuft weiter	Baritone is stuck, the own engine takes over
+Baritone steckt fest, eigene Engine läuft weiter	Baritone is stuck, the own engine takes over
+Wer läuft beim Holen, Einlagern, Einsammeln und Hinlaufen über die Karte	Who walks when fetching, storing, collecting and going somewhere from the map
+Laufen mit	Walk with
+Automatisch	Automatic
+Immer eigene Engine	Always own engine
+Nur Baritone	Baritone only
+Automatisch: Baritone, wenn installiert. Fehlt Baritone oder steckt es fest, läuft die eigene Engine. Die gräbt nie und baut nichts, Abbauen beim Farmen und Ebnen braucht weiter Baritone.	Automatic: Baritone if installed. If Baritone is missing or stuck, the own engine walks. It never digs or builds; breaking blocks for farming and flattening still needs Baritone.
+eigene Engine	own engine
+nur Baritone	Baritone only
+Baritone läuft nach {} {} {}	Baritone walking to {} {} {}
+Baritone läuft nach {} {}	Baritone walking to {} {}
+läuft nach {} {} {}	walking to {} {} {}
+läuft nach {} {}	walking to {} {}
+Spieler ist nicht online	Player is not online
+Läuft nach {} {} …	Walking to {} {} …
+Wird gestoppt …	Stopping …
+Holt die Items …	Fetching the items …
+Lagert die Items ein …	Storing the items …
+Unterwegs	On the way
