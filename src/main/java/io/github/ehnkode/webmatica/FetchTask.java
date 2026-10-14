@@ -99,11 +99,11 @@ public final class FetchTask extends BotTask<FetchTask.Phase> {
         } else {
             try {
                 BaritoneSafety.walkOnly();
-                BaritoneApi.walkTo(pos);
+                Walker.walkTo(pos);
                 setPhase(Phase.WALK);
                 actionbar(mc, "läuft zur Kiste bei " + pos.getX() + " " + pos.getY() + " " + pos.getZ(), ChatFormatting.AQUA);
-            } catch (ClassNotFoundException e) {
-                finish(false, "Baritone nicht gefunden");
+            } catch (IllegalStateException e) {
+                finish(false, e.getMessage());
             } catch (Throwable t) {
                 Throwable c = t.getCause() != null ? t.getCause() : t;
                 finish(false, "Baritone: " + c.getClass().getSimpleName() + ": " + c.getMessage());
@@ -125,21 +125,22 @@ public final class FetchTask extends BotTask<FetchTask.Phase> {
         switch (phase) {
             case WALK -> {
                 if (near(p)) {
-                    BaritoneApi.stop();
+                    Walker.stop();
                     setPhase(Phase.OPEN);
                 } else if (age > 180_000L) {
-                    BaritoneApi.stop();
+                    Walker.stop();
                     finish(false, "Kiste nicht erreicht (3 min)");
-                } else if (age > 3000L && !BaritoneApi.goalActive()) {
-                    // Baritone is done but too far away: try once more, then give up
+                } else if (age > 3000L && !Walker.active()) {
+                    // the walk ended too far away: try again (in auto mode the own engine
+                    // takes over from Baritone), then give up
                     if (openTries++ < 2) {
                         try {
-                            BaritoneApi.walkTo(pos);
+                            Walker.walkTo(pos);
                         } catch (Throwable ignored) {
                         }
                         phaseStart = System.currentTimeMillis() - 1000L;
                     } else {
-                        finish(false, "Baritone findet keinen Weg zur Kiste, ohne etwas abzubauen");
+                        finish(false, "Kein Weg zur Kiste gefunden, ohne etwas abzubauen");
                     }
                 }
             }

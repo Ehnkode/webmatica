@@ -204,13 +204,13 @@ public final class UnpackTask extends BotTask<UnpackTask.Phase> {
                     walked = true;
                     try {
                         BaritoneSafety.walkOnly();
-                        BaritoneApi.walkTo(placed);
+                        Walker.walkTo(placed);
                     } catch (Throwable ignored) {
                     }
                 }
                 if (back || age > 12_000L) {
                     if (walked) {
-                        BaritoneApi.stop();
+                        Walker.stop();
                         BaritoneSafety.restore();
                     }
                     finish(taken > 0, back ? null : "Shulker liegt noch am Boden bei "

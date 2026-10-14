@@ -17,7 +17,10 @@ import threading
 import time
 import uuid
 
+import numpy as np
+
 from .core import schematic as sch
+from .core.chunk import BLOCKS
 from .core.mesher import MAGIC, mesh_volume
 from .core.models import MODELS
 
@@ -237,6 +240,50 @@ class Placements:
                 "mirror": "FRONT_BACK" if mirror else "NONE", "mtime": int(os.path.getmtime(p) * 1000),
             })
         return out
+
+    # ---------------------------------------------------------------- Webmatica printer
+
+    def printer_blocks(self, server: str, dim: str, x: int, y: int, z: int, r: int = 8) -> dict:
+        """Target blocks of the "In game" placements in a cube around the player.
+
+        For the mod's own printer: ``palette`` holds block states as
+        ``minecraft:oak_stairs[facing=north,half=bottom]``, ``blocks`` is a flat
+        list ``x, y, z, palette index, ...``. Air is left out; where placements
+        overlap, the later one wins (as in the 3D view).
+        """
+        r = max(1, min(12, int(r)))
+        palette: list[str] = []
+        index: dict[int, int] = {}
+        found: dict[tuple, int] = {}
+        for pl in self._read():
+            if not pl.get("ingame") or pl.get("server") != server or pl.get("dim", "overworld") != dim:
+                continue
+            try:
+                s = self.schem(pl["file"], pl.get("rot", 0), pl.get("mirror", False))
+            except Exception:
+                continue
+            W, H, L = s.size
+            x0, y0, z0 = pl["x"], pl["y"], pl["z"]
+            ax, bx = max(x - r, x0), min(x + r, x0 + W - 1)
+            ay, by = max(y - r, y0), min(y + r, y0 + H - 1)
+            az, bz = max(z - r, z0), min(z + r, z0 + L - 1)
+            if ax > bx or ay > by or az > bz:
+                continue
+            part = s.blocks[ay - y0:by - y0 + 1, az - z0:bz - z0 + 1, ax - x0:bx - x0 + 1]
+            for sid in np.unique(part):
+                sid = int(sid)
+                if sid not in index and not sch._is_air(BLOCKS.names[sid]):
+                    index[sid] = len(palette)
+                    palette.append(BLOCKS.names[sid])
+            ys, zs, xs = np.nonzero(part)
+            for yy, zz, xx in zip(ys.tolist(), zs.tolist(), xs.tolist()):
+                i = index.get(int(part[yy, zz, xx]))
+                if i is not None:
+                    found[(ax + xx, ay + yy, az + zz)] = i
+        flat: list[int] = []
+        for (bx_, by_, bz_), i in found.items():
+            flat += (bx_, by_, bz_, i)
+        return {"palette": palette, "blocks": flat}
 
     # ---------------------------------------------------------------- Evaluation
 

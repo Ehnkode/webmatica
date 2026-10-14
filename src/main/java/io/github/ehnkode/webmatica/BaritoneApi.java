@@ -73,8 +73,16 @@ final class BaritoneApi {
         goal("baritone.api.pathing.goals.GoalBlock", target);
     }
 
+    /** Walk to x/z, any height. */
+    static void walkXZ(int x, int z) throws Exception {
+        setGoal(Class.forName("baritone.api.pathing.goals.GoalXZ").getConstructor(int.class, int.class).newInstance(x, z));
+    }
+
     private static void goal(String goalClass, BlockPos target) throws Exception {
-        Object goal = Class.forName(goalClass).getConstructor(BlockPos.class).newInstance(target);
+        setGoal(Class.forName(goalClass).getConstructor(BlockPos.class).newInstance(target));
+    }
+
+    private static void setGoal(Object goal) throws Exception {
         Class.forName("baritone.api.process.ICustomGoalProcess")
                 .getMethod("setGoalAndPath", Class.forName("baritone.api.pathing.goals.Goal"))
                 .invoke(part("getCustomGoalProcess"), goal);
