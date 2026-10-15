@@ -39,5 +39,4 @@ prefix the command with `xvfb-run -a`.
 | printer-orient | logs, stairs (all directions, upside down), slabs, furnaces |
 
 A scenario fails on damage, fire or lava contact, wrong or missing blocks, or a
-timeout. The scenarios live in `AutoTest.java`; the idea comes from
-[Test-RTS](https://github.com/NotARainb0w/Test-RTS) (MIT), the code is our own.
+timeout. The scenarios live in `AutoTest.java`;
