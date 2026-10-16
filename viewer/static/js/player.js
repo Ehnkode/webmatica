@@ -371,6 +371,7 @@ async function set3d(on) {
   if (farmUi.pick3d) pick3dStop();
   renderPickLabel();
   drawFarmArea();
+  gameSel(state.player, true);
   schedulePlayer();
 }
 

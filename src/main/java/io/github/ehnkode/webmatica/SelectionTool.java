@@ -6,9 +6,11 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.gizmos.GizmoStyle;
+import net.minecraft.gizmos.Gizmos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -18,17 +20,19 @@ import net.minecraft.world.phys.Vec3;
  * sets the first corner, right click the second, the mouse wheel pushes the side you look at
  * outwards or back in (sprint key = 8 blocks). Sneaking takes the air block in front of the face.
  * While the mode is on, clicks never reach the server, so nothing gets broken or placed by
- * accident. The box is drawn with particles and sent to the viewer with the position.
+ * accident. The box is drawn as a frame through walls and sent to the viewer with the position.
  */
 final class SelectionTool {
     private static final double RANGE = 160;
     private static final int[] DIM_Y_OVERWORLD = {-64, 319};
+    private static final int FRAME = 0xFF3FD88A;
+    private static final int CORNER = 0xFFFFFFFF;
+    private static final int CORNER_FILL = 0x403FD88A;
 
     private static boolean active;
     private static BlockPos p1;
     private static BlockPos p2;
     private static String dim = "";
-    private static int tick;
 
     private SelectionTool() {
     }
@@ -182,37 +186,19 @@ final class SelectionTool {
                 : new int[] {mc.level.getMinY(), mc.level.getMaxY()};
     }
 
-    /** End of the client tick: draw the box. */
+    /**
+     * End of the client tick (inside the game's per-tick gizmo collection): the box as a line
+     * frame that shows through walls, like Baritone's selection, and the two corner blocks.
+     */
     static void tick(Minecraft mc) {
         int[] b = box(mc);
-        if (b == null || mc.player == null || ++tick % 10 != 0) {
+        if (b == null || mc.player == null) {
             return;
         }
-        double x0 = b[0], y0 = b[1], z0 = b[2], x1 = b[3] + 1, y1 = b[4] + 1, z1 = b[5] + 1;
-        double len = 4 * ((x1 - x0) + (y1 - y0) + (z1 - z0));
-        double step = Math.max(0.5, len / 300);
-        double[][] edges = {
-                {x0, y0, z0, x1, y0, z0}, {x0, y1, z0, x1, y1, z0}, {x0, y0, z1, x1, y0, z1}, {x0, y1, z1, x1, y1, z1},
-                {x0, y0, z0, x0, y1, z0}, {x1, y0, z0, x1, y1, z0}, {x0, y0, z1, x0, y1, z1}, {x1, y0, z1, x1, y1, z1},
-                {x0, y0, z0, x0, y0, z1}, {x1, y0, z0, x1, y0, z1}, {x0, y1, z0, x0, y1, z1}, {x1, y1, z0, x1, y1, z1},
-        };
-        Vec3 me = mc.player.position();
-        for (double[] e : edges) {
-            double l = Math.abs(e[3] - e[0]) + Math.abs(e[4] - e[1]) + Math.abs(e[5] - e[2]);
-            int n = Math.max(1, (int) Math.ceil(l / step));
-            for (int i = 0; i <= n; i++) {
-                double f = (double) i / n;
-                double x = e[0] + (e[3] - e[0]) * f, y = e[1] + (e[4] - e[1]) * f, z = e[2] + (e[5] - e[2]) * f;
-                double dx = x - me.x, dz = z - me.z;
-                if (dx * dx + dz * dz > 128 * 128) {
-                    continue;
-                }
-                mc.level.addParticle(ParticleTypes.END_ROD, true, true, x, y, z, 0.0, 0.0, 0.0);
-            }
-        }
+        Gizmos.cuboid(new AABB(b[0], b[1], b[2], b[3] + 1, b[4] + 1, b[5] + 1), GizmoStyle.stroke(FRAME, 2.5f)).setAlwaysOnTop();
         for (BlockPos c : new BlockPos[] {p1, p2}) {
             if (c != null) {
-                mc.level.addParticle(ParticleTypes.HAPPY_VILLAGER, true, true, c.getX() + 0.5, c.getY() + 0.5, c.getZ() + 0.5, 0, 0, 0);
+                Gizmos.cuboid(c, 0.02f, GizmoStyle.strokeAndFill(CORNER, 2.0f, CORNER_FILL)).setAlwaysOnTop();
             }
         }
     }
