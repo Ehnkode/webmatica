@@ -335,7 +335,6 @@ async function set3d(on) {
     $('#view3d').hidden = false;
     document.body.classList.add('mode3d');
     applySight(Number($('#sight3d').value));
-    view3d.setFog($('#fog3d').checked);
     view3d.setHour(Number($('#hour3d').value));
     view3d.setFancy($('#fancy3d').checked);
     view3d.setClip(cut.mode, cut.y);
@@ -534,14 +533,11 @@ $('#fancy3d').addEventListener('change', (e) => {
   $('#hour3d-wrap').hidden = !e.target.checked;
   if (view3d) view3d.setFancy(e.target.checked);
 });
-$('#fog3d').checked = !!prefs.fog3d;
-$('#fog3d').addEventListener('change', (e) => { savePref('fog3d', e.target.checked); if (view3d) view3d.setFog(e.target.checked); });
 $('#shot3d').addEventListener('click', () => {
   if (!view3d) return;
   const a = Object.assign(document.createElement('a'), { href: view3d.screenshot(), download: `webmatica-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png` });
   document.body.append(a); a.click(); a.remove();
 });
-$('#full3d').addEventListener('change', (e) => view3d && view3d.setFull(e.target.checked));
 // Mob spawns: just a toggle, not saved
 $('#spawn3d').addEventListener('change', (e) => {
   $('#spawn3d-legend').hidden = !e.target.checked;

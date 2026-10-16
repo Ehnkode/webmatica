@@ -514,6 +514,11 @@ public final class Mesher {
      * meshed like chunks; positions relative to corner (0, 0, 0).
      */
     public static byte[] meshVolume(char[] blocks, int w, int h, int l) {
+        return meshVolume(blocks, w, h, l, null);
+    }
+
+    /** yMax: layer cut, only blocks up to this height, with the cut face drawn closed (like /api/mesh). */
+    public static byte[] meshVolume(char[] blocks, int w, int h, int l, Integer yMax) {
         int nz = (l + 15) / 16, nx = (w + 15) / 16;
         int plains = Chunk.BIOMES.id("minecraft:plains");
         Map<Long, Chunk> cols = new HashMap<>();
@@ -549,7 +554,7 @@ public final class Mesher {
                     nb.put(k(dd[0], dd[1]), c);
                 }
             }
-            Pass[] parts = meshParts(cols.get(Tiles.key(i, j)), nb, 0, null, false, false);
+            Pass[] parts = meshParts(cols.get(Tiles.key(i, j)), nb, 0, yMax, false, false);
             for (int p = 0; p < 3; p++) {
                 merged[p].append(parts[p], i * 16, j * 16);
             }

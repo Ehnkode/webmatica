@@ -2,7 +2,7 @@
 import './sidebar.js';   // runs before this file (load order, see index.html)
 import { $, api, esc, fromLatLng, map, overlay, state, toast, toLatLng } from './core.js';
 import { fillGotoList, toggleSide } from './sidebar.js';
-import { setFollow, view3d } from './player.js';
+import { mode3d, set3d, setFollow, view3d } from './player.js';
 import { jsonPost, selectSchem } from './schematics.js';
 import { itemPin, itemsMeta } from './chests.js';
 import { AB_PHASE } from './automation.js';
@@ -212,14 +212,42 @@ function drawMarkers() {
     for (const s of stashes) {
       const r = Math.min(26, 6 + Math.sqrt(s.count) * 2);
       L.circleMarker(toLatLng(s.cx * 16 + 8, s.cz * 16 + 8), { radius: r, color: '#f5a524', weight: 2, fillOpacity: 0.25 })
-        .bindPopup(stashText(s)).addTo(overlay.stashes);
+        .bindPopup(() => stashPopup(s)).addTo(overlay.stashes);
     }
   }
   $('#stash-list').innerHTML = stashes.length ? stashes.slice(0, 500).map((s) => `
     <li data-x="${s.cx * 16 + 8}" data-z="${s.cz * 16 + 8}"><div class="main"><div class="title">${s.count} Behälter</div>
     <div class="sub">${esc(Object.entries(s.types).map(([k, v]) => `${v}× ${k}`).join(', '))}</div>
-    <div class="sub mono">Chunk ${s.cx} ${s.cz} · Block ${s.cx * 16 + 8} ${s.cz * 16 + 8}</div></div></li>`).join('')
+    <div class="sub mono">Chunk ${s.cx} ${s.cz} · Block ${s.cx * 16 + 8} ${s.cz * 16 + 8}</div></div>
+    <button data-walk title="Baritone läuft hin">Hinlaufen</button><button data-fly title="In 3D hinfliegen und ansehen">3D</button></li>`).join('')
     : '<li class="empty">Nichts über der Schwelle.</li>';
+}
+
+/* Popup on the map: what it is, plus walk there or look at it in 3D */
+function stashPopup(s) {
+  const x = s.cx * 16 + 8, z = s.cz * 16 + 8;
+  const d = document.createElement('div');
+  d.innerHTML = `${stashText(s)}<div class="ctx-btns"><button data-walk>Hinlaufen</button><button data-fly>In 3D ansehen</button></div>`;
+  d.addEventListener('click', (e) => {
+    if (e.target.closest('[data-walk]')) { map.closePopup(); baritone({ kind: 'goto', x, z }); }
+    else if (e.target.closest('[data-fly]')) { map.closePopup(); flyTo3d(x, z); }
+  });
+  return d;
+}
+
+/* Switch to 3D (if needed) and fly to a spot, above the highest recorded block there */
+async function flyTo3d(x, z) {
+  let y = 64;
+  try {
+    const c = await api('/api/column?' + new URLSearchParams({ srv: state.server, dim: state.dim, layer: state.layer, x, z }));
+    if (c.y !== undefined) y = c.y;
+  } catch (_) { /* height unknown */ }
+  setFollow(false);
+  if (!mode3d) {
+    map.setView(toLatLng(x, z), Math.max(map.getZoom(), 0));
+    await set3d(true);
+  }
+  if (view3d) view3d.flyTo(x + 0.5, y, z + 0.5);
 }
 
 function stashText(s) {
@@ -231,8 +259,11 @@ function stashText(s) {
 ['#sign-list', '#stash-list'].forEach((s) => $(s).addEventListener('click', (e) => {
   const li = e.target.closest('li[data-x]');
   if (!li) return;
+  const x = Number(li.dataset.x), z = Number(li.dataset.z);
+  if (e.target.closest('[data-walk]')) { baritone({ kind: 'goto', x, z }); return; }
+  if (e.target.closest('[data-fly]')) { flyTo3d(x, z); return; }
   setFollow(false);
   map.setView(toLatLng(Number(li.dataset.x), Number(li.dataset.z)), Math.max(map.getZoom(), 1));
 }));
 
-export { autoBadge, baritone, drawMarkers, drawWaypoints, loadMarkers, loadWaypoints };
+export { autoBadge, baritone, drawMarkers, drawWaypoints, flyTo3d, loadMarkers, loadWaypoints };

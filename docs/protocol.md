@@ -94,7 +94,7 @@ The code for each one is in `viewer/Routes.java` (search for the path).
 ```
 GET  /                                   UI
 GET  /api/worlds                         servers, dimensions, layers
-GET  /api/tile/<srv>/<dim>/<layer>/<z>/<x>/<y>.png[?at=YYYY-MM-DD|raw=1]   (at: state on that day, changed chunks only; raw: without shading)
+GET  /api/tile/<srv>/<dim>/<layer>/<z>/<x>/<y>.png[?at=YYYY-MM-DD|raw=1|water=1]   (at: state on that day, changed chunks only; raw: without shading; water: mask of the water, zoom 0 only)
 GET  /api/changes?srv=&dim=&since=       regions changed since <since>
 GET  /api/column?srv=&dim=&x=&z=&layer=  top block, height, biome at a spot
 GET  /api/markers?srv=&dim=&layer=       signs + containers per chunk
@@ -108,6 +108,7 @@ GET  /api/schematics?srv=&dim=           placed schematics
 GET  /api/schematics/library             schematic files in the folders
 GET  /api/schematics/<id>/mesh|materials|verify
 POST /api/schematics/place|update|delete
+POST /api/schematics/trash {file}        remove a library file (moved to .viewer/papierkorb, its placements unloaded)
 POST /api/schematics/upload?name=        upload a file (raw data)
 GET  /api/litematica?srv=                placements with "In game" for the mod
 POST /api/litematica/status              mod reports what arrived in Litematica
@@ -135,7 +136,8 @@ GET  /api/spawn-tile/<srv>/<dim>/<rx>/<rz>.png[?ymax=]   the same as a 2D overla
 POST /api/fix {srv, pid, extra}          have wrong/rotated (and extra) blocks broken
 GET  /api/radar?srv=                     log: who was within view distance when
 GET  /editor?file=                       schematic editor (separate page)
-GET  /api/editor/blocks|voxels|mesh|info editor data   POST /api/editor/open|new|cut|edit|undo|redo|save|discard
+GET  /api/editor/blocks|voxels|mesh|info editor data (mesh: ?yhi= cut with closed top)
+GET  /api/editor/blockmesh?state=        mesh of a single block (preview at the mouse pointer)   POST /api/editor/open|new|cut|edit|undo|redo|save|discard
 GET  /api/mesh/<srv>/<dim>/<cx>/<cz>     3D chunk [?full=1 caves, ylo/yhi layer cut, xray=a,b only those blocks, at=YYYY-MM-DD state on that day]
 GET  /api/xray/names                     block names for the X-ray search
 GET  /api/xray/find?srv=&dim=&x=&z=&r=&b=a,b   searched blocks around x/z (r chunks) for the 2D map

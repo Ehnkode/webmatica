@@ -267,9 +267,11 @@ ol.pack li { margin-bottom: 3px; }
 .item-grid .cell:hover, .item-grid .cell.sel { border-color: var(--accent); }
 .item-grid .cell .n { position: absolute; right: 3px; bottom: 1px; font: 600 11px/1 ui-monospace, monospace; color: #fff; text-shadow: 1px 1px 0 #000; }
 #ct-where h4 { margin: 8px 0 4px; display: flex; align-items: center; gap: 6px; }
-#inv-win { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; }
+/* Anchored at the top and as wide as the slot grid: buttons appearing in the footer (Holen …) must not
+   move the slots, otherwise the second click of a double click lands on the neighbouring slot. */
+#inv-win { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.45); display: flex; align-items: flex-start; justify-content: center; padding-top: max(16px, 8vh); overflow-y: auto; }
 #inv-win[hidden] { display: none; }
-.inv-box { background: #c6c6c6; color: #3f3f3f; border: 3px solid; border-color: #fff #555 #555 #fff; border-radius: 4px; padding: 10px 12px 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); max-width: calc(100vw - 32px); }
+.inv-box { background: #c6c6c6; color: #3f3f3f; border: 3px solid; border-color: #fff #555 #555 #fff; border-radius: 4px; padding: 10px 12px 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); max-width: calc(100vw - 32px); width: min-content; }
 .inv-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .inv-head b { flex: 1; font: 600 15px/1.2 system-ui, sans-serif; color: #3f3f3f; }
 .inv-head button, .inv-foot button { background: #8b8b8b; color: #fff; border: 2px solid; border-color: #c6c6c6 #373737 #373737 #c6c6c6; border-radius: 2px; padding: 2px 10px; }
@@ -280,7 +282,9 @@ ol.pack li { margin-bottom: 3px; }
 .inv-grid .slot:hover { background: #a8a8a8; }
 .inv-grid .slot .n { position: absolute; right: 1px; bottom: 0; font: 700 13px/1 ui-monospace, monospace; color: #fff; text-shadow: 2px 2px 0 #3f3f3f; }
 .inv-grid .slot.hit { outline: 2px solid #ffd23f; outline-offset: -2px; }
-.inv-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; font-size: 12px; }
+.inv-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 10px; margin-top: 8px; font-size: 12px; }
+.inv-foot > span:last-child { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.inv-foot button { white-space: nowrap; }
 #inv-tip { position: fixed; z-index: 2100; pointer-events: none; background: #100010f0; color: #fff; border: 2px solid #2d0a63; border-radius: 4px; padding: 5px 8px; font-size: 13px; max-width: 280px; }
 #inv-tip .nm { color: #55ffff; font-style: italic; }
 #inv-tip .row { display: flex; align-items: center; gap: 6px; color: #aaa; font-size: 12px; }
@@ -647,3 +651,18 @@ body.xray-on:not(.mode3d) #map .leaflet-tile-pane { filter: brightness(0.38) sat
 .chk-fix.armed { border: 1px solid var(--danger); border-radius: 10px; padding: 8px 10px; margin: 8px 0; background: color-mix(in srgb, var(--danger) 10%, transparent); }
 .chk-fix.armed p { margin: 0 0 8px; }
 button.link { border: 0; background: transparent; color: var(--accent); padding: 4px 0; }
+.ctx-btns { display: flex; gap: 6px; margin-top: 8px; }
+/* Moving water on the map (js/world.js): ripples masked to the water, blended onto the tiles.
+   Sizes in % of the 512-block tile, so the ripples stay one texel per block at every zoom:
+   the pattern repeats every 32 blocks (6.25 %), the inner layers are one period larger and
+   slide by exactly one period, so the loop and the tile edges are seamless. */
+.water-layer { mix-blend-mode: soft-light; pointer-events: none; }
+.water-tile { overflow: hidden; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+.water-tile i { position: absolute; left: 0; top: 0; width: 106.25%; height: 106.25%; background-size: 5.882% 5.882%;
+  image-rendering: pixelated; opacity: 0.7; will-change: transform; }
+.water-tile .wa { background-image: var(--ripple-a); animation: water-a 11s linear infinite; }
+.water-tile .wb { background-image: var(--ripple-b); opacity: 0.5; animation: water-b 7s linear infinite; }
+@keyframes water-a { from { transform: translate(0, 0); } to { transform: translate(-5.882%, -5.882%); } }
+@keyframes water-b { from { transform: translate(-5.882%, 0); } to { transform: translate(0, -5.882%); } }
+@media (prefers-reduced-motion: reduce) { .water-tile i { animation: none; } }
+body.xray-on .water-layer { display: none; }
