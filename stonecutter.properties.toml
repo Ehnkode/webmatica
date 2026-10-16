@@ -1,4 +1,4 @@
-mod.version = "0.8.1"
+mod.version = "0.9.0"
 mod.group = "io.github.ehnkode"
 deps.fabric_loader = "0.19.5"
 

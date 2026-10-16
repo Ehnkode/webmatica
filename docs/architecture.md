@@ -12,7 +12,7 @@ version differences live in `Mc.java` and `//?` comments.
 
 | file | job |
 |---|---|
-| `MapperClient` | entry point: keys (F9), ticks, world change |
+| `MapperClient` | entry point: keys (F8, F9, F10, B), ticks, world change |
 | `RegionStore`, `ChunkSnapshot`, `WorldChunkMixin`, `RecordingTarget` | write seen chunks as region files, one folder per world |
 | `PositionReporter` | POST /api/position several times a second (position, inventory, mods found, other players) |
 | `ContainerTracker`, `ChestLidTracker` | chest contents when opened, lids opened by others |
@@ -28,8 +28,11 @@ version differences live in `Mc.java` and `//?` comments.
 | `NativeWalker` | own walking: A* over standable spots (step up 1, drop 3, never digs or places), follows the path with the movement keys |
 | `BaritoneSafety` | walk without breaking blocks unless the guard allows digging; restore Baritone's settings |
 | `AutoGuard` | eat and save tools while an automation runs; pause and resume |
-| `LitematicaBridge`, `Highlighter` | placements into Litematica (reflection), particles on chests |
+| `LitematicaBridge`, `Highlighter` | placements into Litematica (reflection), marked chests as boxes through walls |
 | `ViewerLauncher` | F10: builds the block images on first use, starts the viewer server, opens the browser |
+| `WebmaticaScreen`, `ChestSearchScreen`, `SettingsScreen`, `SelectionScreen`, `WmScreen`, `Gfx` | the in-game menu (F8, `/wm` in `WmCommand`); `Gfx` hides the drawing API differences between versions |
+| `SelectionTool` | in-game selection (B): takes the attack/use clicks at the start of the tick, the wheel through `MouseScrollMixin`, draws the frame as gizmos, sends the box with the position |
+| `ChestIndex`, `ChestTooltip`, `JobStatus`, `JobHud`, `IngameConfig` | chest search data, "In chests" tooltip and hotbar line, the job box on screen, `config/webmatica.json` |
 
 Baritone and Litematica are optional: they are only touched through reflection,
 so the mod runs without them.
