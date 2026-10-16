@@ -23,10 +23,15 @@ Litematica and Baritone. Works on any server or Singleplayer.
 | ![Click a chest to see its contents, search all chests](docs/storage.gif) | ![Place a schematic in the world and move it](docs/place.gif) |
 | ![Cutting through a schematic layer by layer](docs/editor-cut.gif) | ![Building a house in the schematic editor](docs/build.gif) |
 
-- **Map and 3D** of everything you have seen, with real block models, smooth light, shadows and a
-  far view of up to 65,000 blocks. Live position, trail, follow camera and mob spawn spots.
-- **Schematic editor:** place, break and fill blocks, replace or delete every block of a type, copy,
-  move and rotate, with undo. Any area of your world becomes a schematic with two clicks.
+- **Map and 3D** of everything you have seen, with real block models, smooth light, shadows, moving
+  water and a far view of up to 65,000 blocks. The map has soft relief shading (or the classic
+  vanilla look). Live position, trail, follow camera and mob spawn spots.
+- **Selecting areas:** drag on the map and pick the height, or in 3D like in Axiom: left click
+  sets the first corner, right click the second, the mouse wheel grows the area in the direction
+  you look. Air blocks included.
+- **Schematic editor:** place, replace (with air = remove) and fill blocks, replace or delete every
+  block of a type, copy, move and rotate, with undo. Cut it open layer by layer. Any area of your
+  world becomes a schematic with two clicks.
 - **Schematics:** load `.litematic`, `.schem` or `.nbt`, place them on the map, send them to
   Litematica with one click, and see which items are still missing. Your inventory and chests are
   already subtracted.
@@ -35,7 +40,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
   close. A queue builds several schematics in a row.
 - **Storage:** every chest you open is remembered, shulker contents included. Search an item across
   all chests, fetch exactly the stacks you picked, or store your inventory where each
-  item already is. Stash finder included.
+  item already is. Broken chests disappear by themselves. Stash finder included: walk or fly there.
 - **Own walking engine:** right-click the map and you walk there; fetching, storing and picking up
   drops walk the same way. Works without Baritone: it finds its way over stairs, slabs and drops,
   around walls, lava and deep water. With Baritone installed,
