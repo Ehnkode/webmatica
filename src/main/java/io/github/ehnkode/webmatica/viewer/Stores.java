@@ -118,6 +118,23 @@ public final class Stores {
             return e;
         }
 
+        /** The mod saw these container blocks disappear: {server, dim, at: [[x, y, z], ...]}. */
+        synchronized int gone(JsonObject req) {
+            String srv = J.str(req, "server", ""), dim = J.str(req, "dim", "overworld");
+            int n = 0;
+            for (JsonElement p : J.list(J.get(req, "at"))) {
+                JsonArray xyz = p.isJsonArray() ? p.getAsJsonArray() : null;
+                if (xyz != null && xyz.size() == 3
+                        && data.remove(srv + "|" + dim + "|" + J.i(xyz.get(0)) + "," + J.i(xyz.get(1)) + "," + J.i(xyz.get(2))) != null) {
+                    n++;
+                }
+            }
+            if (n > 0) {
+                J.saveQuiet(path, data);
+            }
+            return n;
+        }
+
         synchronized void delete(String key) {
             if (data.remove(key) != null) {
                 J.saveQuiet(path, data);

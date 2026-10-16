@@ -1,5 +1,6 @@
 package io.github.ehnkode.webmatica.mixin;
 
+import io.github.ehnkode.webmatica.ContainerTracker;
 import io.github.ehnkode.webmatica.Mc;
 import io.github.ehnkode.webmatica.RegionStore;
 import net.minecraft.core.BlockPos;
@@ -16,7 +17,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * This catches every path: block updates from the server, chunk delta packets and
  * the client prediction when building/breaking yourself (for which 2b2t often sends
  * no packet back). Loading a chunk from the packet doesn't use
- * this method, so it only fires on real changes.
+ * this method, so it only fires on real changes. Broken chests and shulkers are
+ * also reported to the viewer from here.
  */
 @Mixin(LevelChunk.class)
 public abstract class WorldChunkMixin {
@@ -28,6 +30,7 @@ public abstract class WorldChunkMixin {
         // null = block was already like this, nothing changed.
         if (cir.getReturnValue() != null && self.getLevel().isClientSide()) {
             RegionStore.getInstance().markDirty(Mc.x(self.getPos()), Mc.z(self.getPos()));
+            ContainerTracker.getInstance().blockReplaced(self.getLevel(), pos, cir.getReturnValue(), state);
         }
     }
 }

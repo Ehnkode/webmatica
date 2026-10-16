@@ -652,11 +652,3 @@ body.xray-on:not(.mode3d) #map .leaflet-tile-pane { filter: brightness(0.38) sat
 .chk-fix.armed p { margin: 0 0 8px; }
 button.link { border: 0; background: transparent; color: var(--accent); padding: 4px 0; }
 .ctx-btns { display: flex; gap: 6px; margin-top: 8px; }
-/* Moving water on the map (js/world.js): the vanilla water texture, one texture per block
-   (1/512 of a region tile), masked to the water and blended onto the tiles. --wf is the
-   current animation frame, set on the layer for all tiles at once. */
-.water-layer { mix-blend-mode: soft-light; pointer-events: none; }
-.water-tile { overflow: hidden; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
-.water-tile i { position: absolute; inset: 0; background-image: var(--wf); background-size: calc(100% / 512) calc(100% / 512);
-  image-rendering: pixelated; opacity: 0.85; }
-body.xray-on .water-layer { display: none; }
