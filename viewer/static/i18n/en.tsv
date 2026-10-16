@@ -1239,3 +1239,26 @@ Luft (entfernt Blöcke)	Air (removes blocks)
 Weicher Shader	Soft shader
 Weiche Schattierung mit Licht und Tiefe. Aus: klassische Schattierung wie auf Vanilla-Karten	Soft shading with light and depth. Off: classic shading like vanilla maps
 Mittlere Maustaste ziehen: umsehen	Drag with middle mouse button: look around
+Klick	Click
+Maus fangen ·	capture mouse ·
+Mittlere Maustaste	Middle mouse button
+umsehen ·	look around ·
+Mausrad	Mouse wheel
+Tempo ·	speed ·
+Maus fangen (umsehen mit der Maus),	capture the mouse (look around with it),
+gibt sie wieder frei	releases it
+gedrückt halten und ziehen: umsehen, ohne die Maus zu fangen	hold and drag: look around without capturing the mouse
+Fluggeschwindigkeit	Flight speed
+Klick auf Spieler	Click a player
+Kamera-Modi: folgen, Ego-Sicht, von oben	Camera modes: follow, first person, from above
+Klick auf Schematic	Click a schematic
+auswählen, dann verschieben und drehen wie oben	select it, then move and rotate as above
+3D-Auswahl (	3D selection (
+erste Ecke,	first corner,
+zweite Ecke	second corner
+Alt+Klick	Alt+click
+Luftblock vor der Fläche	air block in front of the face
+Auswahl in Blickrichtung vergrößern/verkleinern (	grow/shrink the selection in the view direction (
+= 8)	= 8)
+Linksklick	Left-click
+Rechtsklick	Right-click

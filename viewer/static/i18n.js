@@ -83,7 +83,8 @@
     }
     if (r === null) return s;
     const lead = s.match(/^\s*/)[0], trail = s.match(/\s*$/)[0];
-    return lead + m[1].trim() + (m[1].trim() ? ' ' : '') + r + m[3].trim() + trail;
+    const tail = m[3].trim();   // keep the space in front of a trailing " · "
+    return lead + m[1].trim() + (m[1].trim() ? ' ' : '') + r + (tail && /^\s/.test(m[3]) ? ' ' : '') + tail + trail;
   }
   // multi-line messages (confirm) line by line
   const tLines = (s) => (typeof s === 'string' ? s.split('\n').map(t).join('\n') : s);
