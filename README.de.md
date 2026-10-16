@@ -1,6 +1,6 @@
 # Webmatica
 [![Latest Release](https://img.shields.io/github/v/release/Ehnkode/webmatica?style=flat-square&color=blue)](https://github.com/Ehnkode/webmatica/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![License: LGPL-3.0](https://img.shields.io/badge/License-LGPL--3.0-blue.svg?style=flat-square)](COPYING.LESSER)
 [![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.11%20--%2026.3-informational?style=flat-square&logo=minecraft)](https://github.com/Ehnkode/webmatica/releases)
 
 [English](README.md) · **Deutsch**
@@ -85,4 +85,6 @@ Webmatica entsteht mit KI-Unterstützung (Claude). Ideen, Richtung, Tests im Spi
 Automatisierung ist nicht auf jedem Server erlaubt, Nutzung auf eigenes Risiko. Aufnahmen verraten
 Koordinaten, also nicht teilen.
 
-MIT-Lizenz, siehe [LICENSE](LICENSE).
+Copyright (C) 2026 Ehnkode. Lizenziert unter der GNU Lesser General Public License v3.0, siehe
+[COPYING.LESSER](COPYING.LESSER) und [COPYING](COPYING) (die GPL, auf der sie aufbaut). Releases vor dem
+Java-Viewer sind unter der MIT-Lizenz erschienen.

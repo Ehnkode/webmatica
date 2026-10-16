@@ -1,6 +1,6 @@
 # Webmatica
 [![Latest Release](https://img.shields.io/github/v/release/Ehnkode/webmatica?style=flat-square&color=blue)](https://github.com/Ehnkode/webmatica/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![License: LGPL-3.0](https://img.shields.io/badge/License-LGPL--3.0-blue.svg?style=flat-square)](COPYING.LESSER)
 [![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.11%20--%2026.3-informational?style=flat-square&logo=minecraft)](https://github.com/Ehnkode/webmatica/releases)
 
 **English** · [Deutsch](README.de.md)
@@ -83,4 +83,6 @@ Webmatica is built with the help of AI (Claude). The idea, the direction, testin
 Automation is not allowed on every server, use at your own risk. Recordings reveal coordinates,
 don't share them.
 
-MIT license, see [LICENSE](LICENSE).
+Copyright (C) 2026 Ehnkode. Licensed under the GNU Lesser General Public License v3.0, see
+[COPYING.LESSER](COPYING.LESSER) and [COPYING](COPYING) (the GPL it builds on). Releases before the
+Java viewer were published under the MIT license.
