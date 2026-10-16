@@ -2,7 +2,6 @@
 [![Latest Release](https://img.shields.io/github/v/release/Ehnkode/webmatica?style=flat-square&color=blue)](https://github.com/Ehnkode/webmatica/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Minecraft Version](https://img.shields.io/badge/Minecraft-1.21.11%20--%2026.3-informational?style=flat-square&logo=minecraft)](https://github.com/Ehnkode/webmatica/releases)
-[![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue?style=flat-square&logo=python)](https://www.python.org/)
 
 [English](README.md) · **Deutsch**
 
@@ -13,7 +12,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
 - **Mod** (Fabric, Minecraft 1.21.11 bis 26.3, nur Client): speichert jeden Chunk, den du siehst, als normale
   Regiondateien und merkt sich Kisteninhalte. Schickt nichts an den Server oder in den Chat.
-- **Viewer** (Python, läuft lokal unter <http://127.0.0.1:8770>): alles Folgende im Browser.
+- **Viewer** (in der Mod eingebaut, läuft lokal unter <http://127.0.0.1:8770>): alles Folgende im Browser.
   Auf Deutsch und Englisch (Umschalter unter Optionen).
 
 ## Funktionen
@@ -55,19 +54,17 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 ## Voraussetzungen
 
 - Minecraft 1.21.11, 26.1, 26.2 oder 26.3 mit Fabric Loader und Fabric API
-- Python 3.10+
 - Optional: [Baritone](https://github.com/cabaletta/baritone) (nur für Bauen, Farmen und Ebnen; Laufen geht ohne), [Litematica](https://modrinth.com/mod/litematica) + [MaLiLib](https://modrinth.com/mod/malilib)
 
 ## Installation
 
 1. Die Jar für deine Minecraft-Version (`webmatica-<version>+mc<minecraft>.jar`) von Modrinth oder den
    [Releases](https://github.com/Ehnkode/webmatica/releases) in den `mods`-Ordner legen.
-2. Minecraft starten und **F10** drücken. Der Viewer startet und öffnet sich im Browser. Der erste
-   Start dauert etwa eine Minute (er installiert numpy und Pillow und erzeugt die Blockbilder).
+2. Minecraft starten und **F10** drücken. Der Viewer startet und öffnet sich im Browser. Sonst ist
+   nichts zu installieren: Beim ersten Start erzeugt er in wenigen Sekunden die Blockbilder aus deinem Spiel.
 
-Der Viewer steckt in der Mod und liegt danach in `<Spielordner>/webmatica-viewer/`. Er endet, wenn
-du das Spiel schließt. Ohne Spiel startest du ihn mit `start-viewer.bat` in diesem Ordner
-(Linux/macOS: `./start-viewer.sh`).
+Der Viewer läuft im Spiel und endet, wenn du es schließt. Seine Blockbilder liegen in
+`<Spielordner>/webmatica-viewer/assets/`.
 
 **F9** im Spiel schaltet die Aufnahme an und aus, **F10** öffnet den Viewer. **?** im Viewer zeigt alle Tastenkürzel.
 
