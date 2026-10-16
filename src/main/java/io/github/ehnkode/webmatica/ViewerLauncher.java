@@ -49,14 +49,35 @@ final class ViewerLauncher {
 
     /** Client thread, on the key press. */
     static void open(Minecraft mc) {
+        start(mc, true);
+    }
+
+    /**
+     * Starts the viewer's server without opening the browser, so chests are remembered and the
+     * in-game menu works even if F10 was never pressed. Silent unless something goes wrong.
+     */
+    static void startInBackground(Minecraft mc) {
+        if (!busy && !running()) {
+            start(mc, false);
+        }
+    }
+
+    /** The viewer's server runs in this game for the current recording folder. */
+    static synchronized boolean running() {
+        return server != null && server.running();
+    }
+
+    private static void start(Minecraft mc, boolean browse) {
         if (busy) {
-            say(mc, "Viewer startet schon …", ChatFormatting.YELLOW, null);
+            if (browse) {
+                say(mc, "Viewer startet schon …", ChatFormatting.YELLOW, null);
+            }
             return;
         }
         busy = true;
         Thread t = new Thread(() -> {
             try {
-                run(mc);
+                run(mc, browse);
             } catch (Throwable e) {
                 MapperClient.LOGGER.warn("[webmatica] Viewer-Start fehlgeschlagen", e);
                 say(mc, "Viewer-Start fehlgeschlagen: " + e.getMessage(), ChatFormatting.RED, null);
@@ -76,7 +97,7 @@ final class ViewerLauncher {
         }
     }
 
-    private static void run(Minecraft mc) throws IOException, InterruptedException {
+    private static void run(Minecraft mc, boolean browse) throws IOException, InterruptedException {
         System.setProperty("java.awt.headless", "true");
         ModContainer mod = FabricLoader.getInstance().getModContainer("webmatica").orElseThrow();
         Path web = mod.findPath(BUNDLE + "/static").orElseThrow(() -> new IOException("viewer missing from the mod jar"));
@@ -85,6 +106,9 @@ final class ViewerLauncher {
 
         synchronized (ViewerLauncher.class) {
             if (server != null && server.running() && recording.equals(serverRecording)) {
+                if (!browse) {
+                    return;
+                }
                 if (server.app.streams() > 0) {
                     // Each extra tab costs one of the browser's few connections to the viewer.
                     say(mc, "Viewer ist schon im Browser offen: " + URL, ChatFormatting.GREEN, URL);
@@ -94,6 +118,9 @@ final class ViewerLauncher {
                 return;
             }
             shutdown();                        // other recording folder (e.g. another profile): start anew
+        }
+        if (!browse && listening()) {
+            return;                            // something else holds the port: leave it to F10
         }
         if (listening() && !quitRunning()) {
             // An older Python viewer (or something else) holds the port
@@ -110,7 +137,9 @@ final class ViewerLauncher {
                 say(mc, "Viewer: Minecraft-Jar mit den Blockbildern nicht gefunden.", ChatFormatting.RED, null);
                 return;
             }
-            say(mc, "Viewer: erster Start, Blockbilder werden erzeugt …", ChatFormatting.YELLOW, null);
+            if (browse) {
+                say(mc, "Viewer: erster Start, Blockbilder werden erzeugt …", ChatFormatting.YELLOW, null);
+            }
             AssetBuilder.build(jar, assets, msg -> MapperClient.LOGGER.info("[webmatica] {}", msg));
         }
 
@@ -123,7 +152,9 @@ final class ViewerLauncher {
             server = s;
             serverRecording = recording;
         }
-        browse(mc);
+        if (browse) {
+            browse(mc);
+        }
     }
 
     /** The jar holding the vanilla assets: the one the game loaded them from, else the launcher's copy. */

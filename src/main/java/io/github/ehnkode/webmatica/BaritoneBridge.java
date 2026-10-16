@@ -85,6 +85,11 @@ public final class BaritoneBridge {
         }
     }
 
+    /** Stop, pause or resume from the in-game menu while the viewer is not running. Client thread. */
+    void runLocal(JsonObject cmd) {
+        run(cmd);
+    }
+
     /** Client thread. */
     private void run(JsonObject cmd) {
         Minecraft mc = Minecraft.getInstance();

@@ -46,6 +46,24 @@ public final class Mc {
         //?}
     }
 
+    /** Opens a screen (null closes it). */
+    public static void setScreen(Minecraft mc, Screen s) {
+        //? if >=26.2 {
+        /*mc.gui.setScreen(s);
+        *///?} else {
+        mc.setScreen(s);
+        //?}
+    }
+
+    /** F1: interface hidden. From 26.2 on the game skips HUD elements by itself then. */
+    public static boolean guiHidden(Minecraft mc) {
+        //? if >=26.2 {
+        /*return false;
+        *///?} else {
+        return mc.options.hideGui;
+        //?}
+    }
+
     /** Short message above the hotbar. */
     public static void actionbar(Minecraft mc, Component c) {
         LocalPlayer p = mc.player;

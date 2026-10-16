@@ -1261,3 +1261,56 @@ Auswahl in Blickrichtung vergrößern/verkleinern (	grow/shrink the selection in
 = 8)	= 8)
 Linksklick	Left-click
 Rechtsklick	Right-click
+# --- in-game menu (F8), job display, chest tooltip
+Webmatica: Einstellungen	Webmatica: Settings
+Kisten durchsuchen	Search chests
+Viewer im Browser öffnen	Open viewer in browser
+Pause	Pause
+Weiter	Resume
+Fertig	Done
+Jobs	Jobs
+Gerade läuft nichts	Nothing is running right now
+Aufnahme an	Recording on
+Server-safe an	Server-safe on
+Viewer bereit	Viewer ready
+Suche	Search
+Item suchen, z. B. Diamant	Search an item, e.g. diamond
+Markieren	Mark
+Kiste ist in einer anderen Dimension	Chest is in another dimension
+Holt die ganze Shulker-Kiste	Fetches the whole shulker box
+Kisten werden geladen …	Loading chests …
+{} Kisten bekannt. Öffne Kisten im Spiel, damit Webmatica sie sich merkt	{} chests known. Open chests in the game so Webmatica remembers them
+Endertruhe	ender chest
+in Shulker	in shulker
+{}–{} von {} · Mausrad blättert	{}–{} of {} · scroll with the mouse wheel
+Job-Anzeige (HUD)	Job display (HUD)
+HUD-Position	HUD position
+oben links	top left
+oben rechts	top right
+unten links	bottom left
+unten rechts	bottom right
+Kisten-Info im Tooltip	Chest info in tooltips
+Viewer im Hintergrund starten	Start viewer in the background
+An	On
+Aus	Off
+Speichert jeden Chunk, den du siehst (wie F9)	Saves every chunk you see (like F9)
+Schaltet alles aus, was viele Server verbieten: Bot, Printer, X-Ray	Turns off everything many servers forbid: bot, printer, X-ray
+Zeigt laufende Jobs am Bildschirmrand, nur solange einer läuft	Shows running jobs at the edge of the screen, only while one is running
+Zeigt bei jedem Item, wie viel davon in deinen Kisten liegt	Shows for every item how much of it is in your chests
+Startet den Viewer beim Betreten einer Welt ohne Browser, damit Kisten auch ohne F10 gespeichert werden	Starts the viewer without a browser when you join a world, so chests are saved even without F10
+Tasten: Optionen → Steuerung → Webmatica. Sprache wie im Spiel	Keys: Options → Controls → Webmatica. Language follows the game
+Pause: Spieler {} in der Nähe	Paused: player {} nearby
+Holen aus Kiste	Fetching from chest
+Shulker auspacken	Unpacking shulker
+Läuft zum Ziel	Walking to the target
+Printer: {} gesetzt, {} offen	Printer: {} placed, {} left
+Fehlt: {}	Missing: {}
+Pausiert	Paused
+Stopp gesendet	Stop sent
+Kiste markiert: {}	Chest marked: {}
+Viewer läuft nicht	Viewer is not running
+Viewer startet noch, gleich nochmal versuchen	Viewer is still starting, try again in a moment
+Job-Anzeige an	Job display on
+Job-Anzeige aus	Job display off
+In Kisten: {} ({} Kiste)	In chests: {} ({} chest)
+In Kisten: {} ({} Kisten)	In chests: {} ({} chests)
