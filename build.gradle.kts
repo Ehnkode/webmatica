@@ -56,7 +56,8 @@ tasks.processResources {
 }
 
 tasks.withType<Jar>().configureEach {
-    from(rootProject.file("LICENSE")) { rename { "LICENSE_webmatica" } }
+    from(rootProject.file("COPYING.LESSER")) { rename { "LICENSE_webmatica" } }
+    from(rootProject.file("COPYING")) { rename { "LICENSE_webmatica_GPL" } }
 }
 
 loomx.modJar.configure {

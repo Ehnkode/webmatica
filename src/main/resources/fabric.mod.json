@@ -10,7 +10,7 @@
     "sources": "https://github.com/Ehnkode/webmatica",
     "issues": "https://github.com/Ehnkode/webmatica/issues"
   },
-  "license": "MIT",
+  "license": "LGPL-3.0-only",
   "icon": "assets/webmatica/icon.png",
   "environment": "client",
   "entrypoints": {
