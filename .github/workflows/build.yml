@@ -40,12 +40,12 @@ jobs:
         with:
           files: build/libs/webmatica-*.jar
 
-  # The web page's English table covers every German text (tools/check_i18n.py).
+  # The web page's English table covers every German text (tools/check-i18n.mjs).
   i18n:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
-      - run: python3 -m unittest tools/check_i18n.py -v
+      - run: node tools/check-i18n.mjs
 
   # Block and item images are built from the player's game jar on first start;
   # make sure that still works for every supported Minecraft version.
