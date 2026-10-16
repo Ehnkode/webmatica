@@ -2,5 +2,7 @@
   "key.webmatica.toggle": "Toggle recording",
   "key.webmatica.viewer": "Open viewer in browser",
   "key.webmatica.printer": "Webmatica printer on/off",
+  "key.webmatica.menu": "Open Webmatica menu",
+  "key.webmatica.hud": "Job display on/off",
   "key.category.webmatica.main": "Webmatica"
 }
