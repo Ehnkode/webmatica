@@ -211,6 +211,10 @@ public final class PositionReporter {
                 failedOnce("radar", t);
             }
             o.add("mods", mods());
+            JsonObject sel = SelectionTool.json(mc);
+            if (sel != null) {
+                o.add("sel", sel);
+            }
             o.addProperty("server", RecordingTarget.serverId(mc));
             o.addProperty("recording", RegionStore.getInstance().isEnabled());
             o.addProperty("written", RegionStore.getInstance().getWrittenCount());

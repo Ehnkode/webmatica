@@ -1315,3 +1315,31 @@ Job-Anzeige an	Job display on
 Job-Anzeige aus	Job display off
 In Kisten: {} ({} Kiste)	In chests: {} ({} chest)
 In Kisten: {} ({} Kisten)	In chests: {} ({} chests)
+# --- in-game selection (key B)
+Auswahlmodus	Selection mode
+Auswahlmodus an	Selection mode on
+Auswahlmodus aus	Selection mode off
+Auswahlmodus starten	Start selection mode
+Auswahlmodus beenden	End selection mode
+Kein Block in Sicht	No block in sight
+Ecke 1	Corner 1
+Ecke 2	Corner 2
+Linksklick: Ecke 1 · Rechtsklick: Ecke 2 · Mausrad: vergrößern (Sprinten = 8) · F8: Aktionen	Left click: corner 1 · Right click: corner 2 · Mouse wheel: resize (sprint = 8) · F8: actions
+Als Schematic speichern	Save as schematic
+Speichert die Auswahl aus der Aufnahme in den Ordner schematics (Litematica und Viewer finden sie dort)	Saves the selection from the recording into the schematics folder (Litematica and the viewer find it there)
+Alles über der untersten Schicht abtragen, Löcher bis dahin mit dem Block in der Hand füllen	Remove everything above the bottom layer, fill holes up to it with the block in your hand
+Jede leere Stelle in der Auswahl mit dem Block in der Hand füllen	Fill every empty spot in the selection with the block in your hand
+Alles in der Auswahl abbauen und einsammeln	Break everything in the selection and pick it up
+Im Viewer öffnen	Open in viewer
+Der Viewer zeigt dieselbe Auswahl	The viewer shows the same selection
+Auswahl löschen	Clear selection
+Server-safe ist an: der Bot baut nichts ab und nichts auf	Server-safe is on: the bot neither breaks nor builds
+Nimm den Block zum Füllen in die Hand	Hold the block to fill with
+Jede leere Stelle mit {} füllen.	Fill every empty spot with {}.
+Alles über Y {} abtragen.	Remove everything above Y {}.
+Alles über Y {} abtragen und Löcher mit {} füllen.	Remove everything above Y {} and fill holes with {}.
+Gestartet, Stopp im Menü (F8)	Started, stop it in the menu (F8)
+Gespeichert: {}	Saved: {}
+Speichern fehlgeschlagen: {}	Saving failed: {}
+Noch keine Auswahl: Auswahlmodus starten, dann Linksklick und Rechtsklick auf die Ecken.	No selection yet: start the selection mode, then left and right click the corners.
+Server-safe ist an: Ebnen, Füllen und Abbauen sind aus.	Server-safe is on: flatten, fill and break are off.

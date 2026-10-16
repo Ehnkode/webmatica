@@ -195,6 +195,29 @@ function selFieldsChanged() {
 }
 for (const k of ['x0', 'x1', 'z0', 'z1', 'y0', 'y1']) $('#sel-' + k).addEventListener('input', selFieldsChanged);
 
+/* The selection made in game (selection mode, key B) shows up here as well.
+ * ``again``: show it even if unchanged (after switching 2D/3D, which ends the selection) */
+let gameSelKey = null;
+function gameSel(p, again) {
+  const g = p && p.active && p.sel && p.server === state.server && p.sel.dim === state.dim ? p.sel : null;
+  const key = g ? [g.x0, g.y0, g.z0, g.x1, g.y1, g.z1].join(',') : null;
+  if (key === gameSelKey && !(again && g)) return;
+  const had = gameSelKey;
+  gameSelKey = key;
+  if (!g) {
+    // cleared in game: drop it here too, unless it was changed here since
+    const b = sel.box;
+    if (had && b && [b.x0, $('#sel-y0').value, b.z0, b.x1, $('#sel-y1').value, b.z1].join(',') === had) setSelect(false);
+    return;
+  }
+  if (!sel.on) setSelect(true);
+  sel.box = { x0: g.x0, z0: g.z0, x1: g.x1, z1: g.z1 };
+  $('#sel-y0').value = g.y0;
+  $('#sel-y1').value = g.y1;
+  cornersFromBox();
+  showBox();
+}
+
 // ------------------------------------------------------------------ Trail
 
 const trail = { points: [], line: null, lastLoad: 0 };
@@ -239,4 +262,4 @@ function drawTrail() {
   trail.line = L.polyline(parts, { color: '#ffd23f', weight: 2, opacity: 0.85, interactive: false }).addTo(map);
 }
 
-export { DIM_Y, extendTrail, loadTrail, sel, setSelect, setTrail, trail };
+export { DIM_Y, extendTrail, gameSel, loadTrail, sel, setSelect, setTrail, trail };

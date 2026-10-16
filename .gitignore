@@ -20,3 +20,6 @@ webmatica_recording/
 *.schematic
 *.litematic
 *.zip
+
+# Python bytecode of tools/check_i18n.py
+__pycache__/

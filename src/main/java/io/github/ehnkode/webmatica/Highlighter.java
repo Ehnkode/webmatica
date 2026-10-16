@@ -7,17 +7,21 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.gizmos.GizmoStyle;
+import net.minecraft.gizmos.Gizmos;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Highlights chests in game ("Show in game" button on the web page): a
- * light pillar of particles above each chest, for 60 seconds or until the
+ * box around each chest and a line above it, both seen through walls, for 60 seconds or until the
  * chest is opened. Only visible in your own client, the server knows nothing about it.
  */
 public final class Highlighter {
 
     private static final Highlighter INSTANCE = new Highlighter();
     private static final long DURATION_MS = 60_000L;
+    private static final int COLOR = 0xFFFFD23F;
+    private static final int FILL = 0x50FFD23F;
 
     public static Highlighter getInstance() {
         return INSTANCE;
@@ -25,7 +29,6 @@ public final class Highlighter {
 
     private final List<int[]> points = new ArrayList<>();
     private long until;
-    private int tick;
 
     /** Client thread. */
     public int set(JsonArray pts, String label) {
@@ -60,6 +63,7 @@ public final class Highlighter {
         return System.currentTimeMillis() > until ? 0 : points.size();
     }
 
+    /** End of the client tick (inside the game's per-tick gizmo collection). */
     public void tick(Minecraft mc) {
         if (points.isEmpty() || mc.level == null || mc.player == null) {
             return;
@@ -68,22 +72,16 @@ public final class Highlighter {
             points.clear();
             return;
         }
-        if (++tick % 3 != 0) {
-            return;
-        }
         LocalPlayer p = mc.player;
         for (int[] q : points) {
             double dx = q[0] + 0.5 - p.getX(), dz = q[2] + 0.5 - p.getZ();
-            if (dx * dx + dz * dz > 160 * 160) {
+            if (dx * dx + dz * dz > 256 * 256) {
                 continue;
             }
-            // pillar upwards so it can be seen from afar, even behind walls
-            for (int k = 0; k < 6; k++) {
-                double y = q[1] + 1.0 + k * 1.5 + (tick % 9) / 6.0;
-                mc.level.addParticle(ParticleTypes.END_ROD, true, true, q[0] + 0.5, y, q[2] + 0.5, 0.0, 0.02, 0.0);
-            }
-            mc.level.addParticle(ParticleTypes.HAPPY_VILLAGER, true, true,
-                    q[0] + 0.5 + (Math.random() - 0.5), q[1] + 0.6 + Math.random() * 0.6, q[2] + 0.5 + (Math.random() - 0.5), 0, 0, 0);
+            // the chest as a box through walls, like Baritone's goal, and a line up to find it from afar
+            Gizmos.cuboid(new BlockPos(q[0], q[1], q[2]), 0.04f, GizmoStyle.strokeAndFill(COLOR, 2.5f, FILL)).setAlwaysOnTop();
+            Gizmos.line(new Vec3(q[0] + 0.5, q[1] + 1.04, q[2] + 0.5), new Vec3(q[0] + 0.5, q[1] + 40, q[2] + 0.5), COLOR, 2.0f)
+                    .setAlwaysOnTop();
         }
     }
 }
