@@ -345,6 +345,38 @@ final class Placements {
         }
     }
 
+    /**
+     * Removes a file from the library: it goes to .viewer/papierkorb (not deleted for good),
+     * placements that use it are unloaded.
+     */
+    Map<String, Object> trash(String fileId) throws IOException {
+        Path p = resolve(fileId);
+        Path bin = dataDir.resolve("papierkorb");
+        Files.createDirectories(bin);
+        String fn = p.getFileName().toString();
+        Path to = bin.resolve(fn);
+        for (int i = 2; Files.exists(to); i++) {
+            int dot = fn.lastIndexOf('.');
+            to = bin.resolve((dot < 0 ? fn : fn.substring(0, dot)) + " (" + i + ")" + (dot < 0 ? "" : fn.substring(dot)));
+        }
+        Files.move(p, to);
+        int dropped = 0;
+        synchronized (lock) {
+            JsonArray keep = new JsonArray();
+            for (JsonElement e : read()) {
+                if (fileId.equals(J.str(e.getAsJsonObject(), "file", "None"))) {
+                    dropped++;
+                } else {
+                    keep.add(e);
+                }
+            }
+            if (dropped > 0) {
+                write(keep);
+            }
+        }
+        return J.map("ok", true, "trash", to.toString(), "unloaded", dropped);
+    }
+
     // ------------------------------------------------------------------ Litematica bridge
 
     static String uuid5(String name) {

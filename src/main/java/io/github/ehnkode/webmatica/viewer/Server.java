@@ -39,7 +39,7 @@ import java.util.stream.Stream;
  */
 public final class Server {
     /** Bump when the tile rendering changes, so cached tiles are rendered again. */
-    static final String RENDER_VERSION = "java-1";
+    static final String RENDER_VERSION = "java-2";   // 2: soft relief shading + water mask
 
     public final App app;
     public final Router routes = new Router();

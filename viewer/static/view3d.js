@@ -110,7 +110,7 @@ export function create(container, ctx) {
   // ------------------------------------------------------------ State
 
   const st = {
-    srv: null, dim: null, at: null, radius: 10, lod: 4096, fog: false, full: false, fancy: false, hour: 10,
+    srv: null, dim: null, at: null, radius: 10, lod: 4096, fancy: false, hour: 10,
     chunks: new Map(),      // "cx,cz" -> { group, etag, empty, loading }
     regions: new Map(),     // "rx,rz" -> { mesh, etag, empty, loading }
     queue: 0, lodQueue: 0,
@@ -193,7 +193,7 @@ export function create(container, ctx) {
   }
 
   const atQuery = () => (st.at ? '&at=' + st.at : '');
-  const currentQuery = () => clip.query + xray.query + atQuery() + (st.full ? '&full' : '');
+  const currentQuery = () => clip.query + xray.query + atQuery();
   async function loadChunk(cx, cz, force) {
     const key = `${cx},${cz}`;
     let c = st.chunks.get(key);
@@ -202,7 +202,7 @@ export function create(container, ctx) {
     c.loading = true;
     st.queue++;
     try {
-      const url = `/api/mesh/${encodeURIComponent(st.srv)}/${encodeURIComponent(st.dim)}/${cx}/${cz}?full=${st.full ? 1 : 0}${clip.query}${xray.query}${atQuery()}`;
+      const url = `/api/mesh/${encodeURIComponent(st.srv)}/${encodeURIComponent(st.dim)}/${cx}/${cz}?full=0${clip.query}${xray.query}${atQuery()}`;
       const query = currentQuery();
       const r = await fetch(url);
       if (st.chunks.get(key) !== c) return;
@@ -865,14 +865,30 @@ export function create(container, ctx) {
       if (clip.planes.some((pl) => pl.distanceToPoint(hit.point) < -0.05)) continue;   // cut-away part
       const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
       const p = hit.point.clone().addScaledVector(n, -0.02);
-      return { x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z) };
+      const a = hit.point.clone().addScaledVector(n, 0.02);   // the air block in front of the face
+      return { x: Math.floor(p.x), y: Math.floor(p.y), z: Math.floor(p.z), air: { x: Math.floor(a.x), y: Math.floor(a.y), z: Math.floor(a.z) } };
     }
     return null;
   }
-  let blockPick = null;
-  function setBlockPick(cb) {
+  /* cb(block, { button, shift }): left click = 0, right click = 2. Alt picks the air block in front
+   * (Shift would also fly down).
+   * wheel(step, look): while picking, the mouse wheel goes there instead of the flight speed;
+   * look = camera direction, return true when used. */
+  let blockPick = null, blockWheel = null;
+  function setBlockPick(cb, wheel = null) {
     blockPick = cb;
+    blockWheel = cb ? wheel : null;
     container.classList.toggle('picking', !!cb);
+  }
+  function pickAt(e, locked, button) {
+    const rect = canvas.getBoundingClientRect();
+    const nx = locked ? 0 : ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const ny = locked ? 0 : -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    const b = pickBlock(nx, ny);
+    if (!b) return;
+    const air = e.altKey;
+    const at = air ? b.air : b;
+    blockPick({ x: at.x, y: at.y, z: at.z }, { button, air });
   }
 
   // Area (automations) as a frame; ``first`` = first picked block
@@ -900,18 +916,25 @@ export function create(container, ctx) {
   const canvas = renderer.domElement;
   canvas.tabIndex = 0;
   let downAt = null;
-  canvas.addEventListener('mousedown', (e) => { downAt = [e.clientX, e.clientY]; });
+  canvas.addEventListener('mousedown', (e) => {
+    downAt = [e.clientX, e.clientY];
+    // with the mouse locked there is no context menu event: right click picks the second corner here
+    if (e.button === 2 && blockPick && document.pointerLockElement === canvas) pickAt(e, true, 2);
+  });
+  canvas.addEventListener('contextmenu', (e) => {
+    if (!blockPick) return;
+    e.preventDefault();
+    if (document.pointerLockElement === canvas) return;
+    if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4) return;
+    pickAt(e, false, 2);
+  });
   canvas.addEventListener('click', (e) => {
     if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4) return;
     const locked = document.pointerLockElement === canvas;
+    if (blockPick) { pickAt(e, locked, 0); return; }
     const rect = canvas.getBoundingClientRect();
     const nx = locked ? 0 : ((e.clientX - rect.left) / rect.width) * 2 - 1;
     const ny = locked ? 0 : -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    if (blockPick) {
-      const b = pickBlock(nx, ny);
-      if (b) blockPick(b);
-      return;
-    }
     const hit = pick(nx, ny);
     if (hit) { select(hit); return; }
     if (!locked) canvas.requestPointerLock();
@@ -926,6 +949,11 @@ export function create(container, ctx) {
   });
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
+    if (blockWheel && e.deltaY) {
+      const look = new THREE.Vector3();
+      camera.getWorldDirection(look);
+      if (blockWheel(e.deltaY < 0 ? 1 : -1, look, e)) return;
+    }
     if (st.cam === 'follow' || st.cam === 'top') {
       st.dist = Math.max(2, Math.min(300, st.dist * (e.deltaY < 0 ? 1 / 1.15 : 1.15)));
       return;
@@ -1188,8 +1216,7 @@ export function create(container, ctx) {
     skyDome.visible = fancySky;
     const fogCol = fancySky ? skyUniforms.uHorizon.value.clone() : new THREE.Color(c);
     // Fancy: light haze in the distance instead of a hard edge
-    scene.fog = st.fog ? new THREE.Fog(fogCol, near * 0.55, near * 0.98)
-      : fancySky ? new THREE.Fog(fogCol, far * 0.35, far * 1.05) : new THREE.Fog(fogCol, far * 0.8, far * 1.05);
+    scene.fog = fancySky ? new THREE.Fog(fogCol, far * 0.35, far * 1.05) : new THREE.Fog(fogCol, far * 0.8, far * 1.05);
     camera.far = nearFar * 1.2 + 200;
     camera.updateProjectionMatrix();
     for (const r of st.regions.values()) if (r.mesh) r.mesh.visible = lodOn();
@@ -1233,7 +1260,6 @@ export function create(container, ctx) {
     setHour(h) { st.hour = h; updateLighting(); },
     setClip,
     setLod(blocks) { st.lod = blocks; setSky(); },
-    setFog(f) { st.fog = f; setSky(); },
     /* Timelapse: chunks as they were at the start of that day (null = today). The old meshes stay
      * until the new ones are there, so playing it back does not flicker. */
     setAt(date) {
@@ -1254,7 +1280,6 @@ export function create(container, ctx) {
       return false;
     },
     canvas() { return renderer.domElement; },
-    setFull(f) { if (st.full !== f) { st.full = f; for (const c of st.chunks.values()) if (c.group || c.empty) { c.stale = true; c.empty = false; } } },
     updatePlayer: player.update,
     setCam,
     cam() { return st.cam; },

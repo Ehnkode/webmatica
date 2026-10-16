@@ -73,13 +73,29 @@ atlas.flipY = false;
 atlas.colorSpace = THREE.NoColorSpace;
 const clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1e6);
 const clipList = [];
-const mats = [
-  new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, clippingPlanes: clipList }),
-  new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, clippingPlanes: clipList }),
-  new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 0.8, clippingPlanes: clipList }),
+/* With antialiasing the GPU may sample a pixel's texture slightly outside the face; at block edges
+ * that reaches the neighbouring tile in the atlas and draws thin lines between blocks.
+ * Centroid interpolation keeps the texture coordinate inside the face. */
+const centroidUv = (m) => {
+  m.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <uv_pars_vertex>',
+      THREE.ShaderChunk.uv_pars_vertex.replace('varying vec2 vMapUv;', 'centroid varying vec2 vMapUv;'));
+    sh.fragmentShader = sh.fragmentShader.replace('#include <uv_pars_fragment>',
+      THREE.ShaderChunk.uv_pars_fragment.replace('varying vec2 vMapUv;', 'centroid varying vec2 vMapUv;'));
+  };
+  return m;
+};
+const blockMats = (opacity = 1) => [
+  centroidUv(new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, clippingPlanes: clipList, transparent: opacity < 1, opacity, depthWrite: opacity >= 1 })),
+  centroidUv(new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, clippingPlanes: clipList, transparent: opacity < 1, opacity, depthWrite: opacity >= 1 })),
+  centroidUv(new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 0.8 * opacity, clippingPlanes: clipList })),
 ];
+const mats = blockMats();
+const previewMats = blockMats(0.7);
+let atlasVersion = '';
 fetch('/api/blocks-info').then((r) => r.json()).then((j) => {
   if (!j.available) { toast('3D braucht die Blockmodelle (build_assets)'); return; }
+  atlasVersion = j.version || '';
   const img = new Image();
   img.onload = () => { atlas.image = img; atlas.repeat.set(1 / (16 * j.width), 1 / (16 * j.height)); atlas.needsUpdate = true; };
   img.src = `/api/blocks.png?v=${encodeURIComponent(j.version || '')}`;
@@ -137,6 +153,54 @@ scene.add(hoverBox);
 const placeGhost = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0x22a06b, transparent: true, opacity: 0.35, depthWrite: false }));
 placeGhost.visible = false;
 scene.add(placeGhost);
+/* The chosen block itself at the mouse pointer (semi-transparent), instead of just a box.
+ * One small mesh per block state from the server, cached; the green box shows until it is there. */
+const preview = new THREE.Group();
+preview.visible = false;
+preview.renderOrder = 9;
+scene.add(preview);
+const previewCache = new Map();   // state -> Promise<Group | null>
+let previewState = null;
+function previewMesh(state) {
+  let p = previewCache.get(state);
+  if (!p) {
+    p = fetch('/api/editor/blockmesh?' + new URLSearchParams({ state, v: atlasVersion }))
+      .then((r) => (r.ok ? r.arrayBuffer() : null))
+      .then((buf) => {
+        if (!buf) return null;
+        const g = new THREE.Group();
+        parseMesh(buf).forEach((geo, i) => { if (geo) g.add(new THREE.Mesh(geo, previewMats[i])); });
+        g.scale.setScalar(1 / 16);
+        return g.children.length ? g : null;
+      })
+      .catch(() => null);
+    previewCache.set(state, p);
+  }
+  return p;
+}
+/* Show `state` at block p (null hides). Falls back to the green box while loading or for air. */
+function showPreview(state, p) {
+  if (!state || !p) { preview.visible = false; placeGhost.visible = false; previewState = null; return; }
+  // a hair larger than a block, so it is not hidden in the block it replaces
+  preview.position.set(p[0] - 0.002, p[1] - 0.002, p[2] - 0.002);
+  preview.scale.setScalar(1.004);
+  placeGhost.position.set(p[0] + 0.5, p[1] + 0.5, p[2] + 0.5);
+  const air = AIR.has(baseOf(state));
+  placeGhost.material.color.set(air ? 0xff6b6b : 0x22a06b);
+  if (state === previewState && preview.children.length) { preview.visible = true; placeGhost.visible = false; return; }
+  previewState = state;
+  preview.visible = false;
+  placeGhost.visible = true;
+  preview.clear();
+  if (air) return;
+  previewMesh(state).then((g) => {
+    if (previewState !== state || !g) return;
+    preview.clear();
+    preview.add(g);
+    preview.visible = placeGhost.visible;
+    placeGhost.visible = !preview.visible;
+  });
+}
 const pasteBox = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
   new THREE.LineBasicMaterial({ color: 0x22e08b, depthTest: false }));
 pasteBox.renderOrder = 12;
@@ -202,11 +266,32 @@ function solid(x, y, z) {
 const cutY = () => Number($('#ed-cuty').value);
 const planeY = () => ($('#ed-plane').checked ? cutY() : 0);
 
+/* Mesh for the current cut: with "nur bis Höhe" the server leaves out everything above and
+ * draws the cut face closed, like the layer tool in 3D (clipping alone would leave it hollow). */
+const meshUrl = (v) => {
+  const q = new URLSearchParams({ file: ed.file, v });
+  if ($('#ed-cut').checked && cutY() < ed.size[1] - 1) q.set('yhi', cutY());
+  return '/api/editor/mesh?' + q;
+};
+function setMesh(meshBuf) {
+  blockGroup.children.slice().forEach((m) => { blockGroup.remove(m); m.geometry.dispose(); });
+  parseMesh(meshBuf).forEach((g, i) => { if (g) blockGroup.add(new THREE.Mesh(g, mats[i])); });
+}
+let cutTimer = null;
+function reloadCutMesh() {
+  clearTimeout(cutTimer);
+  cutTimer = setTimeout(async () => {
+    const v = ed.version;
+    const buf = await fetch(meshUrl(v)).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+    if (buf && v === ed.version) setMesh(buf);
+  }, 200);
+}
+
 async function loadAll(keepCamera) {
   const v = ++ed.version;
   const [vox, meshBuf] = await Promise.all([
     api('/api/editor/voxels?' + new URLSearchParams({ file: ed.file })),
-    fetch('/api/editor/mesh?' + new URLSearchParams({ file: ed.file, v })).then((r) => (r.ok ? r.arrayBuffer() : new ArrayBuffer(0))),
+    fetch(meshUrl(v)).then((r) => (r.ok ? r.arrayBuffer() : new ArrayBuffer(0))),
   ]);
   if (v !== ed.version) return;
   const sizeChanged = vox.size.join() !== ed.size.join();
@@ -217,8 +302,7 @@ async function loadAll(keepCamera) {
   const bytes = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
   ed.data = new Uint16Array(bytes.buffer);
-  blockGroup.children.slice().forEach((m) => { blockGroup.remove(m); m.geometry.dispose(); });
-  parseMesh(meshBuf).forEach((g, i) => { if (g) blockGroup.add(new THREE.Mesh(g, mats[i])); });
+  setMesh(meshBuf);
   ghosts.children.slice().forEach((m) => ghosts.remove(m));
   const H = ed.size[1];
   const slider = $('#ed-cuty');
@@ -309,6 +393,7 @@ function load(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); retur
 function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) { /* ignore */ } }
 
 function icon(id, size = 32) {
+  if (AIR.has(baseOf(id))) return `<span class="ico air" style="width:${size}px;height:${size}px;font-size:${Math.round(size / 3)}px">Luft</span>`;
   const i = itemsMeta && itemsMeta.index[baseOf(id)];
   if (i == null) return `<span class="ico none" style="width:${size}px;height:${size}px"></span>`;
   const x = (i % itemsMeta.cols) * size, y = Math.floor(i / itemsMeta.cols) * size;
@@ -326,12 +411,14 @@ function setCurrent(id, exactState) {
 function renderHotbar() {
   $('#ed-hotbar').innerHTML = hotbar.slots.map((id, i) => `<div class="h ${i === hotbar.sel ? 'sel' : ''}" data-slot="${i}" title="${esc(pretty(id))}"><i>${i + 1}</i>${icon(id, 36)}</div>`).join('');
   const id = current();
-  $('#ed-current').innerHTML = `${icon(id, 32)}<div>${esc(pretty(id))}<small>${esc(picked || id)}</small></div>`;
+  $('#ed-current').innerHTML = `${icon(id, 32)}<div>${esc(AIR.has(id) ? 'Luft (entfernt Blöcke)' : pretty(id))}<small>${esc(picked || id)}</small></div>`;
   renderReplace();
 }
 function renderPalette() {
   const q = $('#ed-search').value.trim().toLowerCase().replace(/ /g, '_');
-  const list = BLOCKS.filter((b) => !q || b.id.includes(q)).slice(0, 600);
+  // Air first: with "Ersetzen" (or "Setzen") it removes blocks
+  const air = { id: 'minecraft:air' };
+  const list = [air, ...BLOCKS.filter((b) => b.id !== air.id)].filter((b) => !q || b.id.includes(q) || (b === air && 'luft'.includes(q))).slice(0, 600);
   $('#ed-blocks').innerHTML = list.map((b) => `<div class="b ${b.id === current() ? 'sel' : ''}" data-id="${esc(b.id)}" title="${esc(pretty(b.id))}">${icon(b.id, 32)}</div>`).join('');
 }
 $('#ed-search').addEventListener('input', renderPalette);
@@ -480,6 +567,14 @@ function applyResult(r) {
 function act(kind, hit, ev) {
   if (!hit) return;
   if (ed.pasting && kind !== 'break' && kind !== 'pick') { pasteAt(hit.place); return; }
+  if (kind === 'replace') {
+    // the clicked block becomes the chosen one; with air chosen that removes it
+    if (!hit.pos) return;
+    const st = AIR.has(current()) ? 'minecraft:air' : stateFor(hit);
+    if (st === stateAt(...hit.pos)) return;
+    edit([{ op: 'set', pts: [hit.pos], block: st }], AIR.has(baseOf(st)) ? [] : [hit.pos]);
+    return;
+  }
   if (kind === 'pick') {
     if (!hit.pos) return;
     const st = stateAt(...hit.pos);
@@ -495,6 +590,7 @@ function act(kind, hit, ev) {
   }
   if (kind === 'place') {
     const st = stateFor(hit);
+    if (AIR.has(baseOf(st))) { if (hit.pos) edit([{ op: 'set', pts: [hit.pos], block: 'minecraft:air' }]); return; }
     edit([{ op: 'set', pts: [hit.place], block: st }], [hit.place]);
     return;
   }
@@ -631,28 +727,31 @@ canvas.addEventListener('wheel', (e) => {
 function hover(e) {
   const hit = castRay(e.clientX, e.clientY);
   const tip = $('#ed-tip');
-  if (!hit) { hoverBox.visible = placeGhost.visible = false; tip.hidden = true; return; }
+  if (!hit) { hoverBox.visible = false; showPreview(null); tip.hidden = true; return; }
   if (ed.pasting) {
     const s = clipSize(), q = hit.place;
     pasteBox.scale.set(s[0] + 0.04, s[1] + 0.04, s[2] + 0.04);
     pasteBox.position.set(q[0] + s[0] / 2, q[1] + s[1] / 2, q[2] + s[2] / 2);
     pasteBox.visible = true;
   }
-  const showPlace = ed.tool === 'place' || ed.pasting || (ed.tool === 'box' && (!hit.pos || e.shiftKey));
+  const airSel = AIR.has(current());
+  const showPlace = (ed.tool === 'place' && !airSel) || ed.pasting || (ed.tool === 'box' && (!hit.pos || e.shiftKey));
   const p = showPlace ? hit.place : hit.pos;
-  if (!p) { hoverBox.visible = placeGhost.visible = false; tip.hidden = true; return; }
+  if (!p) { hoverBox.visible = false; showPreview(null); tip.hidden = true; return; }
   hoverBox.position.set(p[0] + 0.5, p[1] + 0.5, p[2] + 0.5);
-  hoverBox.material.color.set(ed.tool === 'break' ? 0xff6b6b : 0xffffff);
+  const removes = (ed.tool === 'place' || ed.tool === 'replace') && airSel;
+  hoverBox.material.color.set(removes ? 0xff6b6b : ed.tool === 'replace' ? 0xffd23f : 0xffffff);
   hoverBox.visible = true;
-  placeGhost.visible = ed.tool === 'place' && !ed.pasting;
-  placeGhost.position.copy(hoverBox.position);
+  // Preview: the chosen block where it would end up (place: in front, replace: instead of the block)
+  if ((ed.tool === 'place' || ed.tool === 'replace') && !ed.pasting && !removes) showPreview(stateFor(hit), p);
+  else showPreview(null);
   tip.hidden = false;
   tip.style.left = e.clientX + 16 + 'px';
   tip.style.top = e.clientY + 12 + 'px';
   const what = hit.pos ? pretty(stateAt(...hit.pos)) : 'Bauebene';
   tip.textContent = `${p[0]} ${p[1]} ${p[2]} · ${what}`;
 }
-canvas.addEventListener('pointerleave', () => { hoverBox.visible = placeGhost.visible = false; $('#ed-tip').hidden = true; });
+canvas.addEventListener('pointerleave', () => { hoverBox.visible = false; showPreview(null); $('#ed-tip').hidden = true; });
 
 document.addEventListener('keydown', (e) => {
   if (e.target.matches('input, select, textarea')) return;
@@ -668,7 +767,7 @@ document.addEventListener('keydown', (e) => {
   if (/^[1-9]$/.test(e.key)) { hotbar.sel = Number(e.key) - 1; picked = null; renderHotbar(); renderPalette(); return; }
   const k = e.key.toLowerCase();
   if (k === 'b') setTool('place');
-  else if (k === 'e') setTool('break');
+  else if (k === 'e') setTool('replace');
   else if (k === 'i') setTool('pick');
   else if (k === 'r') setTool('box');
   else if (k === 'f') frame();
@@ -771,10 +870,10 @@ function updateCut() {
   mats.forEach((m) => { m.clippingPlanes = clipList; m.needsUpdate = true; });
   $('#ed-cutv').textContent = on ? `Y ${cutY()}` : 'aus';
 }
-$('#ed-cut').addEventListener('change', () => { updateCut(); rebuildHelpers(); });
-$('#ed-cuty').addEventListener('input', () => { if (!$('#ed-cut').checked) $('#ed-cut').checked = true; updateCut(); rebuildHelpers(); });
+$('#ed-cut').addEventListener('change', () => { updateCut(); rebuildHelpers(); reloadCutMesh(); });
+$('#ed-cuty').addEventListener('input', () => { if (!$('#ed-cut').checked) $('#ed-cut').checked = true; updateCut(); rebuildHelpers(); reloadCutMesh(); });
 $('#ed-plane').addEventListener('change', (e) => {
-  if (e.target.checked && !$('#ed-cut').checked) { $('#ed-cut').checked = true; updateCut(); }
+  if (e.target.checked && !$('#ed-cut').checked) { $('#ed-cut').checked = true; updateCut(); reloadCutMesh(); }
   rebuildHelpers();
 });
 
