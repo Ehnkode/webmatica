@@ -1,8 +1,16 @@
 package io.github.ehnkode.webmatica;
 
+import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+//? if >=26.1 {
+/*import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
+*///?} else {
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+//?}
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 
@@ -18,19 +26,36 @@ final class WmCommand {
 
     static void register() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, ctx) -> dispatcher.register(
-                ClientCommandManager.literal("wm")
+                literal("wm")
                         .executes(c -> open(new WebmaticaScreen(null)))
-                        .then(ClientCommandManager.literal("search")
+                        .then(literal("search")
                                 .executes(c -> open(new ChestSearchScreen(null, "")))
-                                .then(ClientCommandManager.argument("item", StringArgumentType.greedyString())
+                                .then(argument("item", StringArgumentType.greedyString())
                                         .executes(c -> open(new ChestSearchScreen(null, StringArgumentType.getString(c, "item"))))))
-                        .then(ClientCommandManager.literal("stop").executes(c -> bot("stop")))
-                        .then(ClientCommandManager.literal("pause").executes(c -> bot("pause")))
-                        .then(ClientCommandManager.literal("resume").executes(c -> bot("resume")))
-                        .then(ClientCommandManager.literal("hud").executes(c -> {
+                        .then(literal("stop").executes(c -> bot("stop")))
+                        .then(literal("pause").executes(c -> bot("pause")))
+                        .then(literal("resume").executes(c -> bot("resume")))
+                        .then(literal("hud").executes(c -> {
                             toggleHud(Minecraft.getInstance());
                             return 1;
                         }))));
+    }
+
+    /** Fabric renamed ClientCommandManager to ClientCommands in 26.1. */
+    private static LiteralArgumentBuilder<FabricClientCommandSource> literal(String name) {
+        //? if >=26.1 {
+        /*return ClientCommands.literal(name);
+        *///?} else {
+        return ClientCommandManager.literal(name);
+        //?}
+    }
+
+    private static <T> RequiredArgumentBuilder<FabricClientCommandSource, T> argument(String name, ArgumentType<T> type) {
+        //? if >=26.1 {
+        /*return ClientCommands.argument(name, type);
+        *///?} else {
+        return ClientCommandManager.argument(name, type);
+        //?}
     }
 
     private static int open(Screen s) {
