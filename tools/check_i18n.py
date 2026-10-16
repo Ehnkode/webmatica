@@ -1,7 +1,9 @@
 """The English table covers the German texts of the web pages.
 
 Uses the same matching as static/i18n.js: exact lines, {} patterns, and lines
-joined with " · " or ", " translated piece by piece.
+joined with " · " or ", " translated piece by piece. Run in CI:
+
+    python3 -m unittest tools/check_i18n.py
 """
 
 import os
@@ -9,7 +11,7 @@ import re
 import unittest
 from html.parser import HTMLParser
 
-STATIC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+STATIC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "viewer", "static")
 EDGE = re.compile(r"^([\s,:;·–]*)([\s\S]*?)([\s,.:;·–]*)$")
 
 

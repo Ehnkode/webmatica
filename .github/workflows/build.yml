@@ -40,34 +40,39 @@ jobs:
         with:
           files: build/libs/webmatica-*.jar
 
-  viewer-tests:
+  # The web page's English table covers every German text (tools/check_i18n.py).
+  i18n:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install -r requirements.txt
-      - run: python -m unittest discover -s viewer/tests -t . -v
+      - run: python3 -m unittest tools/check_i18n.py -v
 
   # Block and item images are built from the player's game jar on first start;
   # make sure that still works for every supported Minecraft version.
   viewer-assets:
+    needs: build
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         minecraft: ['1.21.11', '26.1.2', '26.2', '26.3']
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-java@v5
         with:
-          python-version: '3.12'
-      - run: pip install -r requirements.txt
-      - name: Download the Minecraft ${{ matrix.minecraft }} client jar
+          java-version: '21'
+          distribution: 'temurin'
+      - uses: actions/download-artifact@v5
+        with:
+          name: webmatica-mod
+          path: libs
+      - name: Download the Minecraft ${{ matrix.minecraft }} client jar and Gson
         run: |
           url=$(curl -s https://piston-meta.mojang.com/mc/game/version_manifest_v2.json \
             | jq -r --arg v '${{ matrix.minecraft }}' '.versions[] | select(.id==$v) | .url')
           curl -s -o client.jar "$(curl -s "$url" | jq -r '.downloads.client.url')"
-      - run: python -m viewer.tools.build_assets --jar client.jar
-      - run: python -m viewer.tools.build_items --jar client.jar
+          curl -s -o gson.jar https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.11.0/gson-2.11.0.jar
+      - name: Build block and item images
+        run: |
+          mod=$(ls libs/webmatica-*+mc1.21.11.jar | grep -v sources | head -1)
+          java -cp "$mod:gson.jar" io.github.ehnkode.webmatica.viewer.AssetBuilder client.jar assets
+          test -n "$(ls -A assets)"

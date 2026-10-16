@@ -11,6 +11,6 @@ about: Etwas funktioniert nicht
 
 **Schritte zum Nachstellen**
 
-**Versionen:** Minecraft, Fabric Loader, Fabric API, Webmatica-Mod, Viewer (Python-Version), Baritone/Litematica falls benutzt
+**Versionen:** Minecraft, Fabric Loader, Fabric API, Webmatica-Mod, Baritone/Litematica falls benutzt
 
 **Fehlermeldung** (aus dem schwarzen Viewer-Fenster oder `logs/latest.log`):
