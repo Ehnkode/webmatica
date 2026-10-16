@@ -24,6 +24,8 @@ public class MapperClient implements ClientModInitializer {
     private static KeyMapping toggleKey;
     private static KeyMapping viewerKey;
     private static KeyMapping printerKey;
+    private static KeyMapping menuKey;
+    private static KeyMapping hudKey;
     private static ClientLevel lastWorld;
 
     @Override
@@ -42,6 +44,11 @@ public class MapperClient implements ClientModInitializer {
         toggleKey = Mc.registerKey("key.webmatica.toggle", InputConstants.KEY_F9, category);
         viewerKey = Mc.registerKey("key.webmatica.viewer", InputConstants.KEY_F10, category);
         printerKey = Mc.registerKey("key.webmatica.printer", InputConstants.UNKNOWN.getValue(), category);
+        menuKey = Mc.registerKey("key.webmatica.menu", InputConstants.KEY_F8, category);
+        hudKey = Mc.registerKey("key.webmatica.hud", InputConstants.UNKNOWN.getValue(), category);
+        JobHud.register();
+        ChestTooltip.register();
+        WmCommand.register();
 
         ClientTickEvents.END_CLIENT_TICK.register(MapperClient::onEndTick);
         if (System.getProperty("webmatica.autotest") != null) {
@@ -66,6 +73,9 @@ public class MapperClient implements ClientModInitializer {
         if (mc.level != lastWorld) {
             lastWorld = mc.level;
             store.onWorldChange(mc.level);
+            if (mc.level != null && IngameConfig.get().viewerInBackground) {
+                ViewerLauncher.startInBackground(mc);
+            }
         }
 
         while (toggleKey.consumeClick()) {
@@ -79,6 +89,16 @@ public class MapperClient implements ClientModInitializer {
 
         while (viewerKey.consumeClick()) {
             ViewerLauncher.open(mc);
+        }
+
+        while (menuKey.consumeClick()) {
+            if (mc.player != null) {
+                Mc.setScreen(mc, new WebmaticaScreen(null));
+            }
+        }
+
+        while (hudKey.consumeClick()) {
+            WmCommand.toggleHud(mc);
         }
 
         while (printerKey.consumeClick()) {
@@ -102,5 +122,7 @@ public class MapperClient implements ClientModInitializer {
         Walker.tick(mc);
         AutoGuard.tick(mc);
         ContainerTracker.getInstance().tick(mc);
+        JobStatus.tick(mc);
+        WmCommand.tick(mc);
     }
 }
