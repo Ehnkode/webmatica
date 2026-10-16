@@ -359,6 +359,11 @@ public final class FarmTask extends BotTask<FarmTask.Phase> {
     @Override
     protected void finish(boolean ok, String why) {
         Minecraft mc = Minecraft.getInstance();
+        if (area != null) {
+            // Baritone keeps drawing its selection after the job: remove it
+            BaritoneApi.tryExecute("sel clear");
+            area = null;
+        }
         String msg;
         if (label != null && label.equals("Kiste")) {
             msg = "Kiste: " + count + " Items eingelagert" + (placed != null ? " bei " + placed.getX() + " " + placed.getY() + " " + placed.getZ() : "");
