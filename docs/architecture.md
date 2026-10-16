@@ -52,9 +52,12 @@ on 127.0.0.1:8770 and runs the automations' logic. The mod only executes steps.
 | `AssetBuilder` | block and item images from the game jar, built once per Minecraft version |
 
 **Web page and reference** (`viewer/`). `viewer/static/` is the web page, packed
-into the jar. The Python files next to it are the earlier viewer: the Java server
-gives the same answers, and its tests (`python3 -m unittest discover -s viewer/tests -t .`)
-still describe the expected behavior.
+into the jar. The Python files next to it are the earlier viewer, kept as a
+reference: its tests (`python3 -m unittest discover -s viewer/tests -t .`) still
+describe the expected behavior of everything both have. Newer parts exist only in
+Java: the 3D water frames (`/api/water.png`), classic map shading
+(`shade=classic`), the editor's cut mesh and block preview, the schematic bin and
+`/api/containers/gone`.
 
 ## The web page
 
