@@ -636,6 +636,20 @@ final class Routes {
                     }
                 }
             }
+            JsonObject sel = J.obj(req, "sel");
+            if (sel != null) {
+                // the selection made in game, shown in the viewer too
+                JsonObject o = new JsonObject();
+                try {
+                    o.addProperty("dim", J.str(sel, "dim", ""));
+                    for (String k : new String[] {"x0", "y0", "z0", "x1", "y1", "z1"}) {
+                        o.addProperty(k, J.i(sel, k));
+                    }
+                    pl.add("sel", o);
+                } catch (RuntimeException ignored) {
+                    // incomplete box: leave it out
+                }
+            }
             JsonArray others = J.arr(req, "others");
             if (others != null) {
                 pl.add("others", app.radar.update(pl, others));

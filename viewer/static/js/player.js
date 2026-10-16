@@ -7,7 +7,7 @@ import {
 import { renderSelectors, select, tiles } from './world.js';
 import { flash, toggleSide } from './sidebar.js';
 import { loadMarkers } from './places.js';
-import { extendTrail, sel, setSelect, trail } from './selection.js';
+import { extendTrail, gameSel, sel, setSelect, trail } from './selection.js';
 import { schem, selectSchem } from './schematics.js';
 import { cut, drawHistory, tl } from './history.js';
 import { ctl } from './automation.js';
@@ -64,6 +64,7 @@ function onPlayer(p) {
   if (view3d) view3d.updatePlayer(state.player);
   if (state.trail && state.player && state.player.active) extendTrail(state.player);
   radarUpdate(state.player);
+  gameSel(state.player);
   statusText();
   followWorld(p);
   startOnPlayer(p);
