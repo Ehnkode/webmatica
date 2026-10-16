@@ -11,15 +11,6 @@ out/
 .vscode/
 *.iml
 
-# Python
-__pycache__/
-*.pyc
-.venv/
-
-# Aus der eigenen Minecraft-Jar erzeugt (gehoert Mojang, nie einchecken)
-viewer/assets/*
-!viewer/assets/.gitkeep
-
 # Eigene Spieldaten nie einchecken: Aufnahmen, Kisten, Wegpunkte, Schematics
 webmatica_recording/
 .viewer/
