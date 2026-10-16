@@ -29,7 +29,7 @@ final class AutoBuild {
     // ------------------------------------------------------------------ timings and limits
     static final double FRESH_PLAYER = 6.0, STEP_EVERY = 2.0, FETCH_TIMEOUT = 240.0, SETTLE = 2.5, STALL = 45.0,
             BAD_CHEST = 600.0, NEAR = 20.0, UNSEEN_WAIT = 8.0, RADAR_CLEAR = 15.0, MINE_TIMEOUT = 360.0, STORE_RADIUS = 128.0;
-    static final int MAIN_SLOTS = 36, FIX_ROUNDS = 2, MINE_BATCH = 48, FREE_MIN = 3, FILL_BATCH = 128, LIGHT_BATCH = 8;
+    static final int MAIN_SLOTS = 36, FIX_ROUNDS = 2, MINE_BATCH = 48, CLEAR_BATCH = 160, FREE_MIN = 3, FILL_BATCH = 128, LIGHT_BATCH = 8;
     static final Set<String> RUNNING = Set.of("plan", "fetch", "build", "approach", "unpack", "return", "fix", "fplan", "mine", "deposit");
     static final List<String> ENGINES = List.of("auto", "native", "baritone");
     /** stays in the inventory when storing */
@@ -1704,7 +1704,7 @@ final class AutoBuild {
                 Object ct = fl.get("clearTotal");
                 fl.put("clearTotal", Math.max(ct == null ? 0L : ((Number) ct).longValue(), left));   // for the progress bar
             }
-            List<int[]> pts = left != 0 && ok ? Farm.positions(app.rec, dim, above, Set.of(Farm.ANY), near, MINE_BATCH, st.skip) : List.of();
+            List<int[]> pts = left != 0 && ok ? Farm.positions(app.rec, dim, above, Set.of(Farm.ANY), near, CLEAR_BATCH, st.skip) : List.of();
             if (pts.isEmpty()) {
                 log(srv, left == 0 ? "abgetragen" : "abgetragen, " + left + " Blöcke kommen nicht weg");
                 if (!(Boolean) fl.get("fill")) {
