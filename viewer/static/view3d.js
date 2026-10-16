@@ -98,14 +98,49 @@ export function create(container, ctx) {
       if (!j.available) { ctx.toast && ctx.toast('3D braucht die Blockmodelle: python -m viewer.tools.build_assets --jar <client.jar>'); return; }
       const img = new Image();
       img.onload = () => {
-        atlas.image = img; atlas.repeat.set(1 / (16 * j.width), 1 / (16 * j.height)); atlas.needsUpdate = true;
+        // on a canvas, so the water tile can be swapped for its animation frames (animateWater)
+        const c = document.createElement('canvas');
+        c.width = img.width;
+        c.height = img.height;
+        c.getContext('2d').drawImage(img, 0, 0);
+        atlas.image = c; atlas.repeat.set(1 / (16 * j.width), 1 / (16 * j.height)); atlas.needsUpdate = true;
         atlasW = j.width; atlasH = j.height;
+        if (j.water >= 0) animateWater(c, j.water);
       };
       img.onerror = () => retry('blocks.png');
       img.src = `/api/blocks.png?v=${encodeURIComponent(j.version || '')}`;
     }).catch((e) => retry(String(e && e.message || e)));
   }
   loadAtlas();
+
+  /* Moving water like in the game: the frames of water_still.png (frametime 2 ticks) are drawn
+   * into the water tile of the atlas in turn. One small upload of the atlas per frame, only while
+   * 3D is open. */
+  let waterTimer = null;
+  function animateWater(canvas, idx) {
+    clearInterval(waterTimer);
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const strip = new Image();
+    strip.onload = () => {
+      const n = strip.width, count = Math.floor(strip.height / n);
+      if (count < 2) return;
+      const cols = Math.round(canvas.width / 16);
+      const x = (idx % cols) * 16, y = Math.floor(idx / cols) * 16;
+      const g = canvas.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      let last = -1;
+      waterTimer = setInterval(() => {
+        if (!st.active || document.hidden || atlas.image !== canvas) return;
+        const k = Math.floor(performance.now() / 100) % count;
+        if (k === last) return;
+        last = k;
+        g.clearRect(x, y, 16, 16);
+        g.drawImage(strip, 0, k * n, n, n, x, y, 16, 16);
+        atlas.needsUpdate = true;
+      }, 50);
+    };
+    strip.src = '/api/water.png';
+  }
 
   // ------------------------------------------------------------ State
 

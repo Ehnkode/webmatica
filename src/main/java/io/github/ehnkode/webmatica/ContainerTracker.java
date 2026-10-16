@@ -98,7 +98,96 @@ public final class ContainerTracker {
         });
     }
 
+    /** Broken containers, checked again after {@link #GONE_DELAY_MS} (2b2t often undoes a predicted break). */
+    private static final long GONE_DELAY_MS = 1500L;
+    private final java.util.Map<BlockPos, Gone> gone = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private record Gone(net.minecraft.world.level.Level level, net.minecraft.world.level.block.Block block, BlockPos other, long at) {
+    }
+
+    /**
+     * From {@code WorldChunkMixin}: a block with a block entity (chest, shulker, barrel ...) was
+     * replaced by a different block. If it stays gone, the viewer forgets its contents.
+     */
+    public void blockReplaced(net.minecraft.world.level.Level level, BlockPos pos,
+                              net.minecraft.world.level.block.state.BlockState old,
+                              net.minecraft.world.level.block.state.BlockState now) {
+        if (!old.hasBlockEntity() || now.getBlock() == old.getBlock()
+                || old.getBlock() instanceof net.minecraft.world.level.block.EnderChestBlock) {
+            return;
+        }
+        BlockPos other = null;
+        try {
+            if (old.getBlock() instanceof net.minecraft.world.level.block.ChestBlock
+                    && old.getValue(net.minecraft.world.level.block.ChestBlock.TYPE) != net.minecraft.world.level.block.state.properties.ChestType.SINGLE) {
+                other = pos.relative(net.minecraft.world.level.block.ChestBlock.getConnectedDirection(old)).immutable();
+            }
+        } catch (Throwable ignored) {
+        }
+        gone.put(pos.immutable(), new Gone(level, old.getBlock(), other, System.currentTimeMillis()));
+    }
+
+    private void sendGone(Minecraft mc) {
+        if (gone.isEmpty()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        for (java.util.Iterator<java.util.Map.Entry<BlockPos, Gone>> it = gone.entrySet().iterator(); it.hasNext(); ) {
+            java.util.Map.Entry<BlockPos, Gone> e = it.next();
+            Gone g = e.getValue();
+            if (now - g.at() < GONE_DELAY_MS) {
+                continue;
+            }
+            it.remove();
+            if (mc.level == null || mc.level != g.level() || mc.level.getBlockState(e.getKey()).getBlock() == g.block()) {
+                continue;       // other world, or the server put the block back
+            }
+            JsonObject o = new JsonObject();
+            o.addProperty("server", RecordingTarget.serverId(mc));
+            Identifier dim = mc.level.dimension().identifier();
+            o.addProperty("dim", "minecraft".equals(dim.getNamespace()) ? dim.getPath() : dim.toString());
+            JsonArray keys = new JsonArray();
+            for (BlockPos p : new BlockPos[] {e.getKey(), g.other()}) {
+                if (p != null) {
+                    JsonArray xyz = new JsonArray();
+                    xyz.add(p.getX());
+                    xyz.add(p.getY());
+                    xyz.add(p.getZ());
+                    keys.add(xyz);
+                }
+            }
+            o.add("at", keys);
+            post("/api/containers/gone", o.toString());
+        }
+    }
+
+    private void post(String path, String body) {
+        sender.submit(() -> {
+            try {
+                String base = PositionReporter.url();
+                int i = base.indexOf("/api/");
+                URI uri = URI.create((i > 0 ? base.substring(0, i) : "http://127.0.0.1:8770") + path);
+                HttpURLConnection c = (HttpURLConnection) uri.toURL().openConnection();
+                c.setConnectTimeout(800);
+                c.setReadTimeout(2000);
+                c.setDoOutput(true);
+                c.setRequestMethod("POST");
+                c.setRequestProperty("Content-Type", "application/json");
+                byte[] b = body.getBytes(StandardCharsets.UTF_8);
+                c.setFixedLengthStreamingMode(b.length);
+                try (OutputStream os = c.getOutputStream()) {
+                    os.write(b);
+                }
+                c.getResponseCode();
+                c.disconnect();
+            } catch (Throwable ignored) {
+                // viewer off: the viewer drops it later from the recording
+            }
+        });
+    }
+
     public void tick(Minecraft mc) {
+        sendGone(mc);
         if (UnpackTask.getInstance().busy()) {
             usePos = null;      // a briefly placed shulker is not a chest
             return;

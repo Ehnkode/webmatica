@@ -1233,11 +1233,9 @@ Alt+Klick: Luftblock davor	Alt+click: the air block in front
 Mausrad: Auswahl in Blickrichtung vergrößern/verkleinern (Strg = 8)	Mouse wheel: grow/shrink the selection in the view direction (Ctrl = 8)
 X von	X from
 Z von	Z from
-Wasser animiert	Animated water
 Angeklickten Block durch den gewählten ersetzen (E). Mit Luft gewählt entfernt er ihn, Rechtsklick entfernt immer.	Replace the clicked block with the chosen one (E). With air chosen it removes it, right-click always removes.
 Linksklick: Werkzeug · Rechtsklick: entfernen · Mittelklick: Pipette	Left-click: tool · Right-click: remove · Middle-click: pick block
 Luft (entfernt Blöcke)	Air (removes blocks)
-Wasser auf der Karte bewegt sich wie im Spiel (ab mittlerer Zoomstufe)	Water on the map moves like in the game (from medium zoom on)
 Weicher Shader	Soft shader
 Weiche Schattierung mit Licht und Tiefe. Aus: klassische Schattierung wie auf Vanilla-Karten	Soft shading with light and depth. Off: classic shading like vanilla maps
 Mittlere Maustaste ziehen: umsehen	Drag with middle mouse button: look around

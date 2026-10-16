@@ -94,8 +94,8 @@ The code for each one is in `viewer/Routes.java` (search for the path).
 ```
 GET  /                                   UI
 GET  /api/worlds                         servers, dimensions, layers
-GET  /api/tile/<srv>/<dim>/<layer>/<z>/<x>/<y>.png[?at=YYYY-MM-DD|raw=1|water=1|shade=classic]   (at: state on that day, changed chunks only; raw: without shading; water: mask of the water, zoom 0 only; shade=classic: vanilla-map shading instead of the soft one)
-GET  /api/water.png   (all animation frames of the vanilla still water, one below the other)
+GET  /api/tile/<srv>/<dim>/<layer>/<z>/<x>/<y>.png[?at=YYYY-MM-DD|raw=1|shade=classic]   (at: state on that day, changed chunks only; raw: without shading; shade=classic: vanilla-map shading instead of the soft one)
+GET  /api/water.png   (all animation frames of the vanilla still water, one below the other; animates the water in 3D)
 GET  /api/changes?srv=&dim=&since=       regions changed since <since>
 GET  /api/column?srv=&dim=&x=&z=&layer=  top block, height, biome at a spot
 GET  /api/markers?srv=&dim=&layer=       signs + containers per chunk

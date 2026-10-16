@@ -150,13 +150,7 @@ final class Routes {
             }
             String at = date(h);
             Tiles store = at.isEmpty() ? app.tiles : app.past(srv, dimKey, at);
-            boolean water = "1".equals(h.q("water"));
-            if (water && (zoom != 0 || !at.isEmpty())) {
-                h.send(200, Png.EMPTY, "image/png", "no-cache");
-                return;
-            }
-            Path path = water ? store.waterRegionTile(dim, Tiles.Layer.parse(parts.get(2)), tx, tz)
-                    : store.tile(dim, Tiles.Layer.parse(parts.get(2)), zoom, tx, tz,
+            Path path = store.tile(dim, Tiles.Layer.parse(parts.get(2)), zoom, tx, tz,
                             "1".equals(h.q("raw")) && at.isEmpty() ? "raw" : "classic".equals(h.q("shade")) ? "classic" : "");
             if (path == null) {
                 h.send(200, Png.EMPTY, "image/png", "no-cache");
@@ -300,7 +294,8 @@ final class Routes {
         r.get("/api/blocks-info", h -> {
             Models m = Palette.models;
             h.json(J.map("available", m != null && m.available, "version", m == null ? "0" : m.version,
-                    "width", m == null ? 0 : m.width, "height", m == null ? 0 : m.height));
+                    "width", m == null ? 0 : m.width, "height", m == null ? 0 : m.height,
+                    "water", m == null ? -1 : m.textures.getOrDefault("block/water_still", -1)));
         });
 
         r.get("/api/xray/find", h -> {
@@ -1080,6 +1075,10 @@ final class Routes {
             } catch (IllegalArgumentException | IllegalStateException e) {
                 h.fail(400, "Kiste unvollstaendig: " + App.pyErr(e));
             }
+        });
+        r.post("/api/containers/gone", (h, req) -> {
+            JsonObject o = J.obj(req);
+            h.json(J.map("removed", o == null ? 0 : app.containers.gone(o)));
         });
         r.post("/api/containers/delete", (h, req) -> {
             app.containers.delete(J.str(J.obj(req), "key", "None"));

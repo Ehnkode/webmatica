@@ -316,17 +316,6 @@ public class Tiles {
             return has[i] ? height[i] : fallback;
         }
 
-        /** Where the map shows water: white, opaque on water, transparent elsewhere (mask for the animation). */
-        byte[] waterMask() {
-            byte[] out = new byte[TILE * TILE * 4];
-            for (int i = 0; i < TILE * TILE; i++) {
-                boolean w = has[i] && water[i];
-                out[4 * i] = out[4 * i + 1] = out[4 * i + 2] = (byte) 255;
-                out[4 * i + 3] = (byte) (w ? 255 : 0);
-            }
-            return out;
-        }
-
         byte[] raw() {
             byte[] out = new byte[TILE * TILE * 4];
             for (int i = 0; i < TILE * TILE; i++) {
@@ -537,28 +526,6 @@ public class Tiles {
                 return null;
             }
             Png.writeAtomic(png, Png.encode(TILE, TILE, g.shaded(false)));
-            return png;
-        }
-    }
-
-    /** Water mask of a region tile (zoom 0), for the moving water on the map. */
-    public Path waterRegionTile(Recording.Dimension dim, Layer layer, int rx, int rz) throws IOException {
-        if (regionTile(dim, layer, rx, rz) == null) {
-            return null;
-        }
-        Path d = dir(dim, layer, 0);
-        Path grid = d.resolve(rx + "_" + rz + ".grid");
-        Path png = d.resolve(rx + "_" + rz + ".water.png");
-        synchronized (lock(png)) {
-            long pm = mtime(png);
-            if (pm >= 0 && pm >= mtime(grid)) {
-                return png;
-            }
-            Grid g = Grid.load(grid);
-            if (g == null) {
-                return null;
-            }
-            Png.writeAtomic(png, Png.encode(TILE, TILE, g.waterMask()));
             return png;
         }
     }
