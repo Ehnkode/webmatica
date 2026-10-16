@@ -6,12 +6,13 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 
 /**
  * Highlights chests in game ("Show in game" button on the web page): a
- * light pillar of particles above each chest, for 60 seconds. Only visible in
- * your own client, the server knows nothing about it.
+ * light pillar of particles above each chest, for 60 seconds or until the
+ * chest is opened. Only visible in your own client, the server knows nothing about it.
  */
 public final class Highlighter {
 
@@ -40,6 +41,23 @@ public final class Highlighter {
         }
         until = System.currentTimeMillis() + DURATION_MS;
         return points.size();
+    }
+
+    /** Client thread: a chest was opened, its mark (both halves of a double chest) goes away. */
+    public void opened(BlockPos pos, BlockPos other) {
+        points.removeIf(q -> is(q, pos) || is(q, other));
+    }
+
+    private static boolean is(int[] q, BlockPos p) {
+        return p != null && q[0] == p.getX() && q[1] == p.getY() && q[2] == p.getZ();
+    }
+
+    public void clear() {
+        points.clear();
+    }
+
+    public int count() {
+        return System.currentTimeMillis() > until ? 0 : points.size();
     }
 
     public void tick(Minecraft mc) {
