@@ -24,10 +24,15 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 | ![Schematic Schicht für Schicht aufschneiden](docs/editor-cut.gif) | ![Ein Haus im Schematic-Editor bauen](docs/build.gif) |
 
 - **Karte und 3D** von allem, was du gesehen hast, mit echten Blockmodellen, weichem Licht,
-  Schatten und Fernsicht bis 65.000 Blöcke. Live-Position, Spur, Verfolger-Kamera und Mob-Spawns.
-- **Schematic-Editor:** Blöcke setzen, abbauen und füllen, alle Blöcke einer Sorte ersetzen oder
-  löschen, kopieren, verschieben, drehen, mit Rückgängig. Jeder Bereich deiner Welt wird mit zwei
-  Klicks zur Schematic.
+  Schatten, bewegtem Wasser und Fernsicht bis 65.000 Blöcke. Die Karte hat eine weiche
+  Relief-Schattierung (oder den klassischen Vanilla-Look). Live-Position, Spur, Verfolger-Kamera und
+  Mob-Spawns.
+- **Bereiche auswählen:** auf der Karte aufziehen und die Höhe wählen, oder in 3D wie bei Axiom:
+  Linksklick setzt die erste Ecke, Rechtsklick die zweite, das Mausrad erweitert den Bereich in
+  Blickrichtung. Auch Luftblöcke.
+- **Schematic-Editor:** Blöcke setzen, ersetzen (mit Luft = entfernen) und füllen, alle Blöcke
+  einer Sorte ersetzen oder löschen, kopieren, verschieben, drehen, mit Rückgängig. Schicht für
+  Schicht aufschneiden. Jeder Bereich deiner Welt wird mit zwei Klicks zur Schematic.
 - **Schematics:** `.litematic`, `.schem` oder `.nbt` laden, auf der Karte platzieren, mit einem
   Klick an Litematica schicken und sehen, welche Items noch fehlen. Inventar und Kisten sind schon
   abgezogen.
@@ -36,7 +41,8 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
   an, wenn ein Spieler in die Nähe kommt. Eine Warteschlange baut mehrere Schematics nacheinander.
 - **Lager:** Jede Kiste, die du öffnest, wird gemerkt, auch der Inhalt von Shulkern. Such ein Item
   über alle Kisten, lass genau die gewählten Stacks holen oder dein Inventar dorthin
-  einlagern, wo das Item schon liegt. Mit Stash-Finder.
+  einlagern, wo das Item schon liegt. Abgebaute Kisten verschwinden von selbst. Mit Stash-Finder:
+  hinlaufen oder in 3D hinfliegen.
 - **Eigene Lauf-Engine:** Rechtsklick auf die Karte und du läufst hin; Holen, Einlagern und
   Einsammeln laufen genauso. Klappt ohne Baritone: Sie findet den Weg über Treppen, Stufen und
   Abgründe, um Mauern, Lava und tiefes Wasser herum.
