@@ -13,7 +13,7 @@
 <div id="map"></div>
 <button id="tl-badge" class="panel tl-badge" hidden title="Zurück zu heute"></button>
 <div id="view3d" hidden>
-  <div class="hint3d panel"><span id="hint3d-text">Klick auf Spieler oder Schematic wählt aus · sonst Maus fangen · <b>WASD</b> fliegen · <b>Leertaste/Shift</b> hoch/runter · <b>Strg</b> schneller · <b>Esc</b> Maus frei · <b>H</b> diese Hilfe</span></div>
+  <div class="hint3d panel"><span id="hint3d-text"><b>Klick</b> Maus fangen · <b>Mittlere Maustaste</b> umsehen · <b>WASD</b> fliegen · <b>Leertaste/Shift</b> hoch/runter · <b>Strg</b> schneller · <b>Mausrad</b> Tempo · <b>Esc</b> Maus frei · <b>H</b> diese Hilfe</span></div>
   <div id="mini" class="mini panel" title="Klick: dorthin fliegen · Rad: Zoom">
     <div id="mini-map"></div>
     <div id="mini-arrow" class="mini-arrow"></div>
@@ -480,7 +480,16 @@
       <div><kbd>R</kbd> <kbd>M</kbd><span>drehen, spiegeln</span></div>
       <div><kbd>Esc</kbd><span>schließen</span></div>
       <h4>3D</h4>
+      <div><span class="k">Klick</span><span>Maus fangen (umsehen mit der Maus), <kbd>Esc</kbd> gibt sie wieder frei</span></div>
+      <div><span class="k">Mittlere Maustaste</span><span>gedrückt halten und ziehen: umsehen, ohne die Maus zu fangen</span></div>
       <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>fliegen, <kbd>Leer</kbd>/<kbd>Shift</kbd> hoch/runter, <kbd>Strg</kbd> schneller</span></div>
+      <div><span class="k">Mausrad</span><span>Fluggeschwindigkeit</span></div>
+      <div><span class="k">Klick auf Spieler</span><span>Kamera-Modi: folgen, Ego-Sicht, von oben</span></div>
+      <div><span class="k">Klick auf Schematic</span><span>auswählen, dann verschieben und drehen wie oben</span></div>
+      <h4>3D-Auswahl (<kbd>E</kbd>)</h4>
+      <div><span class="k">Linksklick</span><span>erste Ecke, <span class="k">Rechtsklick</span> zweite Ecke</span></div>
+      <div><span class="k">Alt+Klick</span><span>Luftblock vor der Fläche</span></div>
+      <div><span class="k">Mausrad</span><span>Auswahl in Blickrichtung vergrößern/verkleinern (<kbd>Strg</kbd> = 8)</span></div>
       <div><kbd>X</kbd><span>X-Ray an/aus</span></div>
       <div><kbd>N</kbd><span>X-Ray: zum nächsten Fund</span></div>
     </div>
