@@ -4,5 +4,6 @@
   "key.webmatica.printer": "Webmatica printer on/off",
   "key.webmatica.menu": "Open Webmatica menu",
   "key.webmatica.hud": "Job display on/off",
+  "key.webmatica.select": "Selection mode on/off",
   "key.category.webmatica.main": "Webmatica"
 }

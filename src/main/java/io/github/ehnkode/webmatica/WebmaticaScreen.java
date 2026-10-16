@@ -28,7 +28,9 @@ final class WebmaticaScreen extends WmScreen {
         ChestIndex.refresh(mc, true);
         int x = (width - W) / 2;
         int y = Math.max(30, height / 2 - 112);
-        button("Kisten durchsuchen", x, y, W, b -> Mc.setScreen(mc, new ChestSearchScreen(this, "")));
+        int half = (W - 4) / 2;
+        button("Kisten durchsuchen", x, y, half, b -> Mc.setScreen(mc, new ChestSearchScreen(this, "")));
+        button("Auswahl", x + half + 4, y, half, b -> Mc.setScreen(mc, new SelectionScreen(this)));
         button("Viewer im Browser öffnen", x, y + 24, W, b -> {
             Mc.setScreen(mc, null);
             ViewerLauncher.open(mc);
@@ -36,7 +38,6 @@ final class WebmaticaScreen extends WmScreen {
         button("Einstellungen", x, y + 48, W, b -> Mc.setScreen(mc, new SettingsScreen(this)));
         unmark = button("Markierungen entfernen", x, y + 72, W, b -> Highlighter.getInstance().clear());
         jobsY = y + 106;
-        int half = (W - 4) / 2;
         pause = button("Pause", x, jobsY + 52, half, b -> IngameActions.bot(mc, JobStatus.paused() ? "resume" : "pause"));
         stop = button("Stopp", x + half + 4, jobsY + 52, half, b -> IngameActions.bot(mc, "stop"));
         button("Fertig", x, jobsY + 84, W, b -> onClose());

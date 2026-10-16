@@ -52,6 +52,25 @@ final class ViewerApi {
         }
     }
 
+    /** Blocking GET of a file (schematic export), background threads only. */
+    static byte[] getBytesNow(String path) throws IOException {
+        HttpURLConnection c = (HttpURLConnection) URI.create(base() + path).toURL().openConnection();
+        c.setConnectTimeout(800);
+        c.setReadTimeout(60000);
+        try {
+            if (c.getResponseCode() != 200) {
+                throw new IOException(errorText(c));
+            }
+            try (InputStream in = c.getInputStream()) {
+                return in.readAllBytes();
+            }
+        } catch (java.net.ConnectException e) {
+            throw new IOException("Viewer läuft nicht");
+        } finally {
+            c.disconnect();
+        }
+    }
+
     /**
      * POST in the background. {@code done} gets null on success, else the viewer's error message
      * (or a hint that the viewer is not running), on the client thread.

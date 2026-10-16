@@ -26,6 +26,7 @@ public class MapperClient implements ClientModInitializer {
     private static KeyMapping printerKey;
     private static KeyMapping menuKey;
     private static KeyMapping hudKey;
+    private static KeyMapping selectKey;
     private static ClientLevel lastWorld;
 
     @Override
@@ -46,10 +47,13 @@ public class MapperClient implements ClientModInitializer {
         printerKey = Mc.registerKey("key.webmatica.printer", InputConstants.UNKNOWN.getValue(), category);
         menuKey = Mc.registerKey("key.webmatica.menu", InputConstants.KEY_F8, category);
         hudKey = Mc.registerKey("key.webmatica.hud", InputConstants.UNKNOWN.getValue(), category);
+        selectKey = Mc.registerKey("key.webmatica.select", InputConstants.KEY_B, category);
         JobHud.register();
         ChestTooltip.register();
         WmCommand.register();
+        SelectionTool.register();
 
+        ClientTickEvents.START_CLIENT_TICK.register(SelectionTool::startTick);
         ClientTickEvents.END_CLIENT_TICK.register(MapperClient::onEndTick);
         if (System.getProperty("webmatica.autotest") != null) {
             AutoTest.install();
@@ -101,6 +105,12 @@ public class MapperClient implements ClientModInitializer {
             WmCommand.toggleHud(mc);
         }
 
+        while (selectKey.consumeClick()) {
+            if (mc.player != null) {
+                SelectionTool.setActive(mc, !SelectionTool.active());
+            }
+        }
+
         while (printerKey.consumeClick()) {
             if (mc.player != null) {
                 WebPrinter.getInstance().toggleFromKey(mc);
@@ -115,6 +125,7 @@ public class MapperClient implements ClientModInitializer {
         BuildControl.getInstance().tick(mc);
         WebPrinter.getInstance().tick(mc);
         Highlighter.getInstance().tick(mc);
+        SelectionTool.tick(mc);
         FetchTask.getInstance().tick(mc);
         UnpackTask.getInstance().tick(mc);
         FarmTask.getInstance().tick(mc);
