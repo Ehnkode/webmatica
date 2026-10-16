@@ -915,9 +915,11 @@ export function create(container, ctx) {
 
   const canvas = renderer.domElement;
   canvas.tabIndex = 0;
-  let downAt = null;
+  let downAt = null, lookDrag = false;
   canvas.addEventListener('mousedown', (e) => {
     downAt = [e.clientX, e.clientY];
+    // middle mouse button held: look around without locking the mouse (also while selecting)
+    if (e.button === 1) { e.preventDefault(); lookDrag = document.pointerLockElement !== canvas; return; }
     // with the mouse locked there is no context menu event: right click picks the second corner here
     if (e.button === 2 && blockPick && document.pointerLockElement === canvas) pickAt(e, true, 2);
   });
@@ -942,10 +944,14 @@ export function create(container, ctx) {
   document.addEventListener('pointerlockchange', () => {
     container.classList.toggle('locked', document.pointerLockElement === canvas);
   });
+  canvas.addEventListener('auxclick', (e) => { if (e.button === 1) e.preventDefault(); });
+  document.addEventListener('mouseup', (e) => { if (e.button === 1) lookDrag = false; });
   document.addEventListener('mousemove', (e) => {
-    if (!st.active || document.pointerLockElement !== canvas) return;
-    st.yaw -= e.movementX * 0.0025;
-    st.pitch = Math.max(-1.55, Math.min(1.55, st.pitch - e.movementY * 0.0025));
+    if (lookDrag && !(e.buttons & 4)) lookDrag = false;
+    if (!st.active || (document.pointerLockElement !== canvas && !lookDrag)) return;
+    const k = lookDrag ? 0.004 : 0.0025;
+    st.yaw -= e.movementX * k;
+    st.pitch = Math.max(-1.55, Math.min(1.55, st.pitch - e.movementY * k));
   });
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
