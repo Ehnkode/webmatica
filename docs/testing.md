@@ -1,9 +1,11 @@
 # Testing
 
-## Viewer
+## Translations
+
+The English table must cover every German text of the web page:
 
 ```
-python -m unittest discover -s viewer/tests
+python3 -m unittest tools/check_i18n.py
 ```
 
 ## Game tests (AutoTest)
