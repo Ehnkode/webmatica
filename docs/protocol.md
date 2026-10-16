@@ -5,7 +5,7 @@ the player's own computer: the viewer listens on `127.0.0.1:8770`, the mod and
 the browser are its clients.
 
 ```
- Minecraft + mod  ──POST /api/position (5x/s)──▶  viewer (Python)  ◀──GET/POST──  browser
+ Minecraft + mod  ──POST /api/position (5x/s)──▶  viewer (in-game) ◀──GET/POST──  browser
                   ◀─GET /api/control, /api/commands (polls)─┘
                   ──POST /api/commands/result, /api/control/status──▶
 ```
@@ -89,7 +89,7 @@ is on): target blocks of the "In game" placements in a cube around the player,
 
 All answers are JSON unless an image or binary mesh. Errors are
 `{"error": "..."}` with status 400 (bad parameters), 403, 404 or 500.
-The code for each one is in `viewer/api/` (search for the path).
+The code for each one is in `viewer/Routes.java` (search for the path).
 
 ```
 GET  /                                   UI

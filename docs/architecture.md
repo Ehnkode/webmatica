@@ -29,27 +29,32 @@ version differences live in `Mc.java` and `//?` comments.
 | `BaritoneSafety` | walk without breaking blocks unless the guard allows digging; restore Baritone's settings |
 | `AutoGuard` | eat and save tools while an automation runs; pause and resume |
 | `LitematicaBridge`, `Highlighter` | placements into Litematica (reflection), particles on chests |
-| `ViewerLauncher` | unpack and start the viewer (finds Python, installs requirements, venv fallback) |
+| `ViewerLauncher` | F10: builds the block images on first use, starts the viewer server, opens the browser |
 
 Baritone and Litematica are optional: they are only touched through reflection,
 so the mod runs without them.
 
-**Viewer** (`viewer/`, Python 3, no framework). Reads the recording, serves
-the web page and runs the automations' logic. The mod only executes steps.
+**Viewer server** (`src/main/java/io/github/ehnkode/webmatica/viewer/`, plain Java,
+no Minecraft imports). Runs inside the game: reads the recording, serves the web page
+on 127.0.0.1:8770 and runs the automations' logic. The mod only executes steps.
 
-| path | job |
+| file | job |
 |---|---|
-| `server.py` | start-up, request handler, Host/Origin checks |
-| `api/` | the answer to each URL, one module per feature: `pages`, `maps`, `game`, `schematics` |
-| `app.py` | `App`: the state of a running viewer (recording, tile cache, player, every store) |
-| `workers.py` | 3D meshes and X-ray in worker processes, pre-rendering, the automation loop |
-| `core/` | reading the recording: region files and NBT (`world`, `nbt`, `chunk`), map tiles (`tiles`, `colors`), 3D meshes (`mesher`, `models`), schematics (`schem`, `schematic`) |
-| `autobuild.py`, `automation/` | auto-build, storing, farming and flattening: the step loop in `autobuild.py`, one module per mode |
-| `extras.py` | smaller stores: commands queue, chests, printer/server-safe/layer control, history, radar, lids |
-| `placements.py`, `editor.py` | placed schematics and the schematic editor |
-| `farm.py`, `spawn.py`, `xray.py` | area scans, mob spawn spots, X-ray search |
-| `static/` | the web page (see below) |
-| `tests/` | `python3 -m unittest discover -s viewer/tests -t .` |
+| `Server` | start-up, request dispatch, Host/Origin checks, pre-render and automation loops; `main` runs it without the game |
+| `Routes`, `Router`, `Http` | the answer to each URL |
+| `App` | the state of a running viewer (recording, tile cache, player, every store) |
+| `Stores` | smaller stores: commands queue, chests, printer/server-safe/layer control, history, radar, lids |
+| `core/` | reading the recording: region files and NBT (`Recording`, `Region`, `Nbt`, `Chunk`), map tiles (`Tiles`, `Palette`, `Png`), block models (`Models`), schematics (`Schematic`) |
+| `Mesher`, `Xray` | 3D chunk meshes, X-ray search |
+| `AutoBuild` | auto-build, storing, farming and flattening: one step per server every 2 seconds |
+| `Placements`, `Editor` | placed schematics and the schematic editor |
+| `Farm`, `Spawn`, `WorldChests` | area scans, mob spawn spots, chests in the recording |
+| `AssetBuilder` | block and item images from the game jar, built once per Minecraft version |
+
+**Web page and reference** (`viewer/`). `viewer/static/` is the web page, packed
+into the jar. The Python files next to it are the earlier viewer: the Java server
+gives the same answers, and its tests (`python3 -m unittest discover -s viewer/tests -t .`)
+still describe the expected behavior.
 
 ## The web page
 
@@ -91,10 +96,10 @@ New UI text is written in German; add the English line to `i18n/en.tsv`
 "Break wrong blocks" as an example:
 
 1. `js/materials.js` shows the button after a progress check
-   (`GET /api/schematics/<id>/verify`, answered in `api/schematics.py`,
-   computed in `core/schematic.py`).
+   (`GET /api/schematics/<id>/verify`, answered in `Routes`,
+   computed in `core/Schematic.verify`).
 2. `js/farm.js` marks the blocks in 3D (`view3d.setVerify`) and, after the
-   confirmation, sends `POST /api/fix` (`api/game.py`).
+   confirmation, sends `POST /api/fix` (`Routes`).
 3. The viewer turns the points into boxes and queues a `breakboxes` command.
 4. The mod's `BaritoneBridge` picks it up on its next poll and starts `FarmTask`,
    which reports back with `POST /api/commands/result`.
