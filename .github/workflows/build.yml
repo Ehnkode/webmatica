@@ -69,8 +69,8 @@ jobs:
         run: |
           url=$(curl -s https://piston-meta.mojang.com/mc/game/version_manifest_v2.json \
             | jq -r --arg v '${{ matrix.minecraft }}' '.versions[] | select(.id==$v) | .url')
-          curl -fsSL --retry 3 -o client.jar "$(curl -s "$url" | jq -r '.downloads.client.url')"
-          curl -fsSL --retry 3 -o gson.jar https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.11.0/gson-2.11.0.jar
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o client.jar "$(curl -s "$url" | jq -r '.downloads.client.url')"
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o gson.jar https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.11.0/gson-2.11.0.jar
       - name: Build block and item images
         run: |
           mod=$(ls libs/webmatica-*+mc1.21.11.jar | grep -v sources | head -1)
