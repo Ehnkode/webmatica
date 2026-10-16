@@ -274,6 +274,9 @@ public final class FarmTask extends BotTask<FarmTask.Phase> {
     }
 
     private ItemEntity nearestDrop(LocalPlayer p, ClientLevel w) {
+        if (area == null) {
+            return null;
+        }
         AABB b = area.inflate(4.0);
         ItemEntity best = null;
         double bestD = Double.MAX_VALUE;
