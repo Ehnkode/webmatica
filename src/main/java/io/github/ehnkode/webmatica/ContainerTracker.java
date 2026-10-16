@@ -199,6 +199,9 @@ public final class ContainerTracker {
             currentPos = null;
             lastSent = null;
             pending = null;
+            if (h != null && usePos != null && System.currentTimeMillis() - useTime < OPEN_WINDOW_MS) {
+                Highlighter.getInstance().opened(usePos, useOther);
+            }
             if (h != null && isStorage(h) && usePos != null
                     && System.currentTimeMillis() - useTime < OPEN_WINDOW_MS) {
                 current = h;

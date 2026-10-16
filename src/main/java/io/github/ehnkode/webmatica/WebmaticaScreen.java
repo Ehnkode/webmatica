@@ -4,6 +4,7 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 /** The in-game menu (F8): search, jobs, settings and the way to the browser viewer. */
 final class WebmaticaScreen extends WmScreen {
@@ -11,6 +12,7 @@ final class WebmaticaScreen extends WmScreen {
 
     private Button pause;
     private Button stop;
+    private Button unmark;
     private int jobsY;
 
     WebmaticaScreen(Screen parent) {
@@ -25,14 +27,15 @@ final class WebmaticaScreen extends WmScreen {
         }
         ChestIndex.refresh(mc, true);
         int x = (width - W) / 2;
-        int y = Math.max(30, height / 2 - 100);
+        int y = Math.max(30, height / 2 - 112);
         button("Kisten durchsuchen", x, y, W, b -> Mc.setScreen(mc, new ChestSearchScreen(this, "")));
         button("Viewer im Browser öffnen", x, y + 24, W, b -> {
             Mc.setScreen(mc, null);
             ViewerLauncher.open(mc);
         });
         button("Einstellungen", x, y + 48, W, b -> Mc.setScreen(mc, new SettingsScreen(this)));
-        jobsY = y + 82;
+        unmark = button("Markierungen entfernen", x, y + 72, W, b -> Highlighter.getInstance().clear());
+        jobsY = y + 106;
         int half = (W - 4) / 2;
         pause = button("Pause", x, jobsY + 52, half, b -> IngameActions.bot(mc, JobStatus.paused() ? "resume" : "pause"));
         stop = button("Stopp", x + half + 4, jobsY + 52, half, b -> IngameActions.bot(mc, "stop"));
@@ -45,12 +48,15 @@ final class WebmaticaScreen extends WmScreen {
         pause.active = busy;
         stop.active = busy;
         pause.setMessage(c(JobStatus.paused() ? "Weiter" : "Pause"));
+        int marks = Highlighter.getInstance().count();
+        unmark.active = marks > 0;
+        unmark.setMessage(Component.literal(t("Markierungen entfernen") + (marks > 0 ? " (" + marks + ")" : "")));
     }
 
     @Override
     protected void draw(Gfx g, int mouseX, int mouseY) {
         int x = (width - W) / 2;
-        int top = Math.max(30, height / 2 - 100);
+        int top = Math.max(30, height / 2 - 112);
         g.centered(font, title.getString(), width / 2, top - 22, WHITE);
         String rec = t(RegionStore.getInstance().isEnabled() ? "Aufnahme an" : "Aufnahme aus");
         String safe = ServerSafe.on() ? " · " + t("Server-safe an") : "";
