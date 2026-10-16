@@ -376,11 +376,20 @@ function renderInv() {
   $('#inv-info').textContent = c.dim === 'ender' ? `Enderkiste · ${agoText(c.t)}` : `${c.x} ${c.y} ${c.z} · ${agoText(c.t)}`;
   $('#inv-goto').hidden = c.dim === 'ender' || c.dim !== state.dim;
   const top = inv.stack.length === 1;
-  const npick = top && inv.pick ? inv.pick.size : 0;
-  $('#inv-fetch').hidden = !npick;
-  $('#inv-fetch').textContent = `Holen (${npick} Stack${npick === 1 ? '' : 's'})`;
+  renderFetch();
   $('#inv-all').hidden = !top;
   renderMine(c, top);
+}
+function renderFetch() {
+  const w = inv.stack[inv.stack.length - 1];
+  if (w && w.from != null) {   // inside an opened shulker: fetch that shulker
+    $('#inv-fetch').hidden = false;
+    $('#inv-fetch').textContent = 'Diese Shulker holen';
+    return;
+  }
+  const npick = inv.stack.length === 1 && inv.pick ? inv.pick.size : 0;
+  $('#inv-fetch').hidden = !npick;
+  $('#inv-fetch').textContent = `Holen (${npick} Stack${npick === 1 ? '' : 's'})`;
 }
 /* Your own inventory under the chest: pick stacks to store into this chest. */
 const KEEP_ID = /pickaxe|_axe|shovel|_hoe|sword|shears|totem|elytra|helmet|chestplate|leggings|boots|flint_and_steel|ender_pearl|firework/;
@@ -442,7 +451,10 @@ $('#inv-grid').addEventListener('click', (e) => {
   if (!s || inv.stack.length !== 1) return;
   const i = Number(s.dataset.i);
   if (inv.pick.has(i)) inv.pick.delete(i); else inv.pick.add(i);
-  renderInv();
+  // Only toggle the mark: a full redraw would replace the slot, and the double click
+  // that opens a shulker would then never arrive
+  s.classList.toggle('pick', inv.pick.has(i));
+  renderFetch();
 });
 $('#inv-all').addEventListener('click', () => {
   const all = inv.slots.map((it, i) => (it ? i : -1)).filter((i) => i >= 0);
@@ -453,15 +465,25 @@ $('#inv-fetch').addEventListener('click', () => {
   const c = inv.stack[0].chest;
   const p = state.player;
   if (c.dim !== 'ender' && p && p.active && p.dim !== c.dim) { toast('Die Kiste ist in einer anderen Dimension'); return; }
-  const slots = Array.from(inv.pick).map((i) => (Number.isInteger(inv.slots[i].slot) ? inv.slots[i].slot : i));
+  const w = inv.stack[inv.stack.length - 1];
+  const top = inv.stack[0];
+  const picks = w.from != null ? [w.from] : Array.from(inv.pick);
+  const slotOf = (i) => (Number.isInteger(top.slotsArr[i].slot) ? top.slotsArr[i].slot : i);
+  if (w.from == null) top.slotsArr = inv.slots;
+  const slots = picks.map(slotOf);
   baritone({ kind: 'fetch', x: c.x, y: c.y, z: c.z, slots });
   closeInv();
 });
 $('#inv-grid').addEventListener('dblclick', (e) => {
   const s = e.target.closest('.slot.shulker');
   if (!s) return;
-  const it = inv.slots[Number(s.dataset.i)];
-  inv.stack.push({ chest: inv.stack[0].chest, title: it.name || prettyItem(it.id), slots: 27, items: it.contents });
+  const i = Number(s.dataset.i);
+  const it = inv.slots[i];
+  // the two clicks of the double click toggled the mark twice; opening is not picking
+  if (inv.stack.length === 1) inv.pick.delete(i);
+  if (inv.stack.length === 1) inv.stack[0].slotsArr = inv.slots;
+  inv.stack.push({ chest: inv.stack[0].chest, title: it.name || prettyItem(it.id), slots: 27, items: it.contents,
+    from: inv.stack.length === 1 ? i : null });
   $('#inv-tip').hidden = true;
   renderInv();
 });

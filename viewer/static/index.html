@@ -252,6 +252,14 @@
   <div class="sel-head"><b>Bereich</b> <span id="sel-size" class="muted mono"></span></div>
   <p class="hint" id="sel-hint">Auf der Karte ein Rechteck aufziehen.</p>
   <div class="sel-row">
+    <label>X von <input type="number" id="sel-x0"></label>
+    <label>bis <input type="number" id="sel-x1"></label>
+  </div>
+  <div class="sel-row">
+    <label>Z von <input type="number" id="sel-z0"></label>
+    <label>bis <input type="number" id="sel-z1"></label>
+  </div>
+  <div class="sel-row">
     <label>Y von <input type="number" id="sel-y0"></label>
     <label>bis <input type="number" id="sel-y1"></label>
   </div>
@@ -433,6 +441,7 @@
     <label class="check"><input type="checkbox" id="show-signs" checked> <span data-icon="minecraft:oak_sign"></span>Schilder</label>
     <label class="check"><input type="checkbox" id="show-stashes" checked> <span data-icon="minecraft:shulker_box"></span>Stashes</label>
     <label class="check"><input type="checkbox" id="show-chests" checked> <span data-icon="minecraft:chest"></span>Kisten</label>
+    <label class="check" title="Wasser auf der Karte bewegt sich (ab mittlerer Zoomstufe)"><input type="checkbox" id="show-water" checked> <span data-icon="minecraft:water_bucket"></span>Wasser animiert</label>
     <label class="check" title="Wo Monster spawnen können: rot jederzeit, orange nur nachts. Auf der Karte die oberste offene Stelle jeder Spalte, ab mittlerer Zoomstufe."><input type="checkbox" id="spawn3d"> <span data-icon="minecraft:zombie_head"></span>Mob-Spawns</label>
   </div>
   <div id="spawn3d-legend" class="spawn-legend" hidden><span class="sw sw-red"></span> jederzeit <span class="sw sw-orange"></span> nur nachts
@@ -443,8 +452,6 @@
     <label title="Wie weit du siehst. Nah mit vollen Blockmodellen, dahinter vereinfachtes Gelände aus der Karte. Weiter = mehr Arbeit für PC und Viewer.">Sichtweite <input type="range" id="sight3d" min="0" max="12" value="6"> <span id="sight3d-val" class="mono"></span></label>
     <label id="hour3d-wrap" title="Tageszeit für den Shader">Uhrzeit <input type="range" id="hour3d" min="0" max="24" step="0.25" value="10"> <span id="hour3d-val" class="mono">10:00</span></label>
     <div class="set3d-checks">
-      <label class="check"><input type="checkbox" id="fog3d"> Nebel</label>
-      <label class="check" title="Höhlen und Inneres mitladen (langsamer)"><input type="checkbox" id="full3d"> Höhlen</label>
       <label class="check" title="Sonne, Schatten, Himmel und Lichtstimmung"><input type="checkbox" id="fancy3d"> Shader</label>
     </div>
     </div>

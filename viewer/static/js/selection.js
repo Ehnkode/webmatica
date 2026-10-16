@@ -33,29 +33,70 @@ function setSelect(on) {
   updateSel();
 }
 
-/* In 3D: click two blocks, the opposite corners. Height comes from the blocks. */
+/* In 3D like WorldEdit/Axiom: left click sets the first corner, right click the second,
+ * Alt+click takes the air block in front of the face. The mouse wheel pushes the side of the
+ * box you look at outwards (up) or back in (down), Ctrl = 8 blocks at a time. */
+const HINT3D = 'Linksklick: erste Ecke · Rechtsklick: zweite Ecke · Alt+Klick: Luftblock davor · Mausrad: Auswahl in Blickrichtung vergrößern/verkleinern (Strg = 8)';
 function sel3dStart() {
   sel.corner = undefined;
-  $('#sel-hint').textContent = 'Klick in 3D auf den ersten Eckblock.';
-  view3d.setBlockPick((b) => {
+  sel.p1 = sel.p2 = null;
+  $('#sel-hint').textContent = HINT3D;
+  view3d.setBlockPick((b, how) => {
     if (!sel.on) return;
-    if (!sel.corner) {
-      sel.corner = b;
-      sel.box = null;
-      view3d.setArea({ x0: b.x, x1: b.x, y0: b.y, y1: b.y, z0: b.z, z1: b.z });
-      $('#sel-hint').textContent = `Erste Ecke ${b.x} ${b.y} ${b.z}. Jetzt auf die gegenüberliegende Ecke klicken.`;
-      updateSel();
-      return;
+    if (how && how.button === 2) sel.p2 = b; else sel.p1 = b;
+    const a = sel.p1 || sel.p2, c = sel.p2 || sel.p1;
+    sel.box = { x0: Math.min(a.x, c.x), z0: Math.min(a.z, c.z), x1: Math.max(a.x, c.x), z1: Math.max(a.z, c.z) };
+    $('#sel-y0').value = Math.min(a.y, c.y);
+    $('#sel-y1').value = Math.max(a.y, c.y);
+    showBox();
+  }, wheelSel);
+}
+
+/* Mouse wheel in 3D: move the face of the box that faces the view direction */
+function wheelSel(step, look, e) {
+  const b = sel.box;
+  if (!b) return false;
+  const n = step * (e.ctrlKey ? 8 : 1);
+  const ax = Math.abs(look.x), ay = Math.abs(look.y), az = Math.abs(look.z);
+  let y0 = Math.min(Number($('#sel-y0').value), Number($('#sel-y1').value));
+  let y1 = Math.max(Number($('#sel-y0').value), Number($('#sel-y1').value));
+  const [lo, hi] = DIM_Y[state.dim] || [-64, 319];
+  if (ay >= ax && ay >= az) {
+    if (look.y > 0) y1 = Math.max(y0, Math.min(hi, y1 + n)); else y0 = Math.min(y1, Math.max(lo, y0 - n));
+  } else if (ax >= az) {
+    if (look.x > 0) b.x1 = Math.max(b.x0, b.x1 + n); else b.x0 = Math.min(b.x1, b.x0 - n);
+  } else if (look.z > 0) b.z1 = Math.max(b.z0, b.z1 + n);
+  else b.z0 = Math.min(b.z1, b.z0 - n);
+  $('#sel-y0').value = y0;
+  $('#sel-y1').value = y1;
+  cornersFromBox();
+  showBox();
+  return true;
+}
+function cornersFromBox() {
+  const b = sel.box;
+  if (!b) return;
+  const y0 = Number($('#sel-y0').value), y1 = Number($('#sel-y1').value);
+  sel.p1 = { x: b.x0, y: Math.min(y0, y1), z: b.z0 };
+  sel.p2 = { x: b.x1, y: Math.max(y0, y1), z: b.z1 };
+}
+
+/* Draw the box (2D rectangle or 3D frame) and fill the coordinate fields */
+function showBox() {
+  const b = sel.box;
+  if (b) {
+    $('#sel-x0').value = b.x0; $('#sel-x1').value = b.x1;
+    $('#sel-z0').value = b.z0; $('#sel-z1').value = b.z1;
+    if (mode3d && view3d) {
+      const y0 = Number($('#sel-y0').value), y1 = Number($('#sel-y1').value);
+      view3d.setArea({ ...b, y0: Math.min(y0, y1), y1: Math.max(y0, y1) });
+    } else {
+      const bounds = L.latLngBounds(toLatLng(b.x0, b.z0), toLatLng(b.x1 + 1, b.z1 + 1));
+      if (sel.rect) sel.rect.setBounds(bounds);
+      else sel.rect = L.rectangle(bounds, { color: '#22a06b', weight: 2, fillOpacity: 0.12, interactive: false }).addTo(map);
     }
-    const a = sel.corner;
-    sel.corner = undefined;   // next click starts a new selection
-    sel.box = { x0: Math.min(a.x, b.x), z0: Math.min(a.z, b.z), x1: Math.max(a.x, b.x), z1: Math.max(a.z, b.z) };
-    $('#sel-y0').value = Math.min(a.y, b.y);
-    $('#sel-y1').value = Math.max(a.y, b.y);
-    view3d.setArea({ x0: sel.box.x0, x1: sel.box.x1, z0: sel.box.z0, z1: sel.box.z1, y0: Math.min(a.y, b.y), y1: Math.max(a.y, b.y) });
-    $('#sel-hint').textContent = 'Klick in 3D auf den ersten Eckblock.';
-    updateSel();
-  });
+  }
+  updateSel();
 }
 
 function updateSel() {
@@ -63,9 +104,14 @@ function updateSel() {
   $('#sel-go').disabled = !b;
   $('#sel-edit').disabled = !b;
   $('#sel-farm').disabled = !b;
-  if (!b) { $('#sel-size').textContent = ''; $('#sel-hint').hidden = false; return; }
-  $('#sel-hint').hidden = mode3d ? false : true;
-  if (mode3d) $('#sel-hint').textContent = 'Neue Auswahl: wieder zwei Eckblöcke anklicken.';
+  for (const k of ['x0', 'x1', 'z0', 'z1']) $('#sel-' + k).disabled = !b;
+  if (!b) {
+    $('#sel-size').textContent = '';
+    $('#sel-hint').hidden = false;
+    for (const k of ['x0', 'x1', 'z0', 'z1']) $('#sel-' + k).value = '';
+    return;
+  }
+  $('#sel-hint').hidden = !mode3d;
   const y0 = Number($('#sel-y0').value), y1 = Number($('#sel-y1').value);
   const w = b.x1 - b.x0 + 1, l = b.z1 - b.z0 + 1, h = Math.abs(y1 - y0) + 1;
   $('#sel-size').textContent = `${fmt(w)} × ${fmt(h)} × ${fmt(l)}`;
@@ -74,10 +120,7 @@ function updateSel() {
 
 function drawSel(a, b) {
   sel.box = { x0: Math.min(a.x, b.x), z0: Math.min(a.z, b.z), x1: Math.max(a.x, b.x), z1: Math.max(a.z, b.z) };
-  const bounds = L.latLngBounds(toLatLng(sel.box.x0, sel.box.z0), toLatLng(sel.box.x1 + 1, sel.box.z1 + 1));
-  if (sel.rect) sel.rect.setBounds(bounds);
-  else sel.rect = L.rectangle(bounds, { color: '#22a06b', weight: 2, fillOpacity: 0.12, interactive: false }).addTo(map);
-  updateSel();
+  showBox();
 }
 
 map.on('mousedown', (e) => {
@@ -134,16 +177,23 @@ $('#sel-edit').addEventListener('click', () => {
   openEditor({ cut: { srv: state.server, dim: state.dim, name: $('#sel-name').value.trim() || 'ausschnitt',
     x0: b.x0, z0: b.z0, x1: b.x1, z1: b.z1, y0: Number($('#sel-y0').value), y1: Number($('#sel-y1').value) } });
 });
-function selYChanged() {
-  updateSel();
+/* Typed coordinates: X/Z move the box sides, Y the height (2D and 3D) */
+function selFieldsChanged() {
   const b = sel.box;
-  if (mode3d && view3d && b) {
-    const y0 = Number($('#sel-y0').value), y1 = Number($('#sel-y1').value);
-    view3d.setArea({ ...b, y0: Math.min(y0, y1), y1: Math.max(y0, y1) });
-  }
+  if (b) {
+    const num = (k, d) => { const v = $('#sel-' + k).value; return v === '' || !Number.isFinite(Number(v)) ? d : Math.round(Number(v)); };
+    const x0 = num('x0', b.x0), x1 = num('x1', b.x1), z0 = num('z0', b.z0), z1 = num('z1', b.z1);
+    sel.box = { x0: Math.min(x0, x1), x1: Math.max(x0, x1), z0: Math.min(z0, z1), z1: Math.max(z0, z1) };
+    cornersFromBox();
+    const keep = document.activeElement;
+    showBox();
+    if (keep && keep.id && keep.id.startsWith('sel-')) {
+      // don't swap the typed value while typing (x0 > x1 for a moment)
+      $('#sel-x0').value = x0; $('#sel-x1').value = x1; $('#sel-z0').value = z0; $('#sel-z1').value = z1;
+    }
+  } else updateSel();
 }
-$('#sel-y0').addEventListener('input', selYChanged);
-$('#sel-y1').addEventListener('input', selYChanged);
+for (const k of ['x0', 'x1', 'z0', 'z1', 'y0', 'y1']) $('#sel-' + k).addEventListener('input', selFieldsChanged);
 
 // ------------------------------------------------------------------ Trail
 

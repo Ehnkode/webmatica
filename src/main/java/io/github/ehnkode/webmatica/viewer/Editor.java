@@ -537,20 +537,23 @@ final class Editor {
         return J.map("size", List.of(b.w, b.h, b.l), "palette", palette, "data", Base64.getEncoder().encodeToString(bb.array()));
     }
 
-    /** Mesh from the edit state (including unsaved), not from the file. */
-    Object[] mesh(String fileId) throws IOException {
+    /** Mesh from the edit state (including unsaved), not from the file. yhi: layer cut with closed top. */
+    Object[] mesh(String fileId, Integer yhi) throws IOException {
         List<Object> key;
         Vol blocks;
         Session s;
         synchronized (lock) {
             s = session(fileId);
-            key = List.of(s.path.toString(), s.mtime, s.rev);
+            if (yhi != null && yhi >= s.blocks.h - 1) {
+                yhi = null;
+            }
+            key = List.of(s.path.toString(), s.mtime, s.rev, yhi == null ? "all" : yhi);
             if (key.equals(s.meshKey)) {
                 return new Object[] {s.mesh, s.meshEtag};
             }
             blocks = s.blocks.copy();
         }
-        byte[] data = App.gzip(Mesher.meshVolume(blocks.b, blocks.w, blocks.h, blocks.l), 5);
+        byte[] data = App.gzip(Mesher.meshVolume(blocks.b, blocks.w, blocks.h, blocks.l, yhi), 5);
         String etag = "\"" + Palette.models.version + "-" + Mesher.MAGIC + "-ed-" + Integer.toUnsignedString(key.hashCode()) + "\"";
         synchronized (lock) {
             s.meshKey = key;
@@ -558,6 +561,29 @@ final class Editor {
             s.meshEtag = etag;
         }
         return new Object[] {data, etag};
+    }
+
+    private final Map<String, byte[]> blockMeshes = new HashMap<>();
+
+    /** Mesh of a single block state (preview at the mouse pointer); air gives an empty mesh. */
+    byte[] blockMesh(String state) {
+        String st = complete(state);
+        String key = Palette.models.version + "|" + st;
+        synchronized (blockMeshes) {
+            byte[] m = blockMeshes.get(key);
+            if (m != null) {
+                return m;
+            }
+        }
+        char sid = (char) (st.equals("minecraft:air") ? 0 : Chunk.BLOCKS.id(st));
+        byte[] data = App.gzip(Mesher.meshVolume(new char[] {sid}, 1, 1, 1), 5);
+        synchronized (blockMeshes) {
+            if (blockMeshes.size() > 512) {
+                blockMeshes.clear();
+            }
+            blockMeshes.put(key, data);
+        }
+        return data;
     }
 
     // ------------------------------------------------------------------ editing

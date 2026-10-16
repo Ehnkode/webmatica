@@ -150,7 +150,13 @@ final class Routes {
             }
             String at = date(h);
             Tiles store = at.isEmpty() ? app.tiles : app.past(srv, dimKey, at);
-            Path path = store.tile(dim, Tiles.Layer.parse(parts.get(2)), zoom, tx, tz, "1".equals(h.q("raw")) && at.isEmpty());
+            boolean water = "1".equals(h.q("water"));
+            if (water && (zoom != 0 || !at.isEmpty())) {
+                h.send(200, Png.EMPTY, "image/png", "no-cache");
+                return;
+            }
+            Path path = water ? store.waterRegionTile(dim, Tiles.Layer.parse(parts.get(2)), tx, tz)
+                    : store.tile(dim, Tiles.Layer.parse(parts.get(2)), zoom, tx, tz, "1".equals(h.q("raw")) && at.isEmpty());
             if (path == null) {
                 h.send(200, Png.EMPTY, "image/png", "no-cache");
                 return;
@@ -992,6 +998,7 @@ final class Routes {
 
         lookupRoute(r, "/api/schematics/place", app.placements::place, true);
         lookupRoute(r, "/api/schematics/update", app.placements::update, true);
+        lookupRoute(r, "/api/schematics/trash", req -> app.placements.trash(J.str(req, "file", "None")), true);
         lookupRoute(r, "/api/schematics/delete", req -> {
             app.placements.delete(J.str(req, "id", "None"));
             return J.map("ok", true);
@@ -1022,8 +1029,10 @@ final class Routes {
                         h.send(200, data, "application/octet-stream", "no-cache", Map.of("Content-Disposition", "attachment; filename=\"" + name + "\""));
                     }
                     case "/api/editor/info" -> h.json(app.editor.info(h.need("file")));
+                    case "/api/editor/blockmesh" -> h.send(200, app.editor.blockMesh(h.need("state")), "application/octet-stream",
+                            "max-age=3600", Map.of("Content-Encoding", "gzip"));
                     case "/api/editor/mesh" -> {
-                        Object[] res = app.editor.mesh(h.need("file"));
+                        Object[] res = app.editor.mesh(h.need("file"), h.has("yhi") ? h.qi("yhi") : null);
                         String etag = (String) res[1];
                         if (h.notModified(etag)) {
                             return;

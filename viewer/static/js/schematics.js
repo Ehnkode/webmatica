@@ -40,7 +40,7 @@ function renderLibrary() {
   $('#lib-count').textContent = schem.lib.length ? `(${schem.lib.length})` : '';
   $('#lib-list').innerHTML = files.length ? files.slice(0, 300).map((e) => `
     <li data-file="${esc(e.file)}"><div class="main"><div class="title">${esc(e.name)}</div>
-    <div class="sub">${esc(e.folder)} · ${fmt(e.bytes / 1024)} KB</div></div><button data-edit title="Im Editor öffnen">✎</button><button data-place>Platzieren</button></li>`).join('')
+    <div class="sub">${esc(e.folder)} · ${fmt(e.bytes / 1024)} KB</div></div><button data-edit title="Im Editor öffnen">✎</button><button data-place>Platzieren</button><button data-trash class="lib-del" title="Schematic löschen">✕</button></li>`).join('')
     : `<li class="empty">${schem.lib.length ? 'Nichts gefunden.' : 'Keine Schematics gefunden. Lade eine hoch oder lege sie in den Litematica-Ordner „schematics“.'}</li>`;
   if ($('#edp-list')) renderEdLib();
 }
@@ -107,9 +107,24 @@ async function placeFile(file) {
 $('#lib-list').addEventListener('click', (e) => {
   const li = e.target.closest('li[data-file]');
   if (!li) return;
-  if (e.target.closest('[data-edit]')) openEditor({ file: li.dataset.file });
+  if (e.target.closest('[data-trash]')) trashFile(li.dataset.file);
+  else if (e.target.closest('[data-edit]')) openEditor({ file: li.dataset.file });
   else placeFile(li.dataset.file);
 });
+
+/* Delete from the library: the server moves the file to .viewer/papierkorb */
+async function trashFile(file) {
+  const e = schem.lib.find((x) => x.file === file);
+  const name = e ? e.name : file;
+  const used = schem.list.filter((p) => p.file === file).length;
+  if (!confirm(`„${name}“ löschen?` + (used ? ` Sie ist ${used}× platziert und wird dort entladen.` : '') + ' Die Datei landet im Papierkorb-Ordner .viewer/papierkorb.')) return;
+  try {
+    await jsonPost('/api/schematics/trash', { file });
+    toast(`${name} gelöscht`);
+    loadLibrary();
+    if (used) loadPlacements();
+  } catch (err) { toast('Löschen fehlgeschlagen: ' + err.message); }
+}
 
 /* Editor in a new tab: file (made editable as a copy if needed) or placement */
 async function openEditor(req, extra) {

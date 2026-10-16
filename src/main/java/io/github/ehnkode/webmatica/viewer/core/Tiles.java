@@ -250,21 +250,68 @@ public class Tiles {
             }
         }
 
-        /** Height shading like vanilla maps: lighter when higher than the neighbor to the north. */
+        /**
+         * Soft relief shading (like BlueMap from above): light from the north-west on the slope of
+         * the terrain (central differences, so steps don't look like stairs), plus a soft ambient
+         * occlusion from higher terrain nearby, so walls, trees and valleys get depth.
+         */
         byte[] shaded() {
             byte[] out = new byte[TILE * TILE * 4];
+            // light from the north-west, fairly steep; normalised so flat ground stays at 1.0
+            final float lx = -0.45f, ly = 1.0f, lz = -0.7f;
+            final float ll = (float) Math.sqrt(lx * lx + ly * ly + lz * lz);
+            final int[][] probe = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {-1, -1}, {1, -1}, {-1, 1}};
             for (int z = 0; z < TILE; z++) {
                 for (int x = 0; x < TILE; x++) {
                     int i = z * TILE + x;
-                    int n = z > 0 ? i - TILE : i;
-                    int north = has[n] ? height[n] : height[i];
-                    float dh = Math.max(-8, Math.min(8, height[i] - north));
-                    float f = water[i] ? 1.0f : 1.0f + dh * 0.045f;
+                    float f = 1.0f;
+                    if (has[i] && !water[i]) {
+                        int h0 = height[i];
+                        float dx = Math.max(-6, Math.min(6, at(x + 1, z, h0) - at(x - 1, z, h0))) * 0.5f;
+                        float dz = Math.max(-6, Math.min(6, at(x, z + 1, h0) - at(x, z - 1, h0))) * 0.5f;
+                        float nl = (float) Math.sqrt(dx * dx + 1 + dz * dz);
+                        float lam = (-dx * lx + ly - dz * lz) / (nl * ll) / (ly / ll);
+                        f = 0.62f + 0.38f * Math.max(0.15f, Math.min(1.45f, lam));
+                        // ambient occlusion: higher columns within 4 blocks darken softly
+                        float occ = 0;
+                        for (int[] d : probe) {
+                            for (int r = 1; r <= 4; r++) {
+                                float up = at(x + d[0] * r, z + d[1] * r, h0) - h0;
+                                if (up > 0) {
+                                    occ += Math.min(up, 6f) / (r * (d[0] != 0 && d[1] != 0 ? 1.41f : 1f));
+                                }
+                            }
+                        }
+                        f *= 1.0f - Math.min(0.32f, occ * 0.012f);
+                    } else if (water[i]) {
+                        // water: a little darker towards the shore shadow, otherwise flat
+                        f = 0.97f;
+                    }
                     for (int c = 0; c < 3; c++) {
                         out[4 * i + c] = (byte) clip255(rgb[3 * i + c] * f);
                     }
                     out[4 * i + 3] = (byte) (has[i] ? 255 : 0);
                 }
+            }
+            return out;
+        }
+
+        /** Height at (x, z) inside the tile; outside it or without data the given fallback. */
+        private int at(int x, int z, int fallback) {
+            if (x < 0 || z < 0 || x >= TILE || z >= TILE) {
+                return fallback;
+            }
+            int i = z * TILE + x;
+            return has[i] ? height[i] : fallback;
+        }
+
+        /** Where the map shows water: white, opaque on water, transparent elsewhere (mask for the animation). */
+        byte[] waterMask() {
+            byte[] out = new byte[TILE * TILE * 4];
+            for (int i = 0; i < TILE * TILE; i++) {
+                boolean w = has[i] && water[i];
+                out[4 * i] = out[4 * i + 1] = out[4 * i + 2] = (byte) 255;
+                out[4 * i + 3] = (byte) (w ? 255 : 0);
             }
             return out;
         }
@@ -457,6 +504,28 @@ public class Tiles {
                 return null;
             }
             Png.writeAtomic(png, Png.encode(TILE, TILE, g.raw()));
+            return png;
+        }
+    }
+
+    /** Water mask of a region tile (zoom 0), for the moving water on the map. */
+    public Path waterRegionTile(Recording.Dimension dim, Layer layer, int rx, int rz) throws IOException {
+        if (regionTile(dim, layer, rx, rz) == null) {
+            return null;
+        }
+        Path d = dir(dim, layer, 0);
+        Path grid = d.resolve(rx + "_" + rz + ".grid");
+        Path png = d.resolve(rx + "_" + rz + ".water.png");
+        synchronized (lock(png)) {
+            long pm = mtime(png);
+            if (pm >= 0 && pm >= mtime(grid)) {
+                return png;
+            }
+            Grid g = Grid.load(grid);
+            if (g == null) {
+                return null;
+            }
+            Png.writeAtomic(png, Png.encode(TILE, TILE, g.waterMask()));
             return png;
         }
     }
