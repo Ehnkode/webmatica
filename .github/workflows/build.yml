@@ -76,3 +76,43 @@ jobs:
           mod=$(ls libs/webmatica-*+mc1.21.11.jar | grep -v sources | head -1)
           java -cp "$mod:gson.jar" io.github.ehnkode.webmatica.viewer.AssetBuilder client.jar assets
           test -n "$(ls -A assets)"
+
+  # A published GitHub release also goes to Modrinth and CurseForge, one version per Minecraft
+  # version. Needs the repository secrets MODRINTH_TOKEN / CURSEFORGE_TOKEN and the variables
+  # MODRINTH_ID / CURSEFORGE_ID (see docs/publishing.md); without them this job does nothing.
+  publish:
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { minecraft: '1.21.11', java: '21' }
+          - { minecraft: '26.1.2', java: '25' }
+          - { minecraft: '26.2', java: '25' }
+          - { minecraft: '26.3', java: '25' }
+    env:
+      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+      CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: webmatica-mod
+          path: libs
+      - name: Publish for Minecraft ${{ matrix.minecraft }}
+        if: env.MODRINTH_TOKEN != '' || env.CURSEFORGE_TOKEN != ''
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ${{ vars.MODRINTH_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          curseforge-id: ${{ vars.CURSEFORGE_ID }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          files: libs/webmatica-*+mc${{ matrix.minecraft }}.jar
+          name: Webmatica ${{ github.event.release.tag_name }} (Minecraft ${{ matrix.minecraft }})
+          version-type: ${{ contains(github.event.release.tag_name, 'alpha') && 'alpha' || (contains(github.event.release.tag_name, 'beta') && 'beta' || 'release') }}
+          changelog: ${{ github.event.release.body }}
+          loaders: fabric
+          java: ${{ matrix.java }}
+          dependencies: |
+            fabric-api(required){modrinth:P7dR8mSH}{curseforge:306612}
