@@ -14,6 +14,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
   remembers chest contents. Sends nothing to the server or the chat.
 - **Viewer** (built into the mod, runs locally at <http://127.0.0.1:8770>): everything below, in your browser.
   English and German (switch under Options).
+- **In game** (**F8**): the most used parts without leaving Minecraft, see [In game](#in-game).
 
 ## Features
 
@@ -54,6 +55,22 @@ Litematica and Baritone. Works on any server or Singleplayer.
 - **More:** waypoints, signs, a timelapse of what changed (export as GIF or video), radar for nearby
   players, search for coordinates or waypoints.
 
+## In game
+
+- **Menu (F8 or `/wm`):** search chests, the job display with pause and stop, settings, and the
+  way to the viewer. It does not pause the game, so jobs keep running.
+- **Chest search:** type an item, see every chest with it, its distance and whether it sits in a
+  shulker. Mark the chest (a box and a line that show through walls, gone once you open it),
+  walk there or fetch it.
+- **Selection tool (B):** left click sets the first corner, right click the second (up to 160
+  blocks away), the mouse wheel pushes the side you look at (sprint = 8 blocks). Clicks never
+  reach the server. The frame shows through walls and appears in the viewer too. Then save it as
+  a schematic or flatten, fill or break it.
+- **Job display:** a small box at the screen edge while a job runs, in a corner of your choice,
+  can be switched off.
+- **Chest info:** "In chests: 340 (12 chests)" in every item tooltip and briefly above the hotbar
+  when you switch items.
+
 ## Requirements
 
 - Minecraft 1.21.11, 26.1, 26.2 or 26.3 with Fabric Loader and Fabric API
@@ -61,7 +78,7 @@ Litematica and Baritone. Works on any server or Singleplayer.
 
 ## Install
 
-1. Put the jar for your Minecraft version (`webmatica-<version>+mc<minecraft>.jar`) from Modrinth or
+1. Put the jar for your Minecraft version (`webmatica-<version>+mc<minecraft>.jar`) from Modrinth, CurseForge or
    [Releases](https://github.com/Ehnkode/webmatica/releases) into your `mods` folder.
 2. Start Minecraft and press **F10**. The viewer starts and opens in your browser. Nothing else
    to install: on the first start it builds the block images from your game in a few seconds.
@@ -69,7 +86,8 @@ Litematica and Baritone. Works on any server or Singleplayer.
 The viewer runs inside the game and stops when you close it. Its block images are stored in
 `<game folder>/webmatica-viewer/assets/`.
 
-**F9** in game toggles recording, **F10** opens the viewer. **?** in the viewer shows all shortcuts.
+**F8** opens the in-game menu, **B** the selection tool, **F9** toggles recording, **F10** opens the
+viewer (all keys can be changed in the controls). **?** in the viewer shows all shortcuts.
 
 ## Build the mod
 

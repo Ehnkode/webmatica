@@ -14,6 +14,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
   Regiondateien und merkt sich Kisteninhalte. Schickt nichts an den Server oder in den Chat.
 - **Viewer** (in der Mod eingebaut, läuft lokal unter <http://127.0.0.1:8770>): alles Folgende im Browser.
   Auf Deutsch und Englisch (Umschalter unter Optionen).
+- **Im Spiel** (**F8**): das Wichtigste, ohne Minecraft zu verlassen, siehe [Im Spiel](#im-spiel).
 
 ## Funktionen
 
@@ -57,6 +58,22 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 - **Außerdem:** Wegpunkte, Schilder, Zeitraffer der Änderungen (Export als GIF oder Video), Radar für
   Spieler in der Nähe, Suche nach Koordinaten oder Wegpunkten.
 
+## Im Spiel
+
+- **Menü (F8 oder `/wm`):** Kisten durchsuchen, Job-Anzeige mit Pause und Stopp, Einstellungen und
+  der Weg zum Viewer. Das Spiel läuft dabei weiter, Jobs auch.
+- **Kistensuche:** Item eintippen, jede Kiste damit sehen, mit Entfernung und ob es in einer
+  Shulker liegt. Kiste markieren (Kasten und Linie, durch Wände sichtbar, weg sobald du sie
+  öffnest), hinlaufen oder holen lassen.
+- **Auswahl-Werkzeug (B):** Linksklick setzt die erste Ecke, Rechtsklick die zweite (bis 160 Blöcke
+  weit), das Mausrad schiebt die Seite in Blickrichtung (Sprinten = 8 Blöcke). Kein Klick geht an
+  den Server. Der Rahmen ist durch Wände sichtbar und erscheint auch im Viewer. Danach als
+  Schematic speichern oder ebnen, füllen oder abbauen.
+- **Job-Anzeige:** kleiner Kasten am Bildschirmrand, solange ein Job läuft, Ecke wählbar,
+  abschaltbar.
+- **Kisten-Info:** „In Kisten: 340 (12 Kisten)“ im Tooltip jedes Items und kurz über der Hotbar,
+  wenn du das Item wechselst.
+
 ## Voraussetzungen
 
 - Minecraft 1.21.11, 26.1, 26.2 oder 26.3 mit Fabric Loader und Fabric API
@@ -64,7 +81,7 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
 ## Installation
 
-1. Die Jar für deine Minecraft-Version (`webmatica-<version>+mc<minecraft>.jar`) von Modrinth oder den
+1. Die Jar für deine Minecraft-Version (`webmatica-<version>+mc<minecraft>.jar`) von Modrinth, CurseForge oder den
    [Releases](https://github.com/Ehnkode/webmatica/releases) in den `mods`-Ordner legen.
 2. Minecraft starten und **F10** drücken. Der Viewer startet und öffnet sich im Browser. Sonst ist
    nichts zu installieren: Beim ersten Start erzeugt er in wenigen Sekunden die Blockbilder aus deinem Spiel.
@@ -72,7 +89,8 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 Der Viewer läuft im Spiel und endet, wenn du es schließt. Seine Blockbilder liegen in
 `<Spielordner>/webmatica-viewer/assets/`.
 
-**F9** im Spiel schaltet die Aufnahme an und aus, **F10** öffnet den Viewer. **?** im Viewer zeigt alle Tastenkürzel.
+**F8** öffnet das Menü im Spiel, **B** das Auswahl-Werkzeug, **F9** schaltet die Aufnahme an und aus,
+**F10** öffnet den Viewer (alle Tasten in der Steuerung änderbar). **?** im Viewer zeigt alle Tastenkürzel.
 
 ## Mod bauen
 
