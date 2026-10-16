@@ -36,7 +36,7 @@ function setSelect(on) {
 /* In 3D like WorldEdit/Axiom: left click sets the first corner, right click the second,
  * Alt+click takes the air block in front of the face. The mouse wheel pushes the side of the
  * box you look at outwards (up) or back in (down), Ctrl = 8 blocks at a time. */
-const HINT3D = 'Linksklick: erste Ecke · Rechtsklick: zweite Ecke · Alt+Klick: Luftblock davor · Mausrad: Auswahl in Blickrichtung vergrößern/verkleinern (Strg = 8)';
+const HINT3D = 'Linksklick: erste Ecke · Rechtsklick: zweite Ecke · Alt+Klick: Luftblock davor · Mittlere Maustaste ziehen: umsehen · Mausrad: Auswahl in Blickrichtung vergrößern/verkleinern (Strg = 8)';
 function sel3dStart() {
   sel.corner = undefined;
   sel.p1 = sel.p2 = null;

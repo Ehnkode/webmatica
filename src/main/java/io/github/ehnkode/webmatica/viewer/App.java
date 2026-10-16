@@ -638,4 +638,55 @@ public final class App {
     public int streams() {
         return streams;
     }
+
+    // ------------------------------------------------------------------ chests
+
+    private static final Pattern CONTAINER_BLOCK = Pattern.compile("chest|barrel|shulker_box|hopper|dispenser|dropper|furnace|smoker|crafter");
+
+    /**
+     * Known chests of a server, without the ones that were broken: the recording has rewritten their
+     * chunk after the chest was last opened and there is no container at that spot any more. Those
+     * are dropped from containers.json for good. Chunks not recorded since keep their chests.
+     */
+    List<JsonElement> containers(String srv) {
+        List<JsonElement> out = new ArrayList<>();
+        for (JsonElement el : containers.list(srv)) {
+            JsonObject e = el.getAsJsonObject();
+            if (gone(e)) {
+                containers.delete(J.str(e, "key", ""));
+            } else {
+                out.add(el);
+            }
+        }
+        return out;
+    }
+
+    private boolean gone(JsonObject e) {
+        String dimKey = J.str(e, "dim", "");
+        if (dimKey.equals("ender")) {
+            return false;
+        }
+        try {
+            Recording.Dimension dim = rec.dimension(J.str(e, "server", ""), dimKey);
+            if (dim == null) {
+                return false;
+            }
+            int x = J.i(e, "x"), y = J.i(e, "y"), z = J.i(e, "z");
+            int cx = x >> 4, cz = z >> 4;
+            Region region = dim.region(cx >> 5, cz >> 5);
+            Region.Header h = region == null ? null : region.header();
+            int idx = (cx & 31) | ((cz & 31) << 5);
+            if (h == null || h.offsets[idx] == 0) {
+                return false;
+            }
+            long opened = J.bool(e, "t") ? J.lng(e.get("t")) : 0;
+            if ((h.timestamps[idx] + 1) * 1000L < opened) {
+                return false;                      // chunk not recorded since the chest was opened
+            }
+            Chunk ch = rec.chunk(dim, cx, cz);
+            return ch != null && !CONTAINER_BLOCK.matcher(Chunk.baseName(ch.block(x, y, z))).find();
+        } catch (RuntimeException ex) {
+            return false;                          // a broken chunk must not lose chests
+        }
+    }
 }

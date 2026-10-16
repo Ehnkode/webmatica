@@ -256,6 +256,11 @@ public class Tiles {
          * occlusion from higher terrain nearby, so walls, trees and valleys get depth.
          */
         byte[] shaded() {
+            return shaded(true);
+        }
+
+        /** soft: relief and ambient occlusion (see above); otherwise the classic vanilla-map shading. */
+        byte[] shaded(boolean soft) {
             byte[] out = new byte[TILE * TILE * 4];
             // light from the north-west, fairly steep; normalised so flat ground stays at 1.0
             final float lx = -0.45f, ly = 1.0f, lz = -0.7f;
@@ -265,7 +270,13 @@ public class Tiles {
                 for (int x = 0; x < TILE; x++) {
                     int i = z * TILE + x;
                     float f = 1.0f;
-                    if (has[i] && !water[i]) {
+                    if (!soft) {
+                        // like vanilla maps: lighter when higher than the neighbor to the north
+                        int n = z > 0 ? i - TILE : i;
+                        int north = has[n] ? height[n] : height[i];
+                        float dh = Math.max(-8, Math.min(8, height[i] - north));
+                        f = water[i] ? 1.0f : 1.0f + dh * 0.045f;
+                    } else if (has[i] && !water[i]) {
                         int h0 = height[i];
                         float dx = Math.max(-6, Math.min(6, at(x + 1, z, h0) - at(x - 1, z, h0))) * 0.5f;
                         float dz = Math.max(-6, Math.min(6, at(x, z + 1, h0) - at(x, z - 1, h0))) * 0.5f;
@@ -508,6 +519,28 @@ public class Tiles {
         }
     }
 
+    /** Like {@link #regionTile}, but with the classic vanilla-map shading instead of the soft one. */
+    public Path classicRegionTile(Recording.Dimension dim, Layer layer, int rx, int rz) throws IOException {
+        if (regionTile(dim, layer, rx, rz) == null) {
+            return null;
+        }
+        Path d = dir(dim, layer, 0);
+        Path grid = d.resolve(rx + "_" + rz + ".grid");
+        Path png = d.resolve(rx + "_" + rz + ".classic.png");
+        synchronized (lock(png)) {
+            long pm = mtime(png);
+            if (pm >= 0 && pm >= mtime(grid)) {
+                return png;
+            }
+            Grid g = Grid.load(grid);
+            if (g == null) {
+                return null;
+            }
+            Png.writeAtomic(png, Png.encode(TILE, TILE, g.shaded(false)));
+            return png;
+        }
+    }
+
     /** Water mask of a region tile (zoom 0), for the moving water on the map. */
     public Path waterRegionTile(Recording.Dimension dim, Layer layer, int rx, int rz) throws IOException {
         if (regionTile(dim, layer, rx, rz) == null) {
@@ -544,12 +577,21 @@ public class Tiles {
     }
 
     public Path tile(Recording.Dimension dim, Layer layer, int zoom, int tx, int tz, boolean raw) throws IOException {
-        return tile(dim, layer, zoom, tx, tz, null, raw);
+        return tile(dim, layer, zoom, tx, tz, null, raw ? "raw" : "");
     }
 
-    public Path tile(Recording.Dimension dim, Layer layer, int zoom, int tx, int tz, Set<Long> regions, boolean raw) throws IOException {
+    /** variant: "" (soft shading), "classic" (vanilla-map shading) or "raw" (no shading). */
+    public Path tile(Recording.Dimension dim, Layer layer, int zoom, int tx, int tz, String variant) throws IOException {
+        return tile(dim, layer, zoom, tx, tz, null, variant);
+    }
+
+    public Path tile(Recording.Dimension dim, Layer layer, int zoom, int tx, int tz, Set<Long> regions, String variant) throws IOException {
         if (zoom >= 0) {
-            return raw ? rawRegionTile(dim, layer, tx, tz) : regionTile(dim, layer, tx, tz);
+            return switch (variant) {
+                case "raw" -> rawRegionTile(dim, layer, tx, tz);
+                case "classic" -> classicRegionTile(dim, layer, tx, tz);
+                default -> regionTile(dim, layer, tx, tz);
+            };
         }
         if (regions == null) {
             regions = keys(dim);
@@ -570,10 +612,10 @@ public class Tiles {
         Path[] children = new Path[4];
         for (int dz = 0; dz < 2; dz++) {
             for (int dx = 0; dx < 2; dx++) {
-                children[dz * 2 + dx] = tile(dim, layer, zoom + 1, tx * 2 + dx, tz * 2 + dz, regions, raw);
+                children[dz * 2 + dx] = tile(dim, layer, zoom + 1, tx * 2 + dx, tz * 2 + dz, regions, variant);
             }
         }
-        Path png = dir(dim, layer, zoom).resolve(tx + "_" + tz + (raw ? ".raw" : "") + ".png");
+        Path png = dir(dim, layer, zoom).resolve(tx + "_" + tz + (variant.isEmpty() ? "" : "." + variant) + ".png");
         synchronized (lock(png)) {
             long newest = 0;
             for (Path c : children) {
@@ -683,11 +725,20 @@ public class Tiles {
 
         @Override
         public Path regionTile(Recording.Dimension dim, Layer layer, int rx, int rz) throws IOException {
+            return render(dim, layer, rx, rz, true);
+        }
+
+        @Override
+        public Path classicRegionTile(Recording.Dimension dim, Layer layer, int rx, int rz) throws IOException {
+            return render(dim, layer, rx, rz, false);
+        }
+
+        private Path render(Recording.Dimension dim, Layer layer, int rx, int rz, boolean soft) throws IOException {
             Map<Long, Object[]> chunks = byRegion().get(key(rx, rz));
             if (chunks == null || chunks.isEmpty()) {
                 return null;
             }
-            Path png = dir(dim, layer, 0).resolve(rx + "_" + rz + ".png");
+            Path png = dir(dim, layer, 0).resolve(rx + "_" + rz + (soft ? "" : ".classic") + ".png");
             long newest = 0;
             for (Object[] src : chunks.values()) {
                 newest = Math.max(newest, mtime((Path) src[0]));
@@ -714,14 +765,14 @@ public class Tiles {
                         g.paint(renderChunk(ch, layer), cx & 31, cz & 31);
                     }
                 }
-                Png.writeAtomic(png, Png.encode(TILE, TILE, g.shaded()));
+                Png.writeAtomic(png, Png.encode(TILE, TILE, g.shaded(soft)));
                 return png;
             }
         }
 
         @Override
-        public Path tile(Recording.Dimension dim, Layer layer, int zoom, int tx, int tz, Set<Long> regions, boolean raw) throws IOException {
-            return super.tile(dim, layer, zoom, tx, tz, regions != null ? regions : byRegion().keySet(), false);
+        public Path tile(Recording.Dimension dim, Layer layer, int zoom, int tx, int tz, Set<Long> regions, String variant) throws IOException {
+            return super.tile(dim, layer, zoom, tx, tz, regions != null ? regions : byRegion().keySet(), "classic".equals(variant) ? variant : "");
         }
     }
 }

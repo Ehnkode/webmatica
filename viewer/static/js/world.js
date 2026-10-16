@@ -12,50 +12,69 @@ import { xray2dSoon } from './xray.js';
 let tiles = null;
 let water = null;
 
-/* Moving water on the map (like BlueMap): a mask tile per region says where water is; a soft,
- * seamless ripple texture slides over it and is blended onto the map (soft light). The browser
- * does the animation on the GPU, nothing is redrawn per frame. Only from zoom 0 on: further out
- * the ripples would be smaller than a pixel. */
-function rippleTexture(seed) {
-  const N = 32;   // one texel per block, repeats every 32 blocks
-  const c = document.createElement('canvas');
-  c.width = c.height = N;
-  const g = c.getContext('2d');
-  const img = g.createImageData(N, N);
-  // whole-number wave counts per tile, so the texture repeats without seams
-  const waves = (seed ? [[2, 1, 0.8], [-1, 3, 0.6], [4, -3, 0.35], [-5, -6, 0.2]] : [[1, 2, 0.9], [3, -1, 0.6], [-2, 3, 0.5], [6, 5, 0.25]]).map(([kx, ky, a], i) => [kx, ky, a, seed * 1.7 + i * 2.1]);
-  for (let y = 0; y < N; y++) {
-    for (let x = 0; x < N; x++) {
-      let v = 0;
-      for (const [kx, ky, a, ph] of waves) v += a * Math.sin((2 * Math.PI * (kx * x + ky * y)) / N + ph);
-      // sharp bright crests, broad troughs: looks like light on small waves
-      const t = Math.max(0, Math.min(1, 0.5 + v * 0.22));
-      const crest = Math.pow(t, 3);
-      const k = (y * N + x) * 4;
-      img.data[k] = img.data[k + 1] = img.data[k + 2] = Math.round(255 * (0.35 + 0.65 * crest));
-      img.data[k + 3] = 255;
-    }
-  }
-  g.putImageData(img, 0, 0);
-  return c.toDataURL();
+/* Moving water on the map, like in the game: the vanilla still-water texture (all frames of
+ * water_still.png from the game jar) is drawn once per block over the water, masked by a water tile
+ * per region and blended onto the map (soft light, so the biome color of the map stays). The frames
+ * change every 2 game ticks like in vanilla, for all tiles at once through one CSS variable. Only
+ * from zoom 1 on: further out a block is a single pixel and the texture would just flicker. */
+const WATER_FRAME_MS = 100;    // frametime 2 in water_still.png.mcmeta = 2 ticks
+const WATER_MIN_ZOOM = 1;
+let waterFrames = null, waterTimer = null;
+function loadWaterFrames() {
+  if (waterFrames) return waterFrames;
+  waterFrames = new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const n = img.width, count = Math.max(1, Math.floor(img.height / n));
+      const c = document.createElement('canvas');
+      c.width = n;
+      c.height = n * count;
+      const g = c.getContext('2d');
+      g.drawImage(img, 0, 0);
+      const px = g.getImageData(0, 0, n, n * count).data;
+      // brightness relative to the mean of all frames: 128 = unchanged map color under soft light
+      let sum = 0;
+      for (let i = 0; i < px.length; i += 4) sum += (px[i] + px[i + 1] + px[i + 2]) / 3;
+      const mean = sum / (px.length / 4);
+      const out = [];
+      const f = document.createElement('canvas');
+      f.width = f.height = n;
+      const fg = f.getContext('2d');
+      for (let k = 0; k < count; k++) {
+        const d = fg.createImageData(n, n);
+        for (let i = 0; i < n * n; i++) {
+          const j = (k * n * n + i) * 4;
+          const v = Math.max(0, Math.min(255, Math.round(128 + ((px[j] + px[j + 1] + px[j + 2]) / 3 - mean) * 2.2)));
+          d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v;
+          d.data[i * 4 + 3] = 255;
+        }
+        fg.putImageData(d, 0, 0);
+        out.push(`url(${f.toDataURL()})`);
+      }
+      resolve(out);
+    };
+    img.onerror = () => resolve(null);
+    img.src = '/api/water.png';
+  });
+  return waterFrames;
 }
-let rippleCss = null;
-function ensureRipples() {
-  if (rippleCss) return;
-  rippleCss = true;
-  document.documentElement.style.setProperty('--ripple-a', `url(${rippleTexture(0)})`);
-  document.documentElement.style.setProperty('--ripple-b', `url(${rippleTexture(1)})`);
+function startWaterClock(layer, frames) {
+  clearInterval(waterTimer);
+  const box = layer.getContainer();
+  const tick = () => {
+    if (!box.isConnected) { clearInterval(waterTimer); return; }
+    if (document.hidden) return;
+    box.style.setProperty('--wf', frames[Math.floor(performance.now() / WATER_FRAME_MS) % frames.length]);
+  };
+  tick();
+  waterTimer = setInterval(tick, WATER_FRAME_MS);
 }
 const WaterLayer = RegionLayer.extend({
   tileUrl(c) { return RegionLayer.prototype.tileUrl.call(this, c) + '&water=1'; },
   createTile(coords, done) {
     const div = document.createElement('div');
     div.className = 'water-tile';
-    div.innerHTML = '<i class="wa"></i><i class="wb"></i>';
-    // all tiles in step with one clock, otherwise the ripples break at the tile edges
-    const t = performance.now() / 1000;
-    div.children[0].style.animationDelay = `-${(t % 11).toFixed(3)}s`;
-    div.children[1].style.animationDelay = `-${(t % 7).toFixed(3)}s`;
+    div.innerHTML = '<i></i>';
     const img = new Image();
     img.onload = () => {
       div.style.webkitMaskImage = div.style.maskImage = `url(${img.src})`;
@@ -69,11 +88,16 @@ const WaterLayer = RegionLayer.extend({
 });
 function rebuildWater() {
   if (water) { map.removeLayer(water); water = null; }
+  clearInterval(waterTimer);
   const on = $('#show-water') ? $('#show-water').checked : true;
   if (!on || state.dim === 'the_nether' || state.dim === 'the_end' || !(state.layer || '').startsWith('surface')) return;
-  ensureRipples();
-  water = new WaterLayer({ tileSize: 512, minZoom: 0, maxZoom: MAX_ZOOM, maxNativeZoom: 0, minNativeZoom: 0, keepBuffer: 1, zIndex: 2, className: 'water-layer' });
-  water.addTo(map);
+  const layer = new WaterLayer({ tileSize: 512, minZoom: WATER_MIN_ZOOM, maxZoom: MAX_ZOOM, maxNativeZoom: 0, minNativeZoom: 0, keepBuffer: 1, zIndex: 2, className: 'water-layer' });
+  water = layer;
+  loadWaterFrames().then((frames) => {
+    if (water !== layer || !frames) return;
+    layer.addTo(map);
+    startWaterClock(layer, frames);
+  });
 }
 
 function rebuildTiles() {
@@ -164,6 +188,13 @@ $('#layers').addEventListener('click', (e) => {
   if (b) select(state.server, state.dim, b.dataset.layer, true);
 });
 
+if ($('#soft-shade')) {
+  $('#soft-shade').checked = prefs.soft !== false;
+  $('#soft-shade').addEventListener('change', (e) => {
+    savePref('soft', e.target.checked);
+    rebuildTiles();
+  });
+}
 if ($('#show-water')) {
   $('#show-water').checked = prefs.water !== false;
   $('#show-water').addEventListener('change', (e) => {

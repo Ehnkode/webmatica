@@ -350,7 +350,7 @@ final class AutoBuild {
 
     List<JsonObject> containers(String srv) {
         List<JsonObject> out = new ArrayList<>();
-        for (JsonElement e : app.containers.list(srv)) {
+        for (JsonElement e : app.containers(srv)) {
             out.add(e.getAsJsonObject());
         }
         return out;

@@ -156,7 +156,8 @@ final class Routes {
                 return;
             }
             Path path = water ? store.waterRegionTile(dim, Tiles.Layer.parse(parts.get(2)), tx, tz)
-                    : store.tile(dim, Tiles.Layer.parse(parts.get(2)), zoom, tx, tz, "1".equals(h.q("raw")) && at.isEmpty());
+                    : store.tile(dim, Tiles.Layer.parse(parts.get(2)), zoom, tx, tz,
+                            "1".equals(h.q("raw")) && at.isEmpty() ? "raw" : "classic".equals(h.q("shade")) ? "classic" : "");
             if (path == null) {
                 h.send(200, Png.EMPTY, "image/png", "no-cache");
                 return;
@@ -272,6 +273,15 @@ final class Routes {
                 return;
             }
             h.send(200, Files.readAllBytes(path), "image/png", "no-cache", Map.of("ETag", "\"" + Palette.models.version + "\""));
+        });
+
+        r.get("/api/water.png", h -> {
+            Path path = app.assets.resolve("water.png");
+            if (!Files.exists(path)) {
+                h.fail(404, "water.png fehlt (Spiel-Jar nicht gefunden)");
+                return;
+            }
+            h.send(200, Files.readAllBytes(path), "image/png", "max-age=3600", Map.of());
         });
 
         Router.Get items = h -> {
@@ -1059,7 +1069,7 @@ final class Routes {
         lookupRoute(r, "/api/editor/discard", ed::discard, false);
 
         // chests
-        r.get("/api/containers", h -> h.json(app.containers.list(h.q("srv"))));
+        r.get("/api/containers", h -> h.json(app.containers(h.q("srv"))));
         r.post("/api/containers", (h, req) -> {
             try {
                 JsonObject o = J.obj(req);
