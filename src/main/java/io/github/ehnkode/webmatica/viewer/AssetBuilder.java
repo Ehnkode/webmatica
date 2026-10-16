@@ -30,7 +30,7 @@ import java.util.zip.ZipFile;
  */
 public final class AssetBuilder {
     static final int TILE = 16, SIZE = 32, ITEM_COLS = 48;
-    static final List<String> NEEDED = List.of("blocks.json", "blocks.png", "items.json", "items.png");
+    static final List<String> NEEDED = List.of("blocks.json", "blocks.png", "items.json", "items.png", "water.png");
     static final String PREFIX = "assets/minecraft/";
 
     private AssetBuilder() {
@@ -530,6 +530,14 @@ public final class AssetBuilder {
         meta.add("blockstates", blockstates);
         meta.add("models", ms);
         Png.writeAtomic(out.resolve("blocks.png"), atlas.png());
+        // The whole animation strip of still water (16 px wide, one frame below the other) for the moving
+        // water on the 2D map; the atlas above only keeps the first frame.
+        Img water = src.texture("block/water_still");
+        if (water == null) {
+            water = new Img(TILE, TILE);
+            java.util.Arrays.fill(water.px, 0xFF808080);
+        }
+        Png.writeAtomic(out.resolve("water.png"), water.png());
         Png.writeAtomic(out.resolve("blocks.json"), J.GSON.toJson(meta).getBytes(StandardCharsets.UTF_8));
         log.accept(blockstates.size() + " Blockstates, " + models.size() + " Modelle, " + n + " Texturen");
         return meta;

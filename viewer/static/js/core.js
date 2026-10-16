@@ -85,7 +85,7 @@ const RegionLayer = L.GridLayer.extend({
   },
   tileUrl(c) {
     const v = this._version.get(`${c.z}:${c.x}:${c.y}`) || 0;
-    return `/api/tile/${encodeURIComponent(state.server)}/${encodeURIComponent(state.dim)}/${state.layer}/${c.z}/${c.x}/${c.y}.png?v=${v}`;
+    return `/api/tile/${encodeURIComponent(state.server)}/${encodeURIComponent(state.dim)}/${state.layer}/${c.z}/${c.x}/${c.y}.png?v=${v}${prefs.soft === false ? '&shade=classic' : ''}`;
   },
   createTile(coords, done) {
     const img = document.createElement('img');
