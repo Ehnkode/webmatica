@@ -6,19 +6,6 @@ release and, once set up, uploads them to Modrinth and CurseForge (job `publish`
 The Minecraft versions of each file come from its `fabric.mod.json`, the changelog from the
 release text, the release type from the tag (`-alpha`, `-beta`, otherwise release).
 
-## One-time setup
-
-1. **Modrinth:** create the project (Mod, client side required, server side unsupported,
-   loader Fabric, license LGPL-3.0-only, source `https://github.com/Ehnkode/webmatica`).
-   Copy its project ID (Settings → General). Create a personal access token with the scope
-   "Create versions" (Settings → PATs).
-2. **CurseForge:** create the project (Minecraft → Mods, license LGPL-3.0). Its project ID is in
-   the "About Project" box. Create an API token (Account → API tokens).
-3. **GitHub** (repository → Settings → Secrets and variables → Actions):
-   - secrets `MODRINTH_TOKEN` and `CURSEFORGE_TOKEN`
-   - variables `MODRINTH_ID` and `CURSEFORGE_ID`
-
-Without a token the platform is skipped; without both the job does nothing.
 
 ## A release
 
