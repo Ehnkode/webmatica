@@ -20,8 +20,8 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
 
 | | |
 |---|---|
-| ![Wüstendorf in 3D](docs/village.de.jpg) | ![Rechtsklick auf die Karte, du läufst hin](docs/goto.gif) |
-| ![Kiste anklicken, Inhalt sehen, alle Kisten durchsuchen](docs/storage.gif) | ![Schematic in der Welt platzieren und verschieben](docs/place.gif) |
+| ![Karte und 3D-Ansicht im Browser](docs/browser-3d.gif) | ![Schematic speichern, bearbeiten, platzieren und bauen](docs/schematics.gif) |
+| ![Kiste anklicken, Inhalt sehen, alle Kisten durchsuchen](docs/storage.gif) | ![Rechtsklick auf die Karte, du läufst hin](docs/goto.gif) |
 | ![Schematic Schicht für Schicht aufschneiden](docs/editor-cut.gif) | ![Ein Haus im Schematic-Editor bauen](docs/build.gif) |
 
 - **Karte und 3D** von allem, was du gesehen hast, mit echten Blockmodellen, weichem Licht,
@@ -59,6 +59,10 @@ Baritone fernsteuern. Läuft auf jedem Server und im Singleplayer.
   Spieler in der Nähe, Suche nach Koordinaten oder Wegpunkten.
 
 ## Im Spiel
+
+| | |
+|---|---|
+| ![Kisten mit F8 durchsuchen, eine markieren und holen lassen](docs/chest-search.gif) | ![Bereich mit B auswählen, dann abbauen, füllen oder ebnen](docs/selection.gif) |
 
 - **Menü (F8 oder `/wm`):** Kisten durchsuchen, Job-Anzeige mit Pause und Stopp, Einstellungen und
   der Weg zum Viewer. Das Spiel läuft dabei weiter, Jobs auch.
