@@ -51,7 +51,7 @@ final class ClientInfo {
             Files.writeString(tmp, o.toString(), StandardCharsets.UTF_8);
             Files.move(tmp, dir.resolve("client.json"), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (Throwable t) {
-            MapperClient.LOGGER.warn("[webmatica] client.json nicht geschrieben: {}", t.toString());
+            WebmaticaClient.LOGGER.warn("[webmatica] client.json not written: {}", t.toString());
         }
     }
 }

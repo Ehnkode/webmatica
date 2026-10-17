@@ -3,7 +3,7 @@
   "id": "webmatica",
   "version": "${version}",
   "name": "Webmatica",
-  "description": "Records the chunks your client receives into region files and talks to a local browser viewer (map, 3D, chests, schematics, Baritone helpers).",
+  "description": "Your world in the browser and in game: map, 3D view, chest search, selection tool, schematic editor and Litematica/Baritone automation. Client side, viewer built in.",
   "authors": ["Ehnkode"],
   "contact": {
     "homepage": "https://github.com/Ehnkode/webmatica",
@@ -14,7 +14,7 @@
   "icon": "assets/webmatica/icon.png",
   "environment": "client",
   "entrypoints": {
-    "client": ["io.github.ehnkode.webmatica.MapperClient"]
+    "client": ["io.github.ehnkode.webmatica.WebmaticaClient"]
   },
   "mixins": [
     "webmatica.mixins.json"

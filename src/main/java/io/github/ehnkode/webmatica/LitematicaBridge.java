@@ -179,7 +179,7 @@ public final class LitematicaBridge {
         try {
             apply(here);
         } catch (Throwable t) {
-            MapperClient.LOGGER.warn("[webmatica] Litematica-Abgleich fehlgeschlagen", t);
+            WebmaticaClient.LOGGER.warn("[webmatica] Litematica sync failed", t);
             errors.put("_", String.valueOf(t));
         }
         JsonObject st = new JsonObject();

@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class WorldChunkMixin {
 
     @Inject(method = "setBlockState", at = @At("RETURN"))
-    private void mapper$onSetBlockState(BlockPos pos, BlockState state, int flags,
+    private void webmatica$onSetBlockState(BlockPos pos, BlockState state, int flags,
                                         CallbackInfoReturnable<BlockState> cir) {
         LevelChunk self = (LevelChunk) (Object) this;
         // null = block was already like this, nothing changed.

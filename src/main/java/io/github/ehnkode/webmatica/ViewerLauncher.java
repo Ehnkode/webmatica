@@ -79,7 +79,7 @@ final class ViewerLauncher {
             try {
                 run(mc, browse);
             } catch (Throwable e) {
-                MapperClient.LOGGER.warn("[webmatica] Viewer-Start fehlgeschlagen", e);
+                WebmaticaClient.LOGGER.warn("[webmatica] Viewer start failed", e);
                 say(mc, "Viewer-Start fehlgeschlagen: " + e.getMessage(), ChatFormatting.RED, null);
             } finally {
                 busy = false;
@@ -140,12 +140,12 @@ final class ViewerLauncher {
             if (browse) {
                 say(mc, "Viewer: erster Start, Blockbilder werden erzeugt …", ChatFormatting.YELLOW, null);
             }
-            AssetBuilder.build(jar, assets, msg -> MapperClient.LOGGER.info("[webmatica] {}", msg));
+            AssetBuilder.build(jar, assets, msg -> WebmaticaClient.LOGGER.info("[webmatica] {}", msg));
         }
 
         Files.createDirectories(recording);
         Server s = new Server(recording, recording.resolve(".viewer-cache"), assets, web, version, "127.0.0.1", PORT,
-                msg -> MapperClient.LOGGER.info("[webmatica] {}", msg));
+                msg -> WebmaticaClient.LOGGER.info("[webmatica] {}", msg));
         int cpus = Runtime.getRuntime().availableProcessors();
         s.start(Math.max(1, Math.min(4, cpus / 3)));       // the game needs the rest
         synchronized (ViewerLauncher.class) {
@@ -254,7 +254,7 @@ final class ViewerLauncher {
         try {
             new ProcessBuilder(cmd).start();
         } catch (IOException e) {
-            MapperClient.LOGGER.warn("[webmatica] Browser nicht geöffnet: {}", e.toString());
+            WebmaticaClient.LOGGER.warn("[webmatica] Browser not opened: {}", e.toString());
         }
     }
 
