@@ -207,7 +207,7 @@ public final class RegionStore {
             Path hist = RecordingTarget.root(mc).resolve(RecordingTarget.serverId(mc)).resolve(".history");
             historyDir = (sub.isEmpty() ? hist.resolve("%DAY%") : hist.resolve("%DAY%").resolve(sub)).resolve("region");
         } catch (Throwable t) {
-            MapperClient.LOGGER.warn("[webmatica] Chunk-Kopie fehlgeschlagen ({})", chunk.getPos(), t);
+            WebmaticaClient.LOGGER.warn("[webmatica] Chunk copy failed ({})", chunk.getPos(), t);
             return;
         }
         io.submit(() -> write(regionDir, historyDir, dim, snap));
@@ -241,10 +241,10 @@ public final class RegionStore {
             lastWritten.put(key, crc.getValue());
             int n = writtenCount.incrementAndGet();
             if (n % 500 == 0) {
-                MapperClient.LOGGER.info("[webmatica] {} Chunks geschrieben", n);
+                WebmaticaClient.LOGGER.info("[webmatica] {} chunks written", n);
             }
         } catch (Throwable t) {
-            MapperClient.LOGGER.warn("[webmatica] Schreiben fehlgeschlagen ({})", snap.pos(), t);
+            WebmaticaClient.LOGGER.warn("[webmatica] Write failed ({})", snap.pos(), t);
         }
     }
 
@@ -290,7 +290,7 @@ public final class RegionStore {
                 h.close();
             }
         } catch (Throwable t) {
-            MapperClient.LOGGER.debug("[webmatica] Zeitleiste: Sichern fehlgeschlagen ({})", snap.pos(), t);
+            WebmaticaClient.LOGGER.debug("[webmatica] Timeline: saving failed ({})", snap.pos(), t);
         }
     }
 
@@ -323,7 +323,7 @@ public final class RegionStore {
         try {
             rf.close();
         } catch (Throwable t) {
-            MapperClient.LOGGER.warn("[webmatica] Region-Datei schliessen fehlgeschlagen", t);
+            WebmaticaClient.LOGGER.warn("[webmatica] Closing region file failed", t);
         }
     }
 

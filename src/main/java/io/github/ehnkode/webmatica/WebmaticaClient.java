@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Client entrypoint. Wires the Fabric events to the recorder.
  */
-public class MapperClient implements ClientModInitializer {
+public class WebmaticaClient implements ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("webmatica");
 
     private static KeyMapping toggleKey;
@@ -54,7 +54,7 @@ public class MapperClient implements ClientModInitializer {
         SelectionTool.register();
 
         ClientTickEvents.START_CLIENT_TICK.register(SelectionTool::startTick);
-        ClientTickEvents.END_CLIENT_TICK.register(MapperClient::onEndTick);
+        ClientTickEvents.END_CLIENT_TICK.register(WebmaticaClient::onEndTick);
         if (System.getProperty("webmatica.autotest") != null) {
             AutoTest.install();
         }
@@ -65,7 +65,7 @@ public class MapperClient implements ClientModInitializer {
         BuildControl.getInstance().start();
         WebPrinter.getInstance().start();
         ContainerTracker.getInstance().register();
-        LOGGER.info("[webmatica] Recorder aktiv, Ziel: <rundir>/webmatica_recording/<server>/, Live-Position -> {}",
+        LOGGER.info("[webmatica] Recorder active, target: <rundir>/webmatica_recording/<server>/, live position -> {}",
                 PositionReporter.url());
     }
 

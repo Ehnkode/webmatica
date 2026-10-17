@@ -14,7 +14,7 @@ body:
     attributes:
       label: Versions
       description: Webmatica mod version, Minecraft version, and whether Litematica / Baritone / Printer are installed
-      placeholder: "webmatica 0.5.0, Minecraft 1.21.11, Litematica yes, Baritone yes"
+      placeholder: "webmatica 0.9.0, Minecraft 1.21.11, Litematica yes, Baritone yes"
     validations:
       required: true
   - type: dropdown

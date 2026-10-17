@@ -12,7 +12,7 @@ version differences live in `Mc.java` and `//?` comments.
 
 | file | job |
 |---|---|
-| `MapperClient` | entry point: keys (F8, F9, F10, B), ticks, world change |
+| `WebmaticaClient` | entry point: keys (F8, F9, F10, B), ticks, world change |
 | `RegionStore`, `ChunkSnapshot`, `WorldChunkMixin`, `RecordingTarget` | write seen chunks as region files, one folder per world |
 | `PositionReporter` | POST /api/position several times a second (position, inventory, mods found, other players) |
 | `ContainerTracker`, `ChestLidTracker` | chest contents when opened, lids opened by others |

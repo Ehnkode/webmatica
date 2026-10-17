@@ -114,7 +114,7 @@ final class ChestIndex {
                 }
             }
         } catch (Exception ex) {
-            MapperClient.LOGGER.warn("[webmatica] containers.json nicht lesbar: {}", ex.toString());
+            WebmaticaClient.LOGGER.warn("[webmatica] containers.json not readable: {}", ex.toString());
         }
         return out;
     }
