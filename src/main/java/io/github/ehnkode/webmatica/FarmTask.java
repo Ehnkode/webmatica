@@ -127,11 +127,10 @@ public final class FarmTask extends BotTask<FarmTask.Phase> {
         }
         lines.add(fill != null ? "sel fill " + fill : "sel cleararea");
         BaritoneSafety.restore();
-        for (String l : lines) {
-            if (!BaritoneApi.tryExecute(l)) {
-                finish(false, "Baritone hat \"" + l + "\" abgelehnt");
-                return;
-            }
+        String rejected = BaritoneApi.executeQuietly(lines);
+        if (rejected != null) {
+            finish(false, "Baritone hat \"" + rejected + "\" abgelehnt");
+            return;
         }
         before = countIds(mc.player);
         setPhase(Phase.BREAK);
@@ -364,7 +363,7 @@ public final class FarmTask extends BotTask<FarmTask.Phase> {
         Minecraft mc = Minecraft.getInstance();
         if (area != null) {
             // Baritone keeps drawing its selection after the job: remove it
-            BaritoneApi.tryExecute("sel clear");
+            BaritoneApi.executeQuietly(List.of("sel clear"));
             area = null;
         }
         String msg;

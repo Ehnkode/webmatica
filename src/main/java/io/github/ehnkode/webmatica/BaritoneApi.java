@@ -44,6 +44,38 @@ final class BaritoneApi {
         }
     }
 
+    /**
+     * Runs the lines one by one without Baritone's chat echo ("Selection added",
+     * "Position 1 has been set", "Filling now"): its logger setting is muted for the
+     * duration. Returns the first rejected line, or null if all ran.
+     */
+    static String executeQuietly(java.util.List<String> lines) {
+        Object old = null;
+        boolean muted = false;
+        try {
+            old = get("logger");
+            set("logger", (java.util.function.Consumer<Object>) msg -> { });
+            muted = true;
+        } catch (Throwable ignored) {
+            // older Baritone without the logger setting: run with the echo
+        }
+        try {
+            for (String l : lines) {
+                if (!tryExecute(l)) {
+                    return l;
+                }
+            }
+            return null;
+        } finally {
+            if (muted) {
+                try {
+                    set("logger", old);
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+    }
+
     // ------------------------------------------------------------ Settings
 
     private static Object setting(String key) throws Exception {
