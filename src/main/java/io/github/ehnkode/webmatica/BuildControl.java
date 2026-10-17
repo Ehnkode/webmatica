@@ -206,7 +206,7 @@ public final class BuildControl {
             } catch (ClassNotFoundException e) {
                 append(msg, "Litematica nicht gefunden");
             } catch (Throwable t) {
-                MapperClient.LOGGER.warn("[webmatica] Schicht setzen fehlgeschlagen", t);
+                WebmaticaClient.LOGGER.warn("[webmatica] Setting layer failed", t);
             }
         }
         return msg.length() > 0 ? msg.toString() : null;

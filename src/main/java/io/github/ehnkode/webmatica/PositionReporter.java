@@ -23,7 +23,7 @@ import net.minecraft.world.entity.player.PlayerSkin;
 
 /**
  * Reports the live player position (and view direction) to the local
- * mapper backend (http://127.0.0.1:8770/api/position).
+ * viewer (http://127.0.0.1:8770/api/position).
  *
  * Deliberately conservative:
  *  - daemon thread, never blocks the client's render/network tick
@@ -221,7 +221,7 @@ public final class PositionReporter {
 
             payload.set(o.toString());
         } catch (Throwable t) {
-            MapperClient.LOGGER.debug("[webmatica] Position-JSON fehlgeschlagen", t);
+            WebmaticaClient.LOGGER.debug("[webmatica] Position JSON failed", t);
         }
     }
 
@@ -252,7 +252,7 @@ public final class PositionReporter {
     /** A part of the JSON failed: log it once (it would fail every tick), then stay quiet. */
     private void failedOnce(String part, Throwable t) {
         if (failed.add(part)) {
-            MapperClient.LOGGER.warn("[webmatica] Positionsdaten: {} fehlt ({})", part, t.toString());
+            WebmaticaClient.LOGGER.warn("[webmatica] Position data: {} missing ({})", part, t.toString());
         }
     }
 
@@ -344,17 +344,17 @@ public final class PositionReporter {
             // 1) Send the full 64x64 skin as PNG (for the real figure).
             if (skinFullB64 == null) {
                 try {
-                    Path tmpFull = Files.createTempFile("mapper-skinfull", ".png");
+                    Path tmpFull = Files.createTempFile("webmatica-skinfull", ".png");
                     try {
                         img.writeToFile(tmpFull);
                         byte[] full = Files.readAllBytes(tmpFull);
                         skinFullB64 = Base64.getEncoder().encodeToString(full);
-                        MapperClient.LOGGER.info("[webmatica] Voll-Skin extrahiert ({} Bytes)", full.length);
+                        WebmaticaClient.LOGGER.info("[webmatica] Full skin extracted ({} bytes)", full.length);
                     } finally {
                         try { Files.deleteIfExists(tmpFull); } catch (Throwable ignored) {}
                     }
                 } catch (Throwable t) {
-                    MapperClient.LOGGER.debug("[webmatica] Voll-Skin-Extraktion fehlgeschlagen", t);
+                    WebmaticaClient.LOGGER.debug("[webmatica] Full skin extraction failed", t);
                 }
             }
 
@@ -367,12 +367,12 @@ public final class PositionReporter {
                     }
                 }
                 // NativeImage.writeTo(Path) writes PNG; read it back via a temp file.
-                Path tmp = Files.createTempFile("mapper-skin", ".png");
+                Path tmp = Files.createTempFile("webmatica-skin", ".png");
                 try {
                     face.writeToFile(tmp);
                     byte[] png = Files.readAllBytes(tmp);
                     skinFaceB64 = Base64.getEncoder().encodeToString(png);
-                    MapperClient.LOGGER.info("[webmatica] Skin-Gesicht extrahiert ({} Bytes)", png.length);
+                    WebmaticaClient.LOGGER.info("[webmatica] Skin face extracted ({} bytes)", png.length);
                 } finally {
                     try { Files.deleteIfExists(tmp); } catch (Throwable ignored) {}
                 }
@@ -380,7 +380,7 @@ public final class PositionReporter {
                 face.close();
             }
         } catch (Throwable t) {
-            MapperClient.LOGGER.debug("[webmatica] Skin-Extraktion fehlgeschlagen", t);
+            WebmaticaClient.LOGGER.debug("[webmatica] Skin extraction failed", t);
         }
         return skinFaceB64;
     }

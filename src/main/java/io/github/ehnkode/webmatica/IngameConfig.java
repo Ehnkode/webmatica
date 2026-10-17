@@ -33,7 +33,7 @@ final class IngameConfig {
                     }
                 }
             } catch (Exception e) {
-                MapperClient.LOGGER.warn("[webmatica] config/webmatica.json nicht lesbar, Standardwerte: {}", e.toString());
+                WebmaticaClient.LOGGER.warn("[webmatica] config/webmatica.json not readable, using defaults: {}", e.toString());
             }
             instance.hudCorner = Math.floorMod(instance.hudCorner, 4);
         }
@@ -46,7 +46,7 @@ final class IngameConfig {
             Files.createDirectories(p.getParent());
             Files.writeString(p, GSON.toJson(this), StandardCharsets.UTF_8);
         } catch (Exception e) {
-            MapperClient.LOGGER.warn("[webmatica] config/webmatica.json nicht gespeichert: {}", e.toString());
+            WebmaticaClient.LOGGER.warn("[webmatica] config/webmatica.json not saved: {}", e.toString());
         }
     }
 

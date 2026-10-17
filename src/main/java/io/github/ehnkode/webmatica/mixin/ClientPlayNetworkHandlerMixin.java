@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ClientPlayNetworkHandlerMixin {
 
     @Inject(method = "handleBlockEntityData", at = @At("TAIL"))
-    private void mapper$onBlockEntityUpdate(ClientboundBlockEntityDataPacket packet, CallbackInfo ci) {
+    private void webmatica$onBlockEntityUpdate(ClientboundBlockEntityDataPacket packet, CallbackInfo ci) {
         BlockPos pos = packet.getPos();
         RegionStore.getInstance().markDirty(pos.getX() >> 4, pos.getZ() >> 4);
     }
@@ -29,7 +29,7 @@ public abstract class ClientPlayNetworkHandlerMixin {
      * and aborts in forceMainThread, only the second (client thread) runs through.
      */
     @Inject(method = "handleBlockEvent", at = @At("TAIL"))
-    private void mapper$onBlockEvent(ClientboundBlockEventPacket packet, CallbackInfo ci) {
+    private void webmatica$onBlockEvent(ClientboundBlockEventPacket packet, CallbackInfo ci) {
         ChestLidTracker.getInstance().onBlockEvent(packet.getPos(), packet.getBlock(), packet.getB0(), packet.getB1());
     }
 }
