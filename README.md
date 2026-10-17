@@ -20,8 +20,8 @@ Litematica and Baritone. Works on any server or Singleplayer.
 
 | | |
 |---|---|
-| ![Desert village in 3D](docs/village.jpg) | ![Right-click the map and you walk there](docs/goto.gif) |
-| ![Click a chest to see its contents, search all chests](docs/storage.gif) | ![Place a schematic in the world and move it](docs/place.gif) |
+| ![Map and 3D view in the browser](docs/browser-3d.gif) | ![Save a schematic, edit it, place it and build it](docs/schematics.gif) |
+| ![Click a chest to see its contents, search all chests](docs/storage.gif) | ![Right-click the map and you walk there](docs/goto.gif) |
 | ![Cutting through a schematic layer by layer](docs/editor-cut.gif) | ![Building a house in the schematic editor](docs/build.gif) |
 
 - **Map and 3D** of everything you have seen, with real block models, smooth light, shadows, moving
@@ -56,6 +56,10 @@ Litematica and Baritone. Works on any server or Singleplayer.
   players, search for coordinates or waypoints.
 
 ## In game
+
+| | |
+|---|---|
+| ![Search your chests with F8, mark one and fetch it](docs/chest-search.gif) | ![Select an area with B, then break, fill or flatten it](docs/selection.gif) |
 
 - **Menu (F8 or `/wm`):** search chests, the job display with pause and stop, settings, and the
   way to the viewer. It does not pause the game, so jobs keep running.
